@@ -468,6 +468,15 @@ content: sanity({ project, dataset, resolveReferences: true })
   typed, so LLMs autocomplete the CMS shape.
 - Build-time snapshot by default (fast, cacheable, SEO-safe); optional `mode: 'live'` for
   request-time fetching where the platform allows.
+- **Live mode design (decided 2026-07-11):** because loaders receive `content` as an
+  argument (never import the snapshot), live mode is a config flag, not a code change:
+  `sanity({ …, mode: 'live', revalidate: 60 })`. Server fetches the adapter per request
+  through an in-memory stale-while-revalidate cache (Sanity CDN ~50–150ms, mostly warm);
+  client navigations fetch `/__modulato/content` instead of reading the bundle. Publishes
+  go live within `revalidate` seconds — no webhook, no redeploy. Ships WITH
+  `@modulato/content-sanity` (proving it needs a real remote adapter). True real-time
+  (listeners / Live Content API) is an editor-preview feature, later. The KV-webhook
+  middle path (instant + snapshot-fast) stays out of core: platform-specific infra.
 - Shipped adapters: `@modulato/content-sanity`, `@modulato/content-local`. The interface is
   ~4 functions — community/LLM-written adapters are trivial.
 - `<Img>` component: emits lazy-loading markup + aspect-ratio placeholder wired to the
