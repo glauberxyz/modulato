@@ -733,8 +733,28 @@ Each phase ends with something runnable in `examples/`.
 > numbers in root motion.ts (responsive + reduced-motion + overlay-tweakable).
 > An r3f scene consumes the identical surface — document the recipe in
 > MODULATO.md (Phase 9). §10's "3D (Phase 8)" checklist item is superseded.
-> **Next up: Phase 9 (DX shell + publish): create-modulato, MODULATO.md +
-> llms.txt, tsup builds, real npm versions, modulato.org.**
+> **Phase 9 ✅ prep (2026-07-11) — publish awaits the user's `npm publish`.**
+> DECISION: packages **publish from TS source, no tsup** — Modulato requires
+> vite, and vite transforms framework TS from node_modules in every mode we use
+> (dev, client build, SSR build); TS consumers typecheck against src via the
+> exports map. Verified end-to-end with a scaffolded project (check + tsc + dev
+> SSR + prod build all green against workspace-linked packages). Node-facing
+> entries (CLI, config, adapters, MCP) were already plain .mjs. Revisit tsup as
+> pre-1.0 hardening if a non-vite surface ever appears.
+> Shipped: **MODULATO.md** (docs/, ~350 dense lines, the whole API in one read;
+> copied into create-modulato — `npm run sync:docs` after edits);
+> **create-modulato** (non-interactive: one arg, --json, atomic, no side
+> effects; starter = 2 pages + slide transition + shell intro + tokens with
+> phone/reduced overrides + typed content pre-pulled + CLAUDE.md + MODULATO.md;
+> template ships `gitignore` dotless — npm strips .gitignore); all 8 packages
+> at 0.1.0 with MIT license (⚠ user to confirm), files fields, READMEs,
+> explicit ^0.1.0 ranges — `npm pack --dry-run` clean, whole framework <90 kB
+> unpacked. `create-modulato` npm name confirmed unclaimed.
+> Publish (user, from repo root, npm login as glauberxyz first):
+> `for p in core vite server gsap tweak content-local mcp create; do (cd framework/$p && npm publish --access public); done`
+> Still open: modulato.org + llms.txt hosting, /modulato Claude skill,
+> Tailwind scaffold option, Cloudflare adapter, @modulato/content-sanity
+> (+ live mode). Optional stretch: rewrite glauber-2026 on Modulato.
 
 - **Phase 0 — Skeleton.** Monorepo scaffolding (workspaces, turbo, tsconfig, vitest,
   changesets), claim `modulato` + `@modulato` on npm with 0.0.1 placeholders.

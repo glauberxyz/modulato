@@ -1,0 +1,28 @@
+{
+  "name": "create-modulato",
+  "version": "0.1.0",
+  "description": "Scaffold a Modulato site — the animation-first React framework.",
+  "license": "MIT",
+  "homepage": "https://modulato-demo.vercel.app",
+  "type": "module",
+  "bin": {
+    "create-modulato": "./index.mjs"
+  },
+  "files": [
+    "index.mjs",
+    "templates",
+    "MODULATO.md",
+    "README.md",
+    "LICENSE"
+  ],
+  "engines": {
+    "node": ">=20"
+  },
+  "keywords": [
+    "create",
+    "modulato",
+    "react",
+    "animation",
+    "framework"
+  ]
+}

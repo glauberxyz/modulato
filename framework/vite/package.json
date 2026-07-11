@@ -1,13 +1,24 @@
 {
   "name": "@modulato/vite",
-  "version": "0.0.1",
+  "version": "0.1.0",
   "description": "Vite plugin for Modulato: file-based routing, SSR bridge, style auto-import.",
+  "license": "MIT",
+  "homepage": "https://modulato-demo.vercel.app",
   "type": "module",
   "exports": {
     ".": {
       "types": "./index.d.ts",
       "default": "./index.js"
     }
+  },
+  "files": [
+    "index.js",
+    "index.d.ts",
+    "README.md",
+    "LICENSE"
+  ],
+  "engines": {
+    "node": ">=20"
   },
   "peerDependencies": {
     "vite": "^6.0.0 || ^7.0.0"

@@ -1,7 +1,9 @@
 {
   "name": "@modulato/content-local",
-  "version": "0.0.1",
+  "version": "0.1.0",
   "description": "Local JSON content adapter for Modulato: content/*.json becomes the typed content snapshot.",
+  "license": "MIT",
+  "homepage": "https://modulato-demo.vercel.app",
   "type": "module",
   "exports": {
     ".": {
@@ -9,7 +11,15 @@
       "default": "./src/index.mjs"
     }
   },
+  "files": [
+    "src",
+    "README.md",
+    "LICENSE"
+  ],
+  "engines": {
+    "node": ">=20"
+  },
   "peerDependencies": {
-    "modulato": "*"
+    "modulato": "^0.1.0"
   }
 }

@@ -32,3 +32,5 @@ non-interactive and JSON-friendly — prefer it over doing things by hand:
 - `npm run dev` — dev server with SSR + HMR (long-running)
 - `npm run build` — production build; `npm run preview` serves it
 - `npm run check` (repo root) — TypeScript across demo + framework
+
+The complete framework reference: [../../docs/MODULATO.md](../../docs/MODULATO.md).

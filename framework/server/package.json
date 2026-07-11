@@ -1,17 +1,28 @@
 {
   "name": "@modulato/server",
-  "version": "0.0.1",
+  "version": "0.1.0",
   "description": "SSR renderer for Modulato sites.",
+  "license": "MIT",
+  "homepage": "https://modulato-demo.vercel.app",
   "type": "module",
   "exports": {
     ".": "./src/index.tsx"
+  },
+  "files": [
+    "src",
+    "README.md",
+    "LICENSE"
+  ],
+  "engines": {
+    "node": ">=20"
   },
   "dependencies": {
     "modulato": "*"
   },
   "peerDependencies": {
     "react": "^18.0.0 || ^19.0.0",
-    "react-dom": "^18.0.0 || ^19.0.0"
+    "react-dom": "^18.0.0 || ^19.0.0",
+    "modulato": "^0.1.0"
   },
   "devDependencies": {
     "@types/node": "^26.1.1",

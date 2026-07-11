@@ -8,7 +8,8 @@
   ],
   "scripts": {
     "dev": "npm run dev -w examples/demo",
-    "check": "tsc -p examples/demo --noEmit && tsc -p framework/server --noEmit && tsc -p framework/tweak --noEmit"
+    "check": "tsc -p examples/demo --noEmit && tsc -p framework/server --noEmit && tsc -p framework/tweak --noEmit",
+    "sync:docs": "cp docs/MODULATO.md framework/create/MODULATO.md"
   },
   "devDependencies": {
     "typescript": "^5.8.0"
