@@ -1,0 +1,49 @@
+.work {
+  padding: 10rem 6vw 6rem;
+
+  &__title {
+    font-size: clamp(2.5rem, 6vw, 5rem);
+    letter-spacing: -0.02em;
+    margin: 0 0 3rem;
+  }
+
+  &__list {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 2rem;
+
+    @media (max-width: 767px) {
+      grid-template-columns: 1fr;
+    }
+  }
+
+  &__card {
+    text-decoration: none;
+    color: inherit;
+
+    img {
+      width: 100%;
+      aspect-ratio: 4 / 3;
+      object-fit: cover;
+      border-radius: 0.5rem;
+      display: block;
+    }
+  }
+
+  &__card-meta {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    margin-top: 0.75rem;
+
+    h2 {
+      font-size: 1.25rem;
+      margin: 0;
+    }
+
+    span {
+      color: var(--muted);
+      font-size: 0.875rem;
+    }
+  }
+}

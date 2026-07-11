@@ -1,0 +1,54 @@
+.home {
+  padding: 10rem 6vw 6rem;
+
+  &__hero {
+    max-width: 60rem;
+  }
+
+  &__headline {
+    font-size: clamp(3rem, 9vw, 8rem);
+    line-height: 0.95;
+    letter-spacing: -0.03em;
+    margin: 0 0 2rem;
+  }
+
+  &__intro {
+    max-width: 34rem;
+    font-size: 1.125rem;
+    line-height: 1.6;
+    color: var(--muted);
+  }
+
+  &__grid {
+    margin-top: 5rem;
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 1.5rem;
+
+    @media (max-width: 767px) {
+      grid-template-columns: 1fr;
+    }
+  }
+
+  &__card {
+    display: block;
+    text-decoration: none;
+    color: inherit;
+
+    img {
+      width: 100%;
+      aspect-ratio: 3 / 2;
+      object-fit: cover;
+      border-radius: 0.5rem;
+      display: block;
+    }
+
+    span {
+      display: inline-block;
+      margin-top: 0.75rem;
+      font-size: 0.875rem;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+    }
+  }
+}

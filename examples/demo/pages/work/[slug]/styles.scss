@@ -1,0 +1,45 @@
+.detail {
+  padding: 10rem 6vw 6rem;
+  max-width: 70rem;
+
+  &__header {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    margin-bottom: 2rem;
+  }
+
+  &__title {
+    font-size: clamp(2.5rem, 7vw, 6rem);
+    letter-spacing: -0.02em;
+    margin: 0;
+    color: var(--project-color, inherit);
+  }
+
+  &__year {
+    font-size: 1rem;
+    color: var(--muted);
+  }
+
+  &__cover {
+    width: 100%;
+    aspect-ratio: 3 / 2;
+    object-fit: cover;
+    border-radius: 0.75rem;
+    display: block;
+  }
+
+  &__description {
+    max-width: 40rem;
+    font-size: 1.25rem;
+    line-height: 1.6;
+    margin: 3rem 0;
+  }
+
+  &__back {
+    color: inherit;
+    font-size: 0.875rem;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+  }
+}

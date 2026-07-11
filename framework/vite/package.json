@@ -1,0 +1,15 @@
+{
+  "name": "@modulato/vite",
+  "version": "0.0.1",
+  "description": "Vite plugin for Modulato: file-based routing, SSR bridge, style auto-import.",
+  "type": "module",
+  "exports": {
+    ".": {
+      "types": "./index.d.ts",
+      "default": "./index.js"
+    }
+  },
+  "peerDependencies": {
+    "vite": "^6.0.0 || ^7.0.0"
+  }
+}

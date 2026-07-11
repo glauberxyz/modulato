@@ -1,0 +1,29 @@
+.about {
+  padding: 10rem 6vw 6rem;
+  max-width: 60rem;
+
+  &__title {
+    font-size: clamp(2.5rem, 6vw, 5rem);
+    letter-spacing: -0.02em;
+    margin: 0 0 3rem;
+  }
+
+  &__body {
+    max-width: 38rem;
+
+    p {
+      font-size: 1.125rem;
+      line-height: 1.7;
+      margin: 0 0 1.5rem;
+    }
+  }
+
+  &__image {
+    width: 100%;
+    aspect-ratio: 16 / 9;
+    object-fit: cover;
+    border-radius: 0.75rem;
+    display: block;
+    margin-top: 3rem;
+  }
+}
