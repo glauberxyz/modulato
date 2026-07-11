@@ -625,9 +625,18 @@ Each phase ends with something runnable in `examples/`.
 > static + one `__ssr` Node function + immutable asset caching). Verified locally via
 > `npm run preview` (examples/demo/preview.mjs serves the output Vercel-style): SSR
 > HTML complete, styled first paint, hydration + client routing + intros all work.
-> Project linked as `modulato-demo`; the actual `vercel deploy --prebuilt` awaits the
-> user's go-ahead.
-> **Next up: Phase 4 (CLI).**
+> **Deployed to production: https://modulato-demo.vercel.app** (verified live: SSR on
+> dynamic routes, 404s, immutable asset caching).
+>
+> **Phase 4 ✅ (CLI, 2026-07-11):** `modulato` bin ships from the core package —
+> `dev`/`build` (vite passthrough, build runs both passes), `new page/transition/
+> behavior/intro` (deterministic scaffolds, refuse-to-overwrite, unknown-route
+> errors that list known routes), `routes [--json]`, `check [--json]` (orphan
+> companion files, missing default exports, malformed/dangling transition pairs,
+> missing `<PageOutlet/>`, misplaced intro.ts — teaching messages, exit 1). Demo
+> scripts dogfood it. Not yet: `tokens` (Phase 5 — no token registry), `new model`
+> (Phase 8), `content` (Phase 6).
+> **Next up: Phase 5 (Tweak Mode: token registry → overlay → writeback → MCP).**
 
 - **Phase 0 — Skeleton.** Monorepo scaffolding (workspaces, turbo, tsconfig, vitest,
   changesets), claim `modulato` + `@modulato` on npm with 0.0.1 placeholders.

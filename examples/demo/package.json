@@ -4,8 +4,8 @@
   "version": "0.0.1",
   "type": "module",
   "scripts": {
-    "dev": "vite",
-    "build": "vite build && vite build --ssr",
+    "dev": "modulato dev",
+    "build": "modulato build",
     "preview": "node preview.mjs"
   },
   "dependencies": {

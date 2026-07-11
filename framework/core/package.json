@@ -3,6 +3,9 @@
   "version": "0.0.1",
   "description": "Animation-first React framework for marketing sites, landing pages and portfolios.",
   "type": "module",
+  "bin": {
+    "modulato": "./bin/modulato.mjs"
+  },
   "exports": {
     ".": "./src/index.ts",
     "./client": "./src/client.tsx"
