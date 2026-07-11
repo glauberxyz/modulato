@@ -1,0 +1,25 @@
+# Modulato
+
+> The animation-first React framework for marketing sites, landing pages and
+> portfolios. Page transitions with coexisting layouts, a persistent URL-aware
+> shell, and motion tokens tweakable live — designed LLM-first.
+
+Modulato projects are built for agents: scaffold with `npx modulato new`, edit
+files directly, always finish with `npx modulato check` (the contract
+validator). Every CLI command is non-interactive and takes `--json`. An MCP
+server (`npx modulato-mcp`) exposes routes, scaffolds, contracts and live
+motion tokens.
+
+Start a project:
+
+    npm create modulato@latest my-site
+
+## Docs
+
+- [Complete reference](https://modulato.org/llms-full.txt): the entire framework — conventions, hooks, motion tokens, transitions, content, server actions, CLI, MCP, deploy — in one file (MODULATO.md; also copied into every scaffolded project)
+
+## Links
+
+- [GitHub](https://github.com/glauberxyz/modulato): source, design document (PLAN.md), issues
+- [npm](https://www.npmjs.com/package/modulato): the `modulato` package (CLI included)
+- [Live demo](https://modulato-demo.vercel.app): three pages exercising every framework concept
