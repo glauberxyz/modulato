@@ -1,0 +1,18 @@
+{
+  "name": "@modulato/mcp",
+  "version": "0.0.1",
+  "description": "MCP server for Modulato projects: routes, contracts, scaffolds and live motion tokens for agents.",
+  "type": "module",
+  "bin": {
+    "modulato-mcp": "./src/server.mjs"
+  },
+  "exports": {
+    ".": "./src/server.mjs"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.12.0",
+    "@modulato/tweak": "*",
+    "modulato": "*",
+    "zod": "^3.24.0"
+  }
+}

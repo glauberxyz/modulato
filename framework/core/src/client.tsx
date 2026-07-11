@@ -127,6 +127,23 @@ export async function boot({
         await runIntro(def, container, window.__MODULATO__?.route ?? '')
       },
     }
+
+    // Remote control: the dev server relays POST /__modulato/replay (from
+    // @modulato/mcp or any tool) over the HMR websocket.
+    const hot = (import.meta as { hot?: { on: (e: string, cb: (d: never) => void) => void } })
+      .hot
+    hot?.on(
+      'modulato:remote',
+      (data: { target?: string; value?: number }) => {
+        const handle = window.__MODULATO__
+        if (!handle) return
+        if (data.target === 'intro') void handle.replayIntro()
+        else if (data.target === 'shell') void handle.replayShellIntro()
+        else if (data.target === 'motions') handle.replayMotions()
+        else if (data.target === 'speed' && typeof data.value === 'number')
+          handle.setSpeed(data.value)
+      },
+    )
   }
 
   // ————— First-load intros —————

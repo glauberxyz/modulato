@@ -651,7 +651,17 @@ Each phase ends with something runnable in `examples/`.
 > Still open from §6: responsive per-breakpoint token overrides + breakpoint
 > switcher (needs modulato.config.ts breakpoints — do with Phase 7's responsive
 > pass), transition replay from the overlay, and **@modulato/mcp** (next).
-> **Next up: @modulato/mcp**, then Phase 6 (content + server actions).
+> **@modulato/mcp ✅ (2026-07-11):** stdio MCP server (`modulato-mcp` bin; register
+> with `claude mcp add modulato -- npx modulato-mcp` from the site root). Tools:
+> `list_routes`, `check`, `scaffold_page/transition/behavior/intro` (same
+> implementation as the CLI via the `modulato/cli` export), `list_motion_tokens`
+> (static AST read — handles negative literals), `set_motion_tokens` (same
+> magicast writeback as the overlay; dev-server HMR makes the file edit a LIVE
+> edit), `replay` (intro/shell/motions) and `set_speed` — the last two relay
+> through `POST /__modulato/replay`, which the dev server broadcasts to the page
+> over its own websocket (verified end-to-end). Token utilities shared in
+> `@modulato/tweak/tokens`.
+> **Next up: Phase 6 (content + server actions).**
 
 - **Phase 0 — Skeleton.** Monorepo scaffolding (workspaces, turbo, tsconfig, vitest,
   changesets), claim `modulato` + `@modulato` on npm with 0.0.1 placeholders.

@@ -224,6 +224,28 @@ export default function modulato(options = {}) {
       server.watcher.on('add', onFileChange)
       server.watcher.on('unlink', onFileChange)
 
+      // Remote control (Tweak Mode / @modulato/mcp): POST /__modulato/replay
+      // broadcasts to the running page over Vite's websocket — the client
+      // listens and replays intros/motions or sets the playback speed.
+      server.middlewares.use('/__modulato/replay', (req, res, next) => {
+        if (req.method !== 'POST') return next()
+        let raw = ''
+        req.on('data', (chunk) => {
+          raw += chunk
+        })
+        req.on('end', () => {
+          try {
+            const data = JSON.parse(raw || '{}')
+            server.ws.send({ type: 'custom', event: 'modulato:remote', data })
+            res.setHeader('content-type', 'application/json')
+            res.end('{"ok":true}')
+          } catch {
+            res.statusCode = 400
+            res.end('{"ok":false}')
+          }
+        })
+      })
+
       // Tweak Mode writeback: POST /__modulato/tokens → AST-preserving edit
       // of a motion.ts. Dev only, and only when the site installed the tool.
       if (options.tweak !== false && resolvable('@modulato/tweak/middleware')) {
