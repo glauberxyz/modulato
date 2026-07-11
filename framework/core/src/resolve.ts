@@ -1,5 +1,5 @@
 import { matchRoute } from './matcher'
-import type { ConfigModule, Entry, RouteDef } from './types'
+import type { ConfigModule, Entry, LoadArgs, RouteDef } from './types'
 
 /**
  * Match a path and build a renderable Entry: load the page module, run the
@@ -11,6 +11,7 @@ export async function resolveEntry(
   pathname: string,
   key: string,
   props?: Record<string, unknown>,
+  content: Record<string, unknown> = {},
 ): Promise<Entry | null> {
   const match = matchRoute(routes, pathname)
   if (!match) return null
@@ -19,7 +20,13 @@ export async function resolveEntry(
     match.route.page(),
     match.route.config ? match.route.config() : Promise.resolve<ConfigModule>({}),
   ])
-  const loadArgs = { params: match.params, path: pathname }
+  // The runtime passes the snapshot as plain data; its typed shape
+  // (ModulatoContent) is the app's business via generated augmentation.
+  const loadArgs: LoadArgs = {
+    params: match.params,
+    path: pathname,
+    content: content as unknown as LoadArgs['content'],
+  }
   const resolvedProps = (props ??
     (cfg.load ? await cfg.load(loadArgs) : {}) ??
     {}) as Record<string, unknown>

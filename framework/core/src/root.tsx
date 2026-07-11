@@ -28,6 +28,7 @@ interface ModulatoRootProps {
   initial: RouterState
   transitions?: TransitionsManifest
   enhancers?: EnhancerDef[]
+  content?: Record<string, unknown>
 }
 
 const NO_ENHANCERS: EnhancerDef[] = []
@@ -51,6 +52,7 @@ export function ModulatoRoot({
   initial,
   transitions,
   enhancers,
+  content,
 }: ModulatoRootProps) {
   const [state, setState] = useState<RouterState>(initial)
   const [phase, setPhase] = useState<NavPhase>('idle')
@@ -78,7 +80,13 @@ export function ModulatoRoot({
 
       let entry = null
       try {
-        entry = await resolveEntry(routes, pathname, `${pathname}#${++seq.current}`)
+        entry = await resolveEntry(
+          routes,
+          pathname,
+          `${pathname}#${++seq.current}`,
+          undefined,
+          content,
+        )
       } catch (error) {
         console.error('[modulato] navigation failed', error)
       }
@@ -100,7 +108,7 @@ export function ModulatoRoot({
       setPhase('transition')
       setState((s) => ({ current: s.current, next: entry }))
     },
-    [routes],
+    [routes, content],
   )
 
   // The transition lifecycle, in well-defined moments:

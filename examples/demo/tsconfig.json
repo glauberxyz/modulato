@@ -1,9 +1,12 @@
 {
   "extends": "../../tsconfig.base.json",
   "compilerOptions": {
-    "types": ["vite/client"]
+    "types": [
+      "vite/client"
+    ]
   },
   "include": [
+    ".modulato/content.d.ts",
     "app.tsx",
     "intro.ts",
     "shell",
@@ -11,6 +14,7 @@
     "content",
     "behaviors",
     "transitions",
-    "vite.config.ts"
+    "vite.config.ts",
+    "modulato.config.ts"
   ]
 }

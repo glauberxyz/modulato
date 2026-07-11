@@ -1,5 +1,5 @@
-import { Shared } from 'modulato'
-import type { Project } from '../../../content/projects'
+import { Img, Shared } from 'modulato'
+import type { Project } from '../../../content/types'
 
 export default function WorkDetail({ project }: { project: Project | null }) {
   if (!project) {
@@ -17,7 +17,7 @@ export default function WorkDetail({ project }: { project: Project | null }) {
         <span className="detail__year">{project.year}</span>
       </header>
       <Shared id={`cover:${project.slug}`}>
-        <img className="detail__cover" src={project.image} alt={project.title} />
+        <Img className="detail__cover" src={project.image} alt={project.title} eager />
       </Shared>
       <p className="detail__description">{project.description}</p>
       <a className="detail__back" href="/work">

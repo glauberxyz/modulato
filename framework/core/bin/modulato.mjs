@@ -27,6 +27,8 @@ Usage
   modulato new behavior <name>          scaffold behaviors/<name>.ts (enhancer)
   modulato new intro [route]            page intro; omit <route> for the shell intro
 
+  modulato content [--json]             pull the content source → typed snapshot
+                                          (.modulato/content.json + content.d.ts)
   modulato routes [--json]              list routes derived from pages/
   modulato tokens [filter] [--json]     motion tokens from every motion.ts
   modulato check [--json]               validate contracts (exit 1 on errors)
@@ -63,7 +65,7 @@ function isModulatoProject(dir) {
 }
 
 if (
-  ['dev', 'build', 'new', 'routes', 'tokens', 'check'].includes(command) &&
+  ['dev', 'build', 'new', 'routes', 'tokens', 'check', 'content'].includes(command) &&
   !isModulatoProject(cwd)
 ) {
   const message = `${cwd} doesn't look like a Modulato site (no pages/ directory, no "modulato" in package.json) — run from the site root.`
@@ -137,6 +139,24 @@ try {
         const message = usage[kind]
           ? `missing arguments — usage: ${usage[kind]}`
           : `unknown scaffold "${kind ?? ''}" — one of: page, transition, behavior, intro`
+        if (json) out({ ok: false, error: message })
+        else console.error(`✖ ${message}`)
+        process.exit(1)
+      }
+      break
+    }
+
+    case 'content': {
+      const { pullContent } = await import('./lib/content.mjs')
+      try {
+        const result = await pullContent(cwd)
+        if (json) out({ ok: true, ...result })
+        else
+          console.log(
+            `✓ pulled "${result.adapter}" → ${result.files.join(', ')} (keys: ${result.keys.join(', ') || 'none'})`,
+          )
+      } catch (error) {
+        const message = String(error?.message ?? error)
         if (json) out({ ok: false, error: message })
         else console.error(`✖ ${message}`)
         process.exit(1)

@@ -1,8 +1,7 @@
-import { projects } from '../../../content/projects'
 import type { LoadArgs } from 'modulato'
 
-export function load({ params }: LoadArgs) {
-  return { project: projects.find((p) => p.slug === params.slug) ?? null }
+export function load({ params, content }: LoadArgs) {
+  return { project: content.projects.find((p) => p.slug === params.slug) ?? null }
 }
 
 export function meta({ props }: LoadArgs & { props: ReturnType<typeof load> }) {

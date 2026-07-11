@@ -661,7 +661,24 @@ Each phase ends with something runnable in `examples/`.
 > through `POST /__modulato/replay`, which the dev server broadcasts to the page
 > over its own websocket (verified end-to-end). Token utilities shared in
 > `@modulato/tweak/tokens`.
-> **Next up: Phase 6 (content + server actions).**
+> **Phase 6a ✅ (content layer, 2026-07-11):** `modulato.config.ts` (imports from
+> **`modulato/config`** — a Node-runnable subpath, since the CLI loads the config
+> via vite's `loadConfigFromFile` outside vite). ContentAdapter interface
+> (`{ name, pull({root}) → snapshot }`); **@modulato/content-local** (content/*.json
+> → snapshot keys). `modulato content` writes `.modulato/content.json` (commit it —
+> reproducible builds) + `.modulato/content.d.ts`, which augments **ModulatoContent
+> via `declare module 'modulato/config'`** (augmentation must target the declaring
+> module, and the tsconfig needs the explicit `.modulato/content.d.ts` include —
+> TS globs skip dot-dirs). Loaders get `content` (typed) in LoadArgs, same data
+> server- and client-side via `virtual:modulato/content` (bundled into both prod
+> outputs; snapshot changes hot-reload in dev). `<Img>`: lazy + async-decoded +
+> aspect-ratio (no CLS) + fade-in on load, plain <img> without JS. Demo migrated:
+> content/projects.json drives all three pages; `Project` type DERIVES from the
+> generated content types. Demo also has a CLAUDE.md agent guide now.
+> Still open in Phase 6: **server actions** (`action()` + colocated server.ts +
+> progressive forms) — needs a contact-ish demo page. @modulato/content-sanity
+> deferred until a real Sanity project exists to test against.
+> **Next up: Phase 6b (server actions), then Phase 7 (complete the demo).**
 
 - **Phase 0 — Skeleton.** Monorepo scaffolding (workspaces, turbo, tsconfig, vitest,
   changesets), claim `modulato` + `@modulato` on npm with 0.0.1 placeholders.

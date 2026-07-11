@@ -9,6 +9,7 @@
     "preview": "node preview.mjs"
   },
   "dependencies": {
+    "@modulato/content-local": "*",
     "@modulato/gsap": "*",
     "@modulato/server": "*",
     "@modulato/tweak": "*",

@@ -1,5 +1,5 @@
-import { Shared } from 'modulato'
-import type { Project } from '../../content/projects'
+import { Img, Shared } from 'modulato'
+import type { Project } from '../../content/types'
 
 export default function Home({ featured }: { featured: Project[] }) {
   return (
@@ -19,7 +19,7 @@ export default function Home({ featured }: { featured: Project[] }) {
         {featured.map((project) => (
           <a key={project.slug} className="home__card" href={`/work/${project.slug}`}>
             <Shared id={`cover:${project.slug}`}>
-              <img src={project.image} alt={project.title} loading="lazy" />
+              <Img src={project.image} alt={project.title} ratio="3/2" />
             </Shared>
             <span>{project.title}</span>
           </a>

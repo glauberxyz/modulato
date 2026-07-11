@@ -18,10 +18,13 @@ const VIRTUAL = {
   transitions: 'virtual:modulato/transitions',
   intros: 'virtual:modulato/intros',
   behaviors: 'virtual:modulato/behaviors',
+  content: 'virtual:modulato/content',
   app: 'virtual:modulato/app',
   clientEntry: 'virtual:modulato/client-entry',
   serverEntry: 'virtual:modulato/server-entry',
 }
+
+const CONTENT_SNAPSHOT = '.modulato/content.json'
 
 /**
  * The Modulato Vite plugin.
@@ -117,6 +120,11 @@ export default function modulato(options = {}) {
       if (id === VIRTUAL.transitions) return generateTransitions(transitionsDir)
       if (id === VIRTUAL.intros) return generateIntros(pagesDir, root)
       if (id === VIRTUAL.behaviors) return generateBehaviors(behaviorsDir)
+      if (id === VIRTUAL.content) {
+        const snapshot = path.join(root, CONTENT_SNAPSHOT)
+        const json = fs.existsSync(snapshot) ? fs.readFileSync(snapshot, 'utf8') : '{}'
+        return `export default ${json}\n`
+      }
       if (id === VIRTUAL.app)
         return [
           `import { createElement } from 'react'`,
@@ -130,8 +138,9 @@ export default function modulato(options = {}) {
           `import * as transitions from '${VIRTUAL.transitions}'`,
           `import * as intros from '${VIRTUAL.intros}'`,
           `import * as behaviors from '${VIRTUAL.behaviors}'`,
+          `import content from '${VIRTUAL.content}'`,
           `import App from '${VIRTUAL.app}'`,
-          `boot({ routes, App, transitions, intros, behaviors })`,
+          `boot({ routes, App, transitions, intros, behaviors, content })`,
         ]
         // Tweak Mode overlay — dev only, and only when the site installed it.
         if (isServe && options.tweak !== false && resolvable('@modulato/tweak/overlay'))
@@ -151,8 +160,9 @@ export default function modulato(options = {}) {
         return [
           `import { render } from '@modulato/server'`,
           `import { routes } from '${VIRTUAL.manifest}'`,
+          `import content from '${VIRTUAL.content}'`,
           `import App from '${VIRTUAL.app}'`,
-          `export const handle = (url) => render({ url, routes, App, ${flags}${assetArgs} })`,
+          `export const handle = (url) => render({ url, routes, App, content, ${flags}${assetArgs} })`,
         ].join('\n')
       }
       return undefined
@@ -213,7 +223,9 @@ export default function modulato(options = {}) {
               ? [VIRTUAL.behaviors]
               : file === path.resolve(root, 'intro.ts')
                 ? [VIRTUAL.intros, VIRTUAL.serverEntry]
-                : []
+                : file === path.resolve(root, CONTENT_SNAPSHOT)
+                  ? [VIRTUAL.content]
+                  : []
         if (!virtualIds.length) return
         for (const id of virtualIds) {
           const mod = server.moduleGraph.getModuleById(id)
@@ -223,6 +235,12 @@ export default function modulato(options = {}) {
       }
       server.watcher.on('add', onFileChange)
       server.watcher.on('unlink', onFileChange)
+
+      // Re-running `modulato content` rewrites the snapshot in place.
+      server.watcher.add(path.resolve(root, CONTENT_SNAPSHOT))
+      server.watcher.on('change', (file) => {
+        if (file === path.resolve(root, CONTENT_SNAPSHOT)) onFileChange(file)
+      })
 
       // Remote control (Tweak Mode / @modulato/mcp): POST /__modulato/replay
       // broadcasts to the running page over Vite's websocket — the client

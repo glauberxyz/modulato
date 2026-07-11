@@ -9,7 +9,11 @@
   "exports": {
     ".": "./src/index.ts",
     "./client": "./src/client.tsx",
-    "./cli": "./bin/lib/index.mjs"
+    "./cli": "./bin/lib/index.mjs",
+    "./config": {
+      "types": "./src/config.ts",
+      "default": "./config.mjs"
+    }
   },
   "peerDependencies": {
     "react": "^18.0.0 || ^19.0.0",

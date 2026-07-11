@@ -1,8 +1,15 @@
 import type { ComponentType } from 'react'
+import type { ModulatoContent } from './config'
 
 export interface LoadArgs {
   params: Record<string, string>
   path: string
+  /**
+   * The content snapshot (run `modulato content` to pull + typegen).
+   * Same data on server and client — loaders behave identically on first
+   * paint and on client-side navigation.
+   */
+  content: ModulatoContent
 }
 
 export interface MetaResult {

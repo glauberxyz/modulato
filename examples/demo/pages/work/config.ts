@@ -1,7 +1,7 @@
-import { projects } from '../../content/projects'
+import type { LoadArgs } from 'modulato'
 
-export function load() {
-  return { projects }
+export function load({ content }: LoadArgs) {
+  return { projects: content.projects }
 }
 
 export function meta() {

@@ -43,12 +43,14 @@ export async function boot({
   transitions,
   intros,
   behaviors,
+  content = {},
 }: {
   routes: RouteDef[]
   App: ComponentType
   transitions?: TransitionsManifest
   intros?: IntrosManifest
   behaviors?: BehaviorsManifest
+  content?: Record<string, unknown>
 }): Promise<void> {
   const container = document.getElementById('__modulato')
   if (!container) {
@@ -61,7 +63,13 @@ export async function boot({
     : {}
 
   const pathname = window.location.pathname
-  const entry = await resolveEntry(routes, pathname, `${pathname}#0`, payload.props ?? {})
+  const entry = await resolveEntry(
+    routes,
+    pathname,
+    `${pathname}#0`,
+    payload.props ?? {},
+    content,
+  )
   if (!entry) {
     console.error(`[modulato] no route matches "${pathname}"`)
     return
@@ -84,6 +92,7 @@ export async function boot({
       initial={{ current: entry, next: null }}
       transitions={transitions}
       enhancers={enhancers}
+      content={content}
     />,
   )
 

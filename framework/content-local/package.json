@@ -1,0 +1,15 @@
+{
+  "name": "@modulato/content-local",
+  "version": "0.0.1",
+  "description": "Local JSON content adapter for Modulato: content/*.json becomes the typed content snapshot.",
+  "type": "module",
+  "exports": {
+    ".": {
+      "types": "./src/index.d.ts",
+      "default": "./src/index.mjs"
+    }
+  },
+  "peerDependencies": {
+    "modulato": "*"
+  }
+}

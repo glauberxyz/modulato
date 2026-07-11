@@ -70,6 +70,7 @@ export async function render({
   styles = [],
   intro = true,
   shellIntro = false,
+  content = {},
 }: {
   url: string
   routes: RouteDef[]
@@ -81,9 +82,17 @@ export async function render({
   intro?: boolean
   /** A root intro.ts exists — hide the whole app, not just the outlet. */
   shellIntro?: boolean
+  /** Content snapshot passed to page loaders. */
+  content?: Record<string, unknown>
 }): Promise<RenderResult> {
   const parsed = new URL(url, 'http://modulato.internal')
-  const entry = await resolveEntry(routes, parsed.pathname, `${parsed.pathname}#0`)
+  const entry = await resolveEntry(
+    routes,
+    parsed.pathname,
+    `${parsed.pathname}#0`,
+    undefined,
+    content,
+  )
 
   if (!entry) {
     return {
