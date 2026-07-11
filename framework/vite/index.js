@@ -19,6 +19,7 @@ const VIRTUAL = {
   intros: 'virtual:modulato/intros',
   behaviors: 'virtual:modulato/behaviors',
   content: 'virtual:modulato/content',
+  actions: 'virtual:modulato/actions',
   app: 'virtual:modulato/app',
   clientEntry: 'virtual:modulato/client-entry',
   serverEntry: 'virtual:modulato/server-entry',
@@ -125,6 +126,7 @@ export default function modulato(options = {}) {
         const json = fs.existsSync(snapshot) ? fs.readFileSync(snapshot, 'utf8') : '{}'
         return `export default ${json}\n`
       }
+      if (id === VIRTUAL.actions) return generateActions(pagesDir)
       if (id === VIRTUAL.app)
         return [
           `import { createElement } from 'react'`,
@@ -158,11 +160,13 @@ export default function modulato(options = {}) {
           ? `, clientSrc: ${JSON.stringify(assets.entry)}, styles: ${JSON.stringify(assets.styles)}`
           : ''
         return [
-          `import { render } from '@modulato/server'`,
+          `import { render, nodeAction } from '@modulato/server'`,
           `import { routes } from '${VIRTUAL.manifest}'`,
           `import content from '${VIRTUAL.content}'`,
+          `import * as actions from '${VIRTUAL.actions}'`,
           `import App from '${VIRTUAL.app}'`,
           `export const handle = (url) => render({ url, routes, App, content, ${flags}${assetArgs} })`,
+          `export const handleActionNode = (req, res) => nodeAction({ actions, req, res })`,
         ].join('\n')
       }
       return undefined
@@ -178,8 +182,38 @@ export default function modulato(options = {}) {
       this.info(`emitted .vercel/output (Build Output API v3)`)
     },
 
-    transform(code, id) {
+    transform(code, id, options) {
       const file = id.split('?')[0]
+
+      // pages/**/server.ts — server actions. On the CLIENT the module is
+      // replaced with URL-only stubs (handler code and secrets never ship);
+      // on the SERVER the real exports are decorated with their URLs so
+      // SSR-rendered forms carry a working action attribute (no-JS support).
+      if (file.startsWith(pagesDir) && file.endsWith(`${path.sep}server.ts`)) {
+        const route = path
+          .relative(pagesDir, path.dirname(file))
+          .split(path.sep)
+          .join('/')
+        const exports = scanActionExports(code)
+        if (options?.ssr) {
+          const decorations = exports
+            .map(
+              (name) =>
+                `;Object.assign(${name}, { url: ${JSON.stringify(actionUrl(route, name))} })`,
+            )
+            .join('\n')
+          return { code: `${code}\n${decorations}`, map: null }
+        }
+        const stubs = exports
+          .map(
+            (name) =>
+              `export const ${name} = { $action: true, url: ${JSON.stringify(actionUrl(route, name))}, method: 'post' }`,
+          )
+          .join('\n')
+        // Empty map (not null): break the sourcemap chain so the original
+        // server-only source can't leak into the client via sourcesContent.
+        return { code: stubs || 'export {}', map: { mappings: '' } }
+      }
 
       // Dev: every motion.ts self-registers into the token registry (Tweak
       // Mode) and self-accepts HMR — re-registration merges into the live
@@ -216,7 +250,7 @@ export default function modulato(options = {}) {
       // presence decides how much of the app the intro hide-style covers).
       const onFileChange = (file) => {
         const virtualIds = file.startsWith(pagesDir)
-          ? [VIRTUAL.manifest, VIRTUAL.intros]
+          ? [VIRTUAL.manifest, VIRTUAL.intros, VIRTUAL.actions]
           : file.startsWith(transitionsDir)
             ? [VIRTUAL.transitions]
             : file.startsWith(behaviorsDir)
@@ -280,6 +314,11 @@ export default function modulato(options = {}) {
       return () => {
         server.middlewares.use(async (req, res, next) => {
           try {
+            // Server actions: POST /__modulato/action/<route>__<name>.
+            if (req.method === 'POST' && req.url?.startsWith('/__modulato/action/')) {
+              const entry = await server.ssrLoadModule(VIRTUAL.serverEntry)
+              return await entry.handleActionNode(req, res)
+            }
             if (req.method !== 'GET') return next()
             if (!(req.headers.accept ?? '').includes('text/html')) return next()
             const url = req.originalUrl ?? req.url ?? '/'
@@ -375,6 +414,48 @@ function decodeRouteId(encoded) {
   return encoded.replaceAll('.', '/')
 }
 
+function encodeRouteId(id) {
+  return id.replaceAll('/', '.')
+}
+
+/**
+ * Action exports from a server.ts source. By convention actions are declared
+ * as `export const <name> = action(...)` — same regex here and in the
+ * manifest, so URLs always agree.
+ */
+function scanActionExports(code) {
+  return [...code.matchAll(/^export\s+const\s+([A-Za-z_$][\w$]*)\s*=/gm)].map((m) => m[1])
+}
+
+/** Route ids can't contain `__` (folder names are [a-z0-9-] + brackets). */
+function actionUrl(route, name) {
+  return `/__modulato/action/${encodeRouteId(route)}__${name}`
+}
+
+/** Scan pagesDir for server.ts files and emit the (server-only) actions manifest. */
+function generateActions(pagesDir) {
+  const lines = []
+  const walk = (dir, prefix) => {
+    if (!fs.existsSync(dir)) return
+    for (const dirent of fs.readdirSync(dir, { withFileTypes: true })) {
+      if (!dirent.isDirectory()) continue
+      const id = prefix ? `${prefix}/${dirent.name}` : dirent.name
+      const abs = path.join(dir, dirent.name)
+      const serverFile = path.join(abs, 'server.ts')
+      if (fs.existsSync(serverFile)) {
+        for (const name of scanActionExports(fs.readFileSync(serverFile, 'utf8'))) {
+          lines.push(
+            `  { id: ${JSON.stringify(`${encodeRouteId(id)}__${name}`)}, exportName: ${JSON.stringify(name)}, load: () => import(${JSON.stringify(`/pages/${id}/server.ts`)}) },`,
+          )
+        }
+      }
+      walk(abs, id)
+    }
+  }
+  walk(pagesDir, '')
+  return `export const entries = [\n${lines.join('\n')}\n]\n`
+}
+
 /**
  * Walk the dev-server module graph from the given entry files and inline
  * every reachable stylesheet as a <style> block (SvelteKit-style dev CSS
@@ -465,10 +546,13 @@ function clientAssets(root) {
   return { entry, styles: [...styles] }
 }
 
-const VERCEL_LAUNCHER = `import { handle } from './server.js'
+const VERCEL_LAUNCHER = `import { handle, handleActionNode } from './server.js'
 
 export default async function (req, res) {
   try {
+    if (req.method === 'POST' && (req.url ?? '').startsWith('/__modulato/action/')) {
+      return await handleActionNode(req, res)
+    }
     const { html, status } = await handle(req.url ?? '/')
     res.statusCode = status
     res.setHeader('content-type', 'text/html; charset=utf-8')

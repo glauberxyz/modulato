@@ -51,6 +51,72 @@
     }
   }
 
+  &__form {
+    margin: 4rem 0 1rem;
+    padding: 2rem;
+    border-radius: 0.75rem;
+    background: rgba(0, 0, 0, 0.045);
+    transition: background 0.4s;
+
+    h2 {
+      margin: 0 0 1rem;
+      font-size: 1.375rem;
+      letter-spacing: -0.01em;
+    }
+
+    &[data-state='ok'] {
+      background: rgba(129, 147, 110, 0.16);
+    }
+
+    &-row {
+      display: flex;
+      gap: 0.75rem;
+
+      input {
+        flex: 1;
+        font: inherit;
+        padding: 0.75rem 1rem;
+        border: 1px solid rgba(0, 0, 0, 0.15);
+        border-radius: 0.5rem;
+        background: #fff;
+
+        &:focus {
+          outline: 2px solid var(--accent-about);
+          outline-offset: 1px;
+        }
+      }
+
+      button {
+        font: inherit;
+        padding: 0.75rem 1.5rem;
+        border: 0;
+        border-radius: 0.5rem;
+        background: var(--fg);
+        color: var(--bg);
+        cursor: pointer;
+
+        &:disabled {
+          opacity: 0.5;
+          cursor: wait;
+        }
+      }
+
+      @media (max-width: 767px) {
+        flex-direction: column;
+      }
+    }
+
+    &-done {
+      margin: 0;
+      color: var(--accent-about);
+    }
+
+    &-error {
+      margin: 0.75rem 0 0;
+      color: #b3402a;
+    }
+  }
+
   &__gallery {
     display: grid;
     grid-template-columns: 1fr 1fr;

@@ -687,7 +687,20 @@ Each phase ends with something runnable in `examples/`.
 > Still open in Phase 6: **server actions** (`action()` + colocated server.ts +
 > progressive forms) — needs a contact-ish demo page. @modulato/content-sanity
 > deferred until a real Sanity project exists to test against.
-> **Next up: Phase 6b (server actions), then Phase 7 (complete the demo).**
+> **Phase 6b ✅ (server actions, 2026-07-11):** `action()` in colocated
+> `pages/*/server.ts`. The build enforces the server boundary: client imports of
+> server.ts are REPLACED with URL stubs (with the sourcemap chain broken so
+> sourcesContent can't leak the original — caught in verification), while SSR keeps
+> the real handlers decorated with their URLs, so SSR-rendered forms carry working
+> action attributes. One Node runner (`nodeAction` in @modulato/server, web
+> Request/FormData parsing) serves the dev middleware and the Vercel function.
+> Content negotiation: fetch clients get `{ ok, data|error }` JSON; no-JS posts get
+> 303 PRG redirects (referer or handler `{ redirect }`). `useFormAction(ref)` gives
+> progressive forms: real action attrs + fetch interception + idle→pending→ok|error
+> state, `data` typed from the handler's return type. Demo: subscribe form on
+> /about, verified in dev, prod (Vercel launcher) and no-JS paths.
+> **Next up: Phase 7 (complete the demo: home__about slide transition, responsive
+> pass, breakpoints config + responsive tokens pulled in from §6).**
 
 - **Phase 0 — Skeleton.** Monorepo scaffolding (workspaces, turbo, tsconfig, vitest,
   changesets), claim `modulato` + `@modulato` on npm with 0.0.1 placeholders.

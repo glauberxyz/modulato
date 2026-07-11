@@ -2,7 +2,7 @@ import fs from 'node:fs'
 import path from 'node:path'
 import { encodeRouteId, scanRoutes, scanTransitions } from './scan.mjs'
 
-const COMPANIONS = ['styles.scss', 'config.ts', 'intro.ts']
+const COMPANIONS = ['styles.scss', 'config.ts', 'intro.ts', 'motion.ts', 'server.ts']
 
 /**
  * Validate the project's contracts. Every message says how to fix the

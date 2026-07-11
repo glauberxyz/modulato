@@ -2,6 +2,9 @@ import { renderToString } from 'react-dom/server'
 import type { ComponentType } from 'react'
 import { ModulatoRoot, resolveEntry, type RouteDef } from 'modulato'
 
+export { nodeAction, ACTION_PREFIX } from './action'
+export type { ActionEntry, ActionsManifest } from './action'
+
 export interface RenderResult {
   html: string
   status: number

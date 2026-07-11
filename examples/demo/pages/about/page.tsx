@@ -1,7 +1,8 @@
 import { useEffect, useRef } from 'react'
-import { useScroll } from 'modulato'
+import { useFormAction, useScroll } from 'modulato'
 import { useMotion } from '@modulato/gsap'
 import tokens from './motion'
+import { subscribe } from './server'
 
 export default function About() {
   return (
@@ -39,6 +40,8 @@ export default function About() {
           on unmount — the strict lifecycle Modulato inherits from Lisergia.
         </p>
       </div>
+      <SubscribeForm />
+
       <div className="about__gallery">
         <img
           data-reveal
@@ -55,6 +58,38 @@ export default function About() {
         />
       </div>
     </main>
+  )
+}
+
+/**
+ * A server action, progressively enhanced: the form renders a real action
+ * URL (works without JS via redirect), and with JS `useFormAction` posts it
+ * over fetch and drives idle → pending → ok|error for animated feedback.
+ * The handler lives in ./server.ts and never ships to the browser.
+ */
+function SubscribeForm() {
+  const { attrs, state, data, error } = useFormAction(subscribe)
+  return (
+    <form className="about__form" data-state={state} {...attrs}>
+      <h2>Get the launch note</h2>
+      {state === 'ok' ? (
+        <p className="about__form-done">{data?.message}</p>
+      ) : (
+        <div className="about__form-row">
+          <input
+            name="email"
+            type="email"
+            required
+            placeholder="you@studio.com"
+            aria-label="Email"
+          />
+          <button type="submit" disabled={state === 'pending'}>
+            {state === 'pending' ? 'Subscribing…' : 'Subscribe'}
+          </button>
+        </div>
+      )}
+      {state === 'error' && <p className="about__form-error">{error}</p>}
+    </form>
   )
 }
 
