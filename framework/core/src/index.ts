@@ -15,6 +15,16 @@ export {
 } from './transitions'
 export { flipShared, collectSharedPairs } from './flip'
 export { intro, defaultIntro, resolveIntro } from './intro'
+export {
+  motion,
+  motionRegistry,
+  setMotionSpeed,
+  getMotionSpeed,
+  syncWaapiSpeed,
+  replayMotions,
+  __registerMotion,
+} from './motion'
+export type { TokenLeaf, TokenValue } from './motion'
 export type { IntroDef, IntroRunContext, IntroEntry, IntrosManifest } from './intro'
 export type { PageApi, PagePhase, ScrollEvent } from './page'
 export type { TickerCallback } from './ticker'

@@ -11,6 +11,7 @@ import { RouterContext, type RouterApi } from './context'
 import { checkDuplicateSharedIds, DEV } from './dev'
 import type { EnhancerDef } from './enhance'
 import { collectSharedPairs } from './flip'
+import { syncWaapiSpeed } from './motion'
 import { EnhancersContext } from './page'
 import { resolveEntry } from './resolve'
 import {
@@ -153,16 +154,16 @@ export function ModulatoRoot({
         // REVEAL + RUN in one task: transitions start their animations
         // synchronously, so hidden → animation-start happens between paints.
         toEl.style.visibility = 'visible'
-        if (def) {
-          await def.run({
-            from: { element: fromEl, route: toInfo(from) },
-            to: { element: toEl, route: toInfo(next) },
-            trigger: trigger.current,
-            shared,
-          })
-        } else {
-          await crossfade({ from: { element: fromEl }, to: { element: toEl } })
-        }
+        const running = def
+          ? def.run({
+              from: { element: fromEl, route: toInfo(from) },
+              to: { element: toEl, route: toInfo(next) },
+              trigger: trigger.current,
+              shared,
+            })
+          : crossfade({ from: { element: fromEl }, to: { element: toEl } })
+        if (DEV) syncWaapiSpeed()
+        await running
       } catch (error) {
         console.error('[modulato] transition failed', error)
       }

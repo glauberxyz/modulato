@@ -1,6 +1,7 @@
 import { useEffect, useRef } from 'react'
 import { useScroll } from 'modulato'
 import { useMotion } from '@modulato/gsap'
+import tokens from './motion'
 
 export default function About() {
   return (
@@ -70,7 +71,9 @@ function ParallaxImage({ src, alt }: { src: string; alt: string }) {
     const rect = frame.current.getBoundingClientRect()
     const progress =
       (rect.top + rect.height / 2 - window.innerHeight / 2) / window.innerHeight
-    img.current.style.transform = `translate3d(0, ${(-11.5 + progress * 11).toFixed(3)}%, 0)`
+    // Read strength per frame — token edits in the overlay apply live.
+    const { strength } = tokens.parallax
+    img.current.style.transform = `translate3d(0, ${(-11.5 + progress * strength).toFixed(3)}%, 0)`
   }
 
   useScroll(apply)
@@ -95,7 +98,7 @@ function Marquee({ text }: { text: string }) {
   useMotion(({ q, gsap }) => {
     gsap.to(q('.about__marquee-track'), {
       xPercent: -50,
-      duration: 16,
+      duration: tokens.marquee.duration,
       ease: 'none',
       repeat: -1,
     })

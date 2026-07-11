@@ -1,11 +1,37 @@
 import { hydrateRoot } from 'react-dom/client'
 import type { ComponentType } from 'react'
+import { DEV } from './dev'
 import type { BehaviorsManifest, EnhancerDef } from './enhance'
-import { defaultIntro, resolveIntro, type IntrosManifest } from './intro'
+import { defaultIntro, resolveIntro, type IntroRunContext, type IntrosManifest } from './intro'
+import {
+  getMotionSpeed,
+  motionRegistry,
+  replayMotions,
+  setMotionSpeed,
+  syncWaapiSpeed,
+} from './motion'
 import { resolveEntry } from './resolve'
 import { ModulatoRoot } from './root'
 import type { TransitionsManifest } from './transitions'
 import type { RouteDef } from './types'
+
+/** Dev-mode introspection handle — see §8 of the plan. */
+export interface ModulatoDevHandle {
+  /** Route id of the (top-most) mounted page. */
+  readonly route: string | null
+  tokens: typeof motionRegistry
+  speed: number
+  setSpeed: (value: number) => void
+  replayMotions: () => void
+  replayIntro: () => Promise<void>
+  replayShellIntro: () => Promise<void>
+}
+
+declare global {
+  interface Window {
+    __MODULATO__?: ModulatoDevHandle
+  }
+}
 
 /**
  * Client bootstrap: read server-loaded props, resolve the initial entry with
@@ -61,6 +87,48 @@ export async function boot({
     />,
   )
 
+  if (DEV) {
+    const currentPage = () =>
+      [
+        ...document.querySelectorAll<HTMLElement>('[data-modulato-outlet] [data-page]'),
+      ].pop() ?? null
+    const runIntro = async (def: { run: (ctx: IntroRunContext) => Promise<void> | void } | null, element: HTMLElement, routeId: string) => {
+      const ctx = {
+        element,
+        route: { id: routeId, path: window.location.pathname, params: {} },
+      }
+      const running = def ? def.run(ctx) : defaultIntro(ctx)
+      syncWaapiSpeed()
+      await running
+    }
+    window.__MODULATO__ = {
+      get route() {
+        return currentPage()?.dataset.page ?? null
+      },
+      tokens: motionRegistry,
+      get speed() {
+        return getMotionSpeed()
+      },
+      set speed(value: number) {
+        setMotionSpeed(value)
+      },
+      setSpeed: setMotionSpeed,
+      replayMotions,
+      async replayIntro() {
+        const el = currentPage()
+        if (!el) return
+        const routeId = el.dataset.page ?? ''
+        const def = intros ? await resolveIntro(intros, routeId) : null
+        await runIntro(def, el, routeId)
+      },
+      async replayShellIntro() {
+        if (!intros?.shell) return
+        const def = (await intros.shell()).default
+        await runIntro(def, container, window.__MODULATO__?.route ?? '')
+      },
+    }
+  }
+
   // ————— First-load intros —————
   // The server injected a <style> hiding the outlet (or the whole app when a
   // shell intro exists). Same discipline as transitions: the reveal — removing
@@ -88,6 +156,7 @@ export async function boot({
       const ctx = { element: pageEl, route }
       runs.push(pageDef ? pageDef.run(ctx) : defaultIntro(ctx))
     }
+    if (DEV) syncWaapiSpeed()
     await Promise.all(runs)
   } catch (error) {
     console.error('[modulato] intro failed', error)

@@ -15,6 +15,11 @@ export interface ModulatoPluginOptions {
    * `vercel deploy --prebuilt`.
    */
   vercel?: boolean
+  /**
+   * Tweak Mode (dev-only overlay + token writeback), active when
+   * @modulato/tweak is installed. Set false to disable.
+   */
+  tweak?: boolean
 }
 
 export default function modulato(options?: ModulatoPluginOptions): Plugin

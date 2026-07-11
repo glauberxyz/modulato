@@ -1,0 +1,21 @@
+{
+  "name": "@modulato/tweak",
+  "version": "0.0.1",
+  "description": "Tweak Mode for Modulato: dev overlay for motion tokens with save-back into source files.",
+  "type": "module",
+  "exports": {
+    "./overlay": "./src/overlay.tsx",
+    "./middleware": "./src/middleware.mjs"
+  },
+  "dependencies": {
+    "magicast": "^0.3.5"
+  },
+  "peerDependencies": {
+    "modulato": "*",
+    "react": "^18.0.0 || ^19.0.0",
+    "react-dom": "^18.0.0 || ^19.0.0"
+  },
+  "devDependencies": {
+    "@types/react": "^19.0.0"
+  }
+}

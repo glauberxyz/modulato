@@ -40,6 +40,7 @@ export default function modulato(options = {}) {
   /** @type {string} */ let transitionsDir
   /** @type {string} */ let behaviorsDir
   let isSsrBuild = false
+  let isServe = false
 
   return {
     name: 'modulato',
@@ -60,7 +61,7 @@ export default function modulato(options = {}) {
             // "new dependencies discovered" reload.
             ...['gsap', 'gsap/SplitText', 'lenis'].filter(resolvable),
           ],
-          exclude: ['modulato', '@modulato/server', '@modulato/gsap'],
+          exclude: ['modulato', '@modulato/server', '@modulato/gsap', '@modulato/tweak'],
         },
       }
       if (env.command !== 'build') return base
@@ -99,6 +100,7 @@ export default function modulato(options = {}) {
       transitionsDir = path.resolve(root, options.transitionsDir ?? 'transitions')
       behaviorsDir = path.resolve(root, options.behaviorsDir ?? 'behaviors')
       isSsrBuild = config.command === 'build' && !!config.build.ssr
+      isServe = config.command === 'serve'
     },
 
     resolveId(id) {
@@ -121,8 +123,8 @@ export default function modulato(options = {}) {
           `import { PageOutlet } from 'modulato'`,
           `export default function App() { return createElement(PageOutlet) }`,
         ].join('\n')
-      if (id === VIRTUAL.clientEntry)
-        return [
+      if (id === VIRTUAL.clientEntry) {
+        const lines = [
           `import { boot } from 'modulato/client'`,
           `import { routes } from '${VIRTUAL.manifest}'`,
           `import * as transitions from '${VIRTUAL.transitions}'`,
@@ -130,7 +132,14 @@ export default function modulato(options = {}) {
           `import * as behaviors from '${VIRTUAL.behaviors}'`,
           `import App from '${VIRTUAL.app}'`,
           `boot({ routes, App, transitions, intros, behaviors })`,
-        ].join('\n')
+        ]
+        // Tweak Mode overlay — dev only, and only when the site installed it.
+        if (isServe && options.tweak !== false && resolvable('@modulato/tweak/overlay'))
+          lines.push(
+            `.then(() => import('@modulato/tweak/overlay')).then((m) => m.mount())`,
+          )
+        return lines.join('\n')
+      }
       if (id === VIRTUAL.serverEntry) {
         const flags = `intro: ${options.intro !== false}, shellIntro: ${options.intro !== false && fs.existsSync(path.resolve(root, 'intro.ts'))}`
         // Production: the client build ran first — bake its hashed asset URLs
@@ -160,8 +169,31 @@ export default function modulato(options = {}) {
     },
 
     transform(code, id) {
-      // Auto-import a page's sibling styles.scss.
       const file = id.split('?')[0]
+
+      // Dev: every motion.ts self-registers into the token registry (Tweak
+      // Mode) and self-accepts HMR — re-registration merges into the live
+      // object, so file edits reach mounted animations without a reload.
+      if (
+        isServe &&
+        file.startsWith(root) &&
+        !file.includes('node_modules') &&
+        file.endsWith(`${path.sep}motion.ts`)
+      ) {
+        const rel = `/${path.relative(root, file).split(path.sep).join('/')}`
+        return {
+          code: [
+            code,
+            `;import { __registerMotion as __modulatoRegister } from 'modulato'`,
+            `;import * as __modulatoSelf from ${JSON.stringify(rel)}`,
+            `;__modulatoRegister(${JSON.stringify(rel)}, __modulatoSelf.default)`,
+            `;if (import.meta.hot) import.meta.hot.accept()`,
+          ].join('\n'),
+          map: null,
+        }
+      }
+
+      // Auto-import a page's sibling styles.scss.
       if (!file.startsWith(pagesDir) || !file.endsWith(`${path.sep}page.tsx`)) return undefined
       const styles = path.join(path.dirname(file), 'styles.scss')
       if (!fs.existsSync(styles)) return undefined
@@ -191,6 +223,18 @@ export default function modulato(options = {}) {
       }
       server.watcher.on('add', onFileChange)
       server.watcher.on('unlink', onFileChange)
+
+      // Tweak Mode writeback: POST /__modulato/tokens → AST-preserving edit
+      // of a motion.ts. Dev only, and only when the site installed the tool.
+      if (options.tweak !== false && resolvable('@modulato/tweak/middleware')) {
+        let handler
+        server.middlewares.use('/__modulato/tokens', (req, res, next) => {
+          handler ??= import('@modulato/tweak/middleware').then((m) =>
+            m.tokensMiddleware(root),
+          )
+          handler.then((h) => h(req, res, next)).catch(next)
+        })
+      }
 
       // SSR middleware, mounted after Vite's own (assets, HMR, transforms).
       return () => {

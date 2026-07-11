@@ -1,6 +1,19 @@
 import gsap from 'gsap'
-import { useEffect, useRef } from 'react'
-import { usePage } from 'modulato'
+import { useEffect, useRef, useState } from 'react'
+import { getMotionSpeed, usePage } from 'modulato'
+
+const DEV: boolean =
+  typeof import.meta !== 'undefined' &&
+  Boolean((import.meta as { env?: { DEV?: boolean } }).env?.DEV)
+
+// Tweak Mode slow-mo: the core dispatches `modulato:speed`, GSAP follows.
+// Also sync on load — this module may be code-split in after a speed change.
+if (DEV && typeof window !== 'undefined') {
+  window.addEventListener('modulato:speed', (event) => {
+    gsap.globalTimeline.timeScale((event as CustomEvent<number>).detail)
+  })
+  gsap.globalTimeline.timeScale(getMotionSpeed())
+}
 
 export interface MotionScope {
   /** The page's root element. */
@@ -31,6 +44,16 @@ export function useMotion(
   const createRef = useRef(create)
   createRef.current = create
 
+  // Tweak Mode replay: re-create (revert + run) on `modulato:replay-motions`,
+  // so token edits apply to running loops and scroll-linked animations.
+  const [replayTick, setReplayTick] = useState(0)
+  useEffect(() => {
+    if (!DEV) return undefined
+    const onReplay = () => setReplayTick((t) => t + 1)
+    window.addEventListener('modulato:replay-motions', onReplay)
+    return () => window.removeEventListener('modulato:replay-motions', onReplay)
+  }, [])
+
   useEffect(() => {
     if (!element) return undefined
     let userCleanup: void | (() => void)
@@ -46,5 +69,5 @@ export function useMotion(
       ctx.revert()
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [element, ...deps])
+  }, [element, replayTick, ...deps])
 }

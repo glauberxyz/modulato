@@ -636,7 +636,22 @@ Each phase ends with something runnable in `examples/`.
 > missing `<PageOutlet/>`, misplaced intro.ts — teaching messages, exit 1). Demo
 > scripts dogfood it. Not yet: `tokens` (Phase 5 — no token registry), `new model`
 > (Phase 8), `content` (Phase 6).
-> **Next up: Phase 5 (Tweak Mode: token registry → overlay → writeback → MCP).**
+> **Phase 5 ✅ core (Tweak Mode, 2026-07-11):** `motion()` token modules
+> (`motion.ts`, auto-registered in dev via a self-registering transform; identity
+> function in prod — zero cost, verified absent from the bundle). Dev registry with
+> live in-place mutation (consumers hold the object → edits apply to the next
+> replay), dirty-tracking, reset, HMR merge that PRESERVES object identity.
+> `window.__MODULATO__` handle (route, tokens, speed, replayIntro/replayShellIntro/
+> replayMotions). **@modulato/tweak**: overlay (per-module token editors, replay
+> intro/shell/motions, loop, 1×–0.1× slow-mo via WAAPI playbackRate + GSAP
+> timeScale) + magicast writeback middleware (`POST /__modulato/tokens`,
+> AST-preserving — comments/formatting survive; verified round-trip: edit → save →
+> file diff exact → HMR merge → dirty clears). `useMotion` re-runs on replay events.
+> Demo tokenized: shell (root motion.ts), home intro, about marquee/parallax.
+> Still open from §6: responsive per-breakpoint token overrides + breakpoint
+> switcher (needs modulato.config.ts breakpoints — do with Phase 7's responsive
+> pass), transition replay from the overlay, and **@modulato/mcp** (next).
+> **Next up: @modulato/mcp**, then Phase 6 (content + server actions).
 
 - **Phase 0 — Skeleton.** Monorepo scaffolding (workspaces, turbo, tsconfig, vitest,
   changesets), claim `modulato` + `@modulato` on npm with 0.0.1 placeholders.
