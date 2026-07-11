@@ -34,4 +34,12 @@ export const ticker = {
   remove(callback: TickerCallback): void {
     callbacks.delete(callback)
   },
+  /**
+   * Manually advance the ticker — for environments without rAF (tests,
+   * headless verification). Runs every callback with a synthetic frame.
+   */
+  advance(delta = 16.67): void {
+    last += delta
+    for (const callback of Array.from(callbacks)) callback(last, delta)
+  },
 }

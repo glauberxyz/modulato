@@ -18,4 +18,13 @@ export default motion({
       reduced: { duration: 0, at: 0 },
     },
   },
+  // The persistent canvas square (shell/Scene.tsx): idle spin in rad/s,
+  // spin boost + scale-down while a page transition runs.
+  scene: {
+    spin: 0.5,
+    boost: 6,
+    shrink: 0.6,
+    phone: { spin: 0.35 },
+    reduced: { spin: 0, boost: 1, shrink: 1 },
+  },
 })

@@ -718,8 +718,23 @@ Each phase ends with something runnable in `examples/`.
 > Deferred from §6: generated SCSS breakpoint variables/custom-media (do with
 > the styling story in Phase 9); per-breakpoint OVERLAY EDITING of un-nested
 > keys is implicit (leaves include phone.* paths already).
-> **Next up: Phase 8 (3D layer) or Phase 9 (DX shell + publish) — 3D is optional
-> for launch; consider 9 first to get create-modulato + MODULATO.md + npm out.**
+> **Phase 8 → REDESIGNED as "integration surface", ✅ (2026-07-11).** Decision
+> (user): no @modulato/three, no baked-in 3D features. Modulato's job is to feed
+> ANY custom component (r3f scene, canvas, cursor) with what's going on: route +
+> navigation phase (useRoute/useNavigation — already shell-safe), viewport +
+> breakpoints (useViewport), motion tokens (resolveTokens, tweakable live), and —
+> the gap this closed — **scroll and frames in the shell**: `useScroll` now works
+> outside pages via a site-wide scroll bus (every page Lenis pipes into it, so a
+> persistent subscriber survives navigations), and **`useTicker`** gives per-frame
+> callbacks on the single RAF ticker with auto-cleanup. `ticker.advance()` +
+> dev `__MODULATO__.tick()` allow rAF-less verification. Proof in the demo:
+> shell/Scene.tsx — a persistent canvas square that rotates with the active
+> page's scroll, spins faster + scales down while any transition runs, all
+> numbers in root motion.ts (responsive + reduced-motion + overlay-tweakable).
+> An r3f scene consumes the identical surface — document the recipe in
+> MODULATO.md (Phase 9). §10's "3D (Phase 8)" checklist item is superseded.
+> **Next up: Phase 9 (DX shell + publish): create-modulato, MODULATO.md +
+> llms.txt, tsup builds, real npm versions, modulato.org.**
 
 - **Phase 0 — Skeleton.** Monorepo scaffolding (workspaces, turbo, tsconfig, vitest,
   changesets), claim `modulato` + `@modulato` on npm with 0.0.1 placeholders.

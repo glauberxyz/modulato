@@ -12,6 +12,7 @@ import {
 } from './motion'
 import { resolveEntry } from './resolve'
 import { ModulatoRoot } from './root'
+import { ticker } from './ticker'
 import type { TransitionsManifest } from './transitions'
 import type { RouteDef } from './types'
 import { forceBreakpoint, forceReducedMotion, initViewport, viewportStore } from './viewport'
@@ -33,6 +34,8 @@ export interface ModulatoDevHandle {
     force: (name: string | null) => void
     forceReduced: (value: boolean | null) => void
   }
+  /** Manually advance the RAF ticker (rAF-less environments/tests). */
+  tick: (frames?: number, delta?: number) => void
 }
 
 declare global {
@@ -157,6 +160,9 @@ export async function boot({
         names: () => viewportStore.breakpointNames(),
         force: forceBreakpoint,
         forceReduced: forceReducedMotion,
+      },
+      tick(frames = 1, delta = 16.67) {
+        for (let i = 0; i < frames; i += 1) ticker.advance(delta)
       },
     }
 

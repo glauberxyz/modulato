@@ -51,20 +51,51 @@ export interface ScrollEvent {
   progress: number
 }
 
+// Site-wide scroll bus: every page Lenis pipes its frames here, so PERSISTENT
+// shell components (canvases, WebGL scenes, cursors) can subscribe once and
+// keep receiving scroll across navigations — page instances come and go, the
+// bus doesn't. Only one page owns scroll at a time, so there's no double-fire.
+const scrollBus = new Set<(e: ScrollEvent) => void>()
+
+function emitScroll(e: ScrollEvent) {
+  for (const listener of scrollBus) listener(e)
+}
+
 /**
- * Subscribe to this page's smooth-scroll frames (Lenis under the hood).
- * Auto-unsubscribes on page unmount. No-op when the page disables scroll.
+ * Per-frame callback on the framework's single RAF ticker, auto-removed on
+ * unmount. Works anywhere — pages or persistent shell components (custom
+ * canvases, WebGL scenes). `delta` is ms since the previous frame.
+ */
+export function useTicker(callback: (time: number, delta: number) => void): void {
+  const cbRef = useRef(callback)
+  cbRef.current = callback
+  useEffect(() => ticker.add((time, delta) => cbRef.current(time, delta)), [])
+}
+
+/**
+ * Subscribe to smooth-scroll frames (Lenis under the hood).
+ * Inside a page: that page's own scroll, unsubscribed on unmount.
+ * In the shell (outside <PageOutlet>): the ACTIVE page's scroll, surviving
+ * navigations — feed it to anything persistent (r3f scenes, canvases).
  */
 export function useScroll(callback: (e: ScrollEvent) => void): void {
-  const { lenis } = usePage()
+  const page = useContext(PageContext)
+  const inPage = page !== null
+  const lenis = page?.lenis ?? null
   const cbRef = useRef(callback)
   cbRef.current = callback
   useEffect(() => {
-    if (!lenis) return undefined
     const handler = (e: ScrollEvent) => cbRef.current(e)
+    if (!inPage) {
+      scrollBus.add(handler)
+      return () => {
+        scrollBus.delete(handler)
+      }
+    }
+    if (!lenis) return undefined
     lenis.on('scroll', handler)
     return () => lenis.off('scroll', handler)
-  }, [lenis])
+  }, [inPage, lenis])
 }
 
 interface PageScopeProps {
@@ -105,6 +136,7 @@ export function PageScope({ entry, phase, hidden, registerEl }: PageScopeProps) 
     void import('lenis').then(({ default: LenisCtor }) => {
       if (cancelled) return
       instance = new LenisCtor({ autoRaf: false, ...(entry.scroll ?? {}) })
+      instance.on('scroll', emitScroll)
       detach = ticker.add((time) => instance!.raf(time))
       // Scroll stays locked while a transition choreographs both pages.
       if (phaseRef.current !== 'active') instance.stop()
