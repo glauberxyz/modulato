@@ -1,6 +1,6 @@
 import gsap from 'gsap'
 import { SplitText } from 'gsap/SplitText'
-import { intro } from 'modulato'
+import { intro, resolveTokens } from 'modulato'
 import tokens from './motion'
 
 gsap.registerPlugin(SplitText)
@@ -13,7 +13,9 @@ gsap.registerPlugin(SplitText)
  */
 export default intro({
   async run({ element }) {
-    const { headline, copy, cards } = tokens.intro
+    // Resolved at run time: the current breakpoint's (and reduced-motion)
+    // overrides are already merged in.
+    const { headline, copy, cards } = resolveTokens(tokens).intro
     const headlineEl = element.querySelector<HTMLElement>('.home__headline')
     const tl = gsap.timeline()
 

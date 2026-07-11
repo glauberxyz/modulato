@@ -61,6 +61,8 @@ export function scanTransitions(root, transitionsDir = 'transitions') {
   if (!fs.existsSync(base)) return entries
   for (const file of fs.readdirSync(base)) {
     if (!file.endsWith('.ts')) continue
+    // Colocated token modules for pair files, not transitions themselves.
+    if (file.endsWith('.motion.ts')) continue
     const name = file.slice(0, -3)
     if (name === 'default') {
       entries.push({ file, isDefault: true })

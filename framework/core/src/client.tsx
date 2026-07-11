@@ -14,6 +14,7 @@ import { resolveEntry } from './resolve'
 import { ModulatoRoot } from './root'
 import type { TransitionsManifest } from './transitions'
 import type { RouteDef } from './types'
+import { forceBreakpoint, forceReducedMotion, initViewport, viewportStore } from './viewport'
 
 /** Dev-mode introspection handle — see §8 of the plan. */
 export interface ModulatoDevHandle {
@@ -25,6 +26,13 @@ export interface ModulatoDevHandle {
   replayMotions: () => void
   replayIntro: () => Promise<void>
   replayShellIntro: () => Promise<void>
+  viewport: {
+    readonly breakpoint: string
+    readonly reducedMotion: boolean
+    names: () => string[]
+    force: (name: string | null) => void
+    forceReduced: (value: boolean | null) => void
+  }
 }
 
 declare global {
@@ -44,6 +52,7 @@ export async function boot({
   intros,
   behaviors,
   content = {},
+  breakpoints,
 }: {
   routes: RouteDef[]
   App: ComponentType
@@ -51,7 +60,10 @@ export async function boot({
   intros?: IntrosManifest
   behaviors?: BehaviorsManifest
   content?: Record<string, unknown>
+  breakpoints?: Record<string, string> | null
 }): Promise<void> {
+  initViewport(breakpoints)
+
   const container = document.getElementById('__modulato')
   if (!container) {
     console.error('[modulato] missing #__modulato container — was the page SSR-rendered?')
@@ -134,6 +146,17 @@ export async function boot({
         if (!intros?.shell) return
         const def = (await intros.shell()).default
         await runIntro(def, container, window.__MODULATO__?.route ?? '')
+      },
+      viewport: {
+        get breakpoint() {
+          return viewportStore.get().breakpoint
+        },
+        get reducedMotion() {
+          return viewportStore.get().reducedMotion
+        },
+        names: () => viewportStore.breakpointNames(),
+        force: forceBreakpoint,
+        forceReduced: forceReducedMotion,
       },
     }
 

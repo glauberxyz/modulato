@@ -1,5 +1,5 @@
 import { useEffect, useRef } from 'react'
-import { useFormAction, useScroll } from 'modulato'
+import { resolveTokens, useFormAction, useScroll } from 'modulato'
 import { useMotion } from '@modulato/gsap'
 import tokens from './motion'
 import { subscribe } from './server'
@@ -106,8 +106,8 @@ function ParallaxImage({ src, alt }: { src: string; alt: string }) {
     const rect = frame.current.getBoundingClientRect()
     const progress =
       (rect.top + rect.height / 2 - window.innerHeight / 2) / window.innerHeight
-    // Read strength per frame — token edits in the overlay apply live.
-    const { strength } = tokens.parallax
+    // Resolved per frame — token edits AND breakpoint changes apply live.
+    const { strength } = resolveTokens(tokens).parallax
     img.current.style.transform = `translate3d(0, ${(-11.5 + progress * strength).toFixed(3)}%, 0)`
   }
 
@@ -131,9 +131,13 @@ function ParallaxImage({ src, alt }: { src: string; alt: string }) {
  */
 function Marquee({ text }: { text: string }) {
   useMotion(({ q, gsap }) => {
+    // useMotion re-runs on breakpoint/reduced-motion changes, so this reads
+    // fresh values. Reduced motion resolves duration to 0: no loop at all.
+    const { duration } = resolveTokens(tokens).marquee
+    if (duration <= 0) return
     gsap.to(q('.about__marquee-track'), {
       xPercent: -50,
-      duration: tokens.marquee.duration,
+      duration,
       ease: 'none',
       repeat: -1,
     })

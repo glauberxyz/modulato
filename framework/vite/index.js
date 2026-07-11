@@ -1,6 +1,7 @@
 import fs from 'node:fs'
 import { createRequire } from 'node:module'
 import path from 'node:path'
+import { transformWithEsbuild } from 'vite'
 
 const require = createRequire(import.meta.url)
 
@@ -20,6 +21,7 @@ const VIRTUAL = {
   behaviors: 'virtual:modulato/behaviors',
   content: 'virtual:modulato/content',
   actions: 'virtual:modulato/actions',
+  breakpoints: 'virtual:modulato/breakpoints',
   app: 'virtual:modulato/app',
   clientEntry: 'virtual:modulato/client-entry',
   serverEntry: 'virtual:modulato/server-entry',
@@ -127,6 +129,10 @@ export default function modulato(options = {}) {
         return `export default ${json}\n`
       }
       if (id === VIRTUAL.actions) return generateActions(pagesDir)
+      if (id === VIRTUAL.breakpoints)
+        return extractBreakpoints(root, this).then(
+          (bp) => `export default ${JSON.stringify(bp)}\n`,
+        )
       if (id === VIRTUAL.app)
         return [
           `import { createElement } from 'react'`,
@@ -141,8 +147,9 @@ export default function modulato(options = {}) {
           `import * as intros from '${VIRTUAL.intros}'`,
           `import * as behaviors from '${VIRTUAL.behaviors}'`,
           `import content from '${VIRTUAL.content}'`,
+          `import breakpoints from '${VIRTUAL.breakpoints}'`,
           `import App from '${VIRTUAL.app}'`,
-          `boot({ routes, App, transitions, intros, behaviors, content })`,
+          `boot({ routes, App, transitions, intros, behaviors, content, breakpoints })`,
         ]
         // Tweak Mode overlay — dev only, and only when the site installed it.
         if (isServe && options.tweak !== false && resolvable('@modulato/tweak/overlay'))
@@ -222,7 +229,7 @@ export default function modulato(options = {}) {
         isServe &&
         file.startsWith(root) &&
         !file.includes('node_modules') &&
-        file.endsWith(`${path.sep}motion.ts`)
+        (file.endsWith(`${path.sep}motion.ts`) || file.endsWith('.motion.ts'))
       ) {
         const rel = `/${path.relative(root, file).split(path.sep).join('/')}`
         return {
@@ -270,10 +277,16 @@ export default function modulato(options = {}) {
       server.watcher.on('add', onFileChange)
       server.watcher.on('unlink', onFileChange)
 
-      // Re-running `modulato content` rewrites the snapshot in place.
+      // Re-running `modulato content` rewrites the snapshot in place, and
+      // config edits change the breakpoints the client derives from it.
       server.watcher.add(path.resolve(root, CONTENT_SNAPSHOT))
       server.watcher.on('change', (file) => {
         if (file === path.resolve(root, CONTENT_SNAPSHOT)) onFileChange(file)
+        if (file === path.resolve(root, 'modulato.config.ts')) {
+          const mod = server.moduleGraph.getModuleById(VIRTUAL.breakpoints)
+          if (mod) server.moduleGraph.invalidateModule(mod)
+          server.ws.send({ type: 'full-reload' })
+        }
       })
 
       // Remote control (Tweak Mode / @modulato/mcp): POST /__modulato/replay
@@ -391,6 +404,8 @@ function generateTransitions(transitionsDir) {
   if (fs.existsSync(transitionsDir)) {
     for (const file of fs.readdirSync(transitionsDir)) {
       if (!file.endsWith('.ts')) continue
+      // Colocated token modules for pair files, not transitions themselves.
+      if (file.endsWith('.motion.ts')) continue
       const name = file.slice(0, -3)
       if (name === 'default') {
         hasDefault = true
@@ -617,6 +632,52 @@ function emitVercelOutput(root) {
       2,
     ),
   )
+}
+
+/**
+ * Statically extract `breakpoints` from modulato.config.ts — the config
+ * executes in Node for `modulato content`, but the CLIENT only needs this
+ * one literal object, so it's read from the AST (TS stripped by esbuild
+ * first) without importing node-only adapter code into the bundle.
+ * Returns null (framework defaults) when absent or not a plain literal.
+ */
+async function extractBreakpoints(root, ctx) {
+  const file = path.join(root, 'modulato.config.ts')
+  if (!fs.existsSync(file)) return null
+  try {
+    const { code } = await transformWithEsbuild(fs.readFileSync(file, 'utf8'), file, {
+      loader: 'ts',
+      sourcemap: false,
+    })
+    const ast = ctx.parse(code)
+    let config = null
+    for (const node of ast.body) {
+      if (node.type !== 'ExportDefaultDeclaration') continue
+      const decl = node.declaration
+      config =
+        decl.type === 'CallExpression' && decl.arguments[0]?.type === 'ObjectExpression'
+          ? decl.arguments[0]
+          : decl.type === 'ObjectExpression'
+            ? decl
+            : null
+    }
+    const prop = config?.properties.find(
+      (p) => p.type === 'Property' && (p.key.name ?? p.key.value) === 'breakpoints',
+    )
+    if (!prop || prop.value.type !== 'ObjectExpression') return null
+    const breakpoints = {}
+    for (const entry of prop.value.properties) {
+      if (entry.type !== 'Property') continue
+      const key = entry.key.name ?? entry.key.value
+      if (typeof key !== 'string' || entry.value.type !== 'Literal') continue
+      if (typeof entry.value.value !== 'string') continue
+      breakpoints[key] = entry.value.value
+    }
+    return Object.keys(breakpoints).length ? breakpoints : null
+  } catch (error) {
+    console.warn(`[modulato] could not read breakpoints from modulato.config.ts: ${error.message}`)
+    return null
+  }
 }
 
 /** Scan behaviorsDir for enhancer files and emit the behaviors manifest. */

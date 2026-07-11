@@ -143,6 +143,8 @@ function Overlay() {
   const [open, setOpen] = useState(false)
   const [loop, setLoop] = useState(false)
   const [status, setStatus] = useState('')
+  const [forcedBp, setForcedBp] = useState<string | null>(null)
+  const [forcedReduced, setForcedReduced] = useState(false)
   const loopRef = useRef(false)
   loopRef.current = loop
 
@@ -218,6 +220,38 @@ function Overlay() {
             <label style={{ ...S.row, cursor: 'pointer' }}>
               <input type="checkbox" checked={loop} onChange={(e) => setLoop(e.target.checked)} />
               loop
+            </label>
+          </div>
+          <div style={S.controls}>
+            {/* Preview another breakpoint's resolved tokens without resizing. */}
+            {[null, ...handle.viewport.names()].map((name) => (
+              <button
+                key={name ?? 'auto'}
+                style={{
+                  ...S.button,
+                  background:
+                    forcedBp === name ? 'rgba(120,160,255,0.3)' : S.button.background,
+                }}
+                onClick={() => {
+                  setForcedBp(name)
+                  handle.viewport.force(name)
+                  queueReplay()
+                }}
+              >
+                {name ?? 'auto'}
+              </button>
+            ))}
+            <label style={{ ...S.row, cursor: 'pointer' }}>
+              <input
+                type="checkbox"
+                checked={forcedReduced}
+                onChange={(e) => {
+                  setForcedReduced(e.target.checked)
+                  handle.viewport.forceReduced(e.target.checked ? true : null)
+                  queueReplay()
+                }}
+              />
+              reduced
             </label>
           </div>
           <div style={S.controls}>

@@ -12,6 +12,14 @@ export interface ContentAdapter {
 export interface ModulatoConfig {
   /** Content source — e.g. localJson() from @modulato/content-local. */
   content?: ContentAdapter
+  /**
+   * Breakpoints, defined once and used everywhere: useViewport(), responsive
+   * motion-token overrides, the Tweak overlay switcher. Names become override
+   * keys in motion.ts; `desktop` is the implicit fallthrough. MUST be literal
+   * strings — the client extracts them from this file statically. Defaults:
+   * phone ≤767px, tablet 768–1279px.
+   */
+  breakpoints?: Record<string, string>
 }
 
 /** Identity helper for typed modulato.config.ts files. */

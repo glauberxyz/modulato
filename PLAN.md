@@ -699,8 +699,27 @@ Each phase ends with something runnable in `examples/`.
 > progressive forms: real action attrs + fetch interception + idle→pending→ok|error
 > state, `data` typed from the handler's return type. Demo: subscribe form on
 > /about, verified in dev, prod (Vercel launcher) and no-JS paths.
-> **Next up: Phase 7 (complete the demo: home__about slide transition, responsive
-> pass, breakpoints config + responsive tokens pulled in from §6).**
+> **Phase 7 ✅ (responsive system + demo completion, 2026-07-11):** Breakpoints
+> defined once in modulato.config.ts, statically AST-extracted for the client
+> (`virtual:modulato/breakpoints` — no node-only adapter code leaks into the
+> bundle; must be literal strings). Core viewport store: reactive `useViewport()`
+> (width/height/dpr/breakpoint/reducedMotion + isPhone/isTablet/isDesktop),
+> SSR-safe. **`resolveTokens(tokens)`**: per-breakpoint override blocks
+> (`phone:`/`tablet:`/custom) deep-merge over the base, `reduced` merges last —
+> called at animation-run time so replays and breakpoint changes read fresh
+> values. `useMotion` reverts + re-runs on breakpoint/reduced change. Tweak
+> overlay gained the breakpoint switcher (auto/phone/tablet/desktop + reduced) —
+> forced via dev-only viewport overrides. Transition pair files can colocate
+> tokens as `<pair>.motion.ts` (excluded from the pair scan, included in the
+> registry/CLI/MCP). Demo: home__about full-screen slide (symmetric, tokenized,
+> phone+reduced overrides), phone/reduced overrides on shell + home intros,
+> about marquee (reduced → no loop) + parallax (phone weaker, reduced off),
+> layouts verified at phone (single-column, clean type scale).
+> Deferred from §6: generated SCSS breakpoint variables/custom-media (do with
+> the styling story in Phase 9); per-breakpoint OVERLAY EDITING of un-nested
+> keys is implicit (leaves include phone.* paths already).
+> **Next up: Phase 8 (3D layer) or Phase 9 (DX shell + publish) — 3D is optional
+> for launch; consider 9 first to get create-modulato + MODULATO.md + npm out.**
 
 - **Phase 0 — Skeleton.** Monorepo scaffolding (workspaces, turbo, tsconfig, vitest,
   changesets), claim `modulato` + `@modulato` on npm with 0.0.1 placeholders.

@@ -5,6 +5,16 @@ export { Img } from './img'
 export { defineConfig } from './config'
 export { action, useFormAction } from './action'
 export type { Action, ActionContext, FormAction, FormActionPhase } from './action'
+export {
+  useViewport,
+  resolveTokens,
+  initViewport,
+  viewportStore,
+  forceBreakpoint,
+  forceReducedMotion,
+  DEFAULT_BREAKPOINTS,
+} from './viewport'
+export type { Viewport, ViewportState } from './viewport'
 export type { ImgProps } from './img'
 export type { ContentAdapter, ModulatoConfig, ModulatoContent } from './config'
 export { useRoute, useNavigation, useRouter } from './context'

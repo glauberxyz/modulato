@@ -9,18 +9,18 @@ import { generateCode, parseModule } from 'magicast'
 export function scanMotionFiles(root) {
   const files = []
   if (fs.existsSync(path.join(root, 'motion.ts'))) files.push('/motion.ts')
-  const pagesDir = path.join(root, 'pages')
   const walk = (dir, prefix) => {
     if (!fs.existsSync(dir)) return
     for (const dirent of fs.readdirSync(dir, { withFileTypes: true })) {
       if (dirent.isDirectory()) {
         walk(path.join(dir, dirent.name), `${prefix}/${dirent.name}`)
-      } else if (dirent.name === 'motion.ts') {
-        files.push(`${prefix}/motion.ts`)
+      } else if (dirent.name === 'motion.ts' || dirent.name.endsWith('.motion.ts')) {
+        files.push(`${prefix}/${dirent.name}`)
       }
     }
   }
-  walk(pagesDir, '/pages')
+  walk(path.join(root, 'pages'), '/pages')
+  walk(path.join(root, 'transitions'), '/transitions')
   return files
 }
 
@@ -28,9 +28,10 @@ export function scanMotionFiles(root) {
 export function resolveMotionFile(root, file) {
   if (typeof file !== 'string') throw new Error('file must be a string')
   const abs = path.resolve(root, `.${path.sep}${file.replace(/^\//, '')}`)
+  const base = path.basename(abs)
   if (
     !abs.startsWith(root + path.sep) ||
-    path.basename(abs) !== 'motion.ts' ||
+    (base !== 'motion.ts' && !base.endsWith('.motion.ts')) ||
     !fs.existsSync(abs)
   )
     throw new Error(`not a motion.ts in this project: ${file}`)

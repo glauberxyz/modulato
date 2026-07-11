@@ -1,5 +1,5 @@
 import gsap from 'gsap'
-import { intro } from 'modulato'
+import { intro, resolveTokens } from 'modulato'
 import tokens from './motion'
 
 /**
@@ -10,7 +10,7 @@ import tokens from './motion'
  */
 export default intro({
   async run({ element }) {
-    const { menu, marker } = tokens.shell
+    const { menu, marker } = resolveTokens(tokens).shell
     const tl = gsap.timeline()
     // .menu itself carries a centering transform and .marker's transform is
     // route-state-driven — animate what the shell doesn't already own.

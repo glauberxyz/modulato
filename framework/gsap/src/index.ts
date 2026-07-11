@@ -1,6 +1,6 @@
 import gsap from 'gsap'
 import { useEffect, useRef, useState } from 'react'
-import { getMotionSpeed, usePage } from 'modulato'
+import { getMotionSpeed, usePage, useViewport } from 'modulato'
 
 const DEV: boolean =
   typeof import.meta !== 'undefined' &&
@@ -44,6 +44,11 @@ export function useMotion(
   const createRef = useRef(create)
   createRef.current = create
 
+  // Responsive: revert + re-run when the breakpoint (or reduced-motion)
+  // changes, so resolveTokens() reads fresh values — write the animation
+  // once, vary the numbers per breakpoint.
+  const { breakpoint, reducedMotion } = useViewport()
+
   // Tweak Mode replay: re-create (revert + run) on `modulato:replay-motions`,
   // so token edits apply to running loops and scroll-linked animations.
   const [replayTick, setReplayTick] = useState(0)
@@ -69,5 +74,5 @@ export function useMotion(
       ctx.revert()
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [element, replayTick, ...deps])
+  }, [element, replayTick, breakpoint, reducedMotion, ...deps])
 }
