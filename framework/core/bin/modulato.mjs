@@ -116,6 +116,10 @@ try {
       // Port managers (portless) and PaaS previews hand us the port via env.
       if (process.env.PORT && !rest.includes('--port')) {
         devArgs.push('--port', process.env.PORT, '--strictPort')
+        // Proxies dial IPv4; vite's default 'localhost' may bind ::1 only.
+        if (!rest.includes('--host')) {
+          devArgs.push('--host', process.env.HOST ?? '127.0.0.1')
+        }
       }
       await runVite(devArgs)
       break
