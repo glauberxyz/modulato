@@ -1,0 +1,44 @@
+* { box-sizing: border-box; }
+
+:root {
+  --bg: #f5f3ee;
+  --fg: #171717;
+  --muted: #6b6b6b;
+  --accent: #d96f4e;
+}
+
+html, body { margin: 0; padding: 0; }
+
+body {
+  background: var(--bg);
+  color: var(--fg);
+  font-family: 'Helvetica Neue', ui-sans-serif, system-ui, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  min-height: 100dvh;
+}
+
+html.lenis, html.lenis body { height: auto; }
+.lenis.lenis-smooth { scroll-behavior: auto !important; }
+
+.links {
+  position: fixed;
+  top: 1.75rem;
+  right: 6vw;
+  z-index: 10;
+  display: flex;
+  gap: 1.75rem;
+
+  a {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.2rem;
+    font-size: 0.875rem;
+    text-decoration: none;
+    color: var(--muted);
+    transition: color 0.3s;
+
+    &:hover { color: var(--fg); }
+
+    svg { translate: 0 0.5px; }
+  }
+}

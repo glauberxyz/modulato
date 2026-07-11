@@ -4,12 +4,14 @@
   "type": "module",
   "workspaces": [
     "framework/*",
-    "examples/*"
+    "examples/*",
+    "docs/site"
   ],
   "scripts": {
     "dev": "npm run dev -w examples/demo",
-    "check": "tsc -p examples/demo --noEmit && tsc -p framework/server --noEmit && tsc -p framework/tweak --noEmit",
-    "sync:docs": "cp docs/MODULATO.md framework/create/MODULATO.md"
+    "check": "tsc -p examples/demo --noEmit && tsc -p framework/server --noEmit && tsc -p framework/tweak --noEmit && tsc -p docs/site --noEmit",
+    "sync:docs": "cp docs/MODULATO.md framework/create/MODULATO.md",
+    "dev:site": "npm run dev -w docs/site"
   },
   "devDependencies": {
     "typescript": "^5.8.0"

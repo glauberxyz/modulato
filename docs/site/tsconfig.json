@@ -1,0 +1,16 @@
+{
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    "types": [
+      "vite/client"
+    ]
+  },
+  "include": [
+    "app.tsx",
+    "intro.ts",
+    "motion.ts",
+    "shell",
+    "pages",
+    "vite.config.ts"
+  ]
+}
