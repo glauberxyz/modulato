@@ -603,6 +603,14 @@ What it must demonstrate, per phase:
 
 Each phase ends with something runnable in `examples/`.
 
+> **STATUS (2026-07-11):** Phases 0–1 ✅ done and browser-verified, plus most of Phase 3
+> (transition pair files, `<Shared>` FLIP, per-page intros, the four-moment no-flicker
+> lifecycle) and dev CSS inlining (FOUC fix). npm names claimed under `glauberxyz`.
+> **Next up: Phase 2 + shell intros** (root `intro.ts` — the one gap glauber-2026
+> exposed), then a **pulled-forward mini deploy milestone** ("demo deploys to Vercel")
+> to de-risk the production build early instead of leaving it buried in Phase 9.
+> The demo currently runs in dev only.
+
 - **Phase 0 — Skeleton.** Monorepo scaffolding (workspaces, turbo, tsconfig, vitest,
   changesets), claim `modulato` + `@modulato` on npm with 0.0.1 placeholders.
 - **Phase 1 — SSR + router walking skeleton.** `@modulato/vite` route manifest from
