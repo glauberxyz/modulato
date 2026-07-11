@@ -43,7 +43,8 @@ Agent notes
   Add --json anywhere for machine-readable output on stdout.
   Scaffolds are atomic — on any conflict they fail and create NOTHING.
   Exit codes: 0 ok, 1 error. "modulato dev" runs until killed
-  (background it); "modulato build" exits when done.
+  (background it) and honors the PORT env var (portless/PaaS);
+  "modulato build" exits when done.
 `
 
 const cwd = process.cwd()
@@ -110,9 +111,15 @@ function reportScaffold({ created, note }) {
 
 try {
   switch (command) {
-    case 'dev':
-      await runVite(rest)
+    case 'dev': {
+      const devArgs = [...rest]
+      // Port managers (portless) and PaaS previews hand us the port via env.
+      if (process.env.PORT && !rest.includes('--port')) {
+        devArgs.push('--port', process.env.PORT, '--strictPort')
+      }
+      await runVite(devArgs)
       break
+    }
 
     case 'build':
       await runVite(['build', ...rest])

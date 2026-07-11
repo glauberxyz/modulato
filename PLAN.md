@@ -759,6 +759,15 @@ Each phase ends with something runnable in `examples/`.
 > unpacked. `create-modulato` npm name confirmed unclaimed.
 > Publish (user, from repo root, npm login as glauberxyz first):
 > `for p in core vite server gsap tweak content-local mcp create; do (cd framework/$p && npm publish --access public); done`
+> **portless by default (decided 2026-07-11):** scaffolded sites run
+> `npm run dev` through portless → stable, port-free `https://<name>.localhost`
+> named after the project — deterministic URLs an agent can derive without
+> reasoning about ports. `modulato dev` honors PORT (portless assigns it; also
+> fixes PaaS previews). Fallback `npm run dev:plain` for CI/non-TTY/Node<24
+> (portless needs Node >= 24 — NOT yet verifiable on this machine, Node 22;
+> first portless run needs an interactive CA-trust). Ships in modulato@0.1.1 +
+> create-modulato@0.1.1 (bumped, publish pending).
+>
 > Still open: modulato.org + llms.txt hosting, /modulato Claude skill,
 > Tailwind scaffold option, Cloudflare adapter, @modulato/content-sanity
 > (+ live mode). Optional stretch: rewrite glauber-2026 on Modulato.

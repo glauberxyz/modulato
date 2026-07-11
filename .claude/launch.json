@@ -31,6 +31,21 @@
         "docs/site"
       ],
       "port": 5174
+    },
+    {
+      "name": "glauber-v2",
+      "runtimeExecutable": "npm",
+      "runtimeArgs": [
+        "run",
+        "dev",
+        "--prefix",
+        "/Users/glauber/Documents/Github/glauber-2026-v2",
+        "--",
+        "--port",
+        "5175",
+        "--strictPort"
+      ],
+      "port": 5175
     }
   ]
 }

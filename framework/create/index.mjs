@@ -68,7 +68,7 @@ if (fs.existsSync(reference)) {
 const next = [
   `cd ${target}`,
   'npm install',
-  'npm run dev        # SSR + HMR on http://localhost:5173',
+  `npm run dev        # https://${name}.localhost (portless; Node >= 24 — else: npm run dev:plain)`,
   'npx modulato check # validate after every structural edit',
 ]
 

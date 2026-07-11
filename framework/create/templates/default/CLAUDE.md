@@ -17,3 +17,7 @@ Key conventions: a page is a folder in `pages/` with `page.tsx` (no
 registration); animation numbers live in `motion.ts` token modules;
 transitions are `transitions/<from>__<to>.ts`; the persistent shell lives in
 `app.tsx` outside `<PageOutlet/>`.
+
+Dev server: `npm run dev` serves **https://<project-name>.localhost** (stable,
+port-free, via portless — needs Node >= 24). In non-TTY/CI contexts or on
+older Node, use `npm run dev:plain` (plain Vite on a port; honors PORT).

@@ -377,7 +377,11 @@ Every command is non-interactive (args only), safe to retry, and takes
 `--json` for machine-readable output. Exit codes: 0 ok, 1 error.
 
 ```
-modulato dev                          dev server, SSR + HMR (runs until killed)
+modulato dev                          dev server, SSR + HMR (runs until killed;
+                                        honors PORT — scaffolded sites run it
+                                        through portless: a stable, port-free
+                                        https://<name>.localhost URL. Node >= 24;
+                                        fallback: npm run dev:plain)
 modulato build                        production build (client + ssr passes)
 modulato new page <route>             scaffold pages/<route>/ (atomic: conflicts create NOTHING)
 modulato new transition <from> <to>   [--symmetric]
