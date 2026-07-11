@@ -733,7 +733,14 @@ Each phase ends with something runnable in `examples/`.
 > numbers in root motion.ts (responsive + reduced-motion + overlay-tweakable).
 > An r3f scene consumes the identical surface — document the recipe in
 > MODULATO.md (Phase 9). §10's "3D (Phase 8)" checklist item is superseded.
-> **Phase 9 ✅ prep (2026-07-11) — publish awaits the user's `npm publish`.**
+> **PUBLISHED (2026-07-11): all 8 packages live on npm at 0.1.0.** Gotchas hit:
+> scoped packages under a fresh org land PRIVATE even when the publish says
+> "public access" — fix: `npm access set status=public @modulato/<pkg>`; npm 11
+> normalizes "./"-prefixed bin paths with a scary "removed" warning (sources now
+> canonical via `npm pkg fix`). Clean-room verified: `npm create modulato@latest`
+> → registry-only install → check + tsc + dev SSR + prod build all green.
+>
+> **Phase 9 ✅ prep (2026-07-11).**
 > DECISION: packages **publish from TS source, no tsup** — Modulato requires
 > vite, and vite transforms framework TS from node_modules in every mode we use
 > (dev, client build, SSR build); TS consumers typecheck against src via the
