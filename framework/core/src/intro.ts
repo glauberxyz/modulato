@@ -22,6 +22,11 @@ export interface IntroEntry {
 
 export interface IntrosManifest {
   entries: IntroEntry[]
+  /**
+   * Root `intro.ts` (next to app.tsx): first-load choreography for the
+   * persistent shell (menu, marker, canvas). Runs alongside the page intro.
+   */
+  shell?: (() => Promise<{ default: IntroDef }>) | null
 }
 
 export async function resolveIntro(

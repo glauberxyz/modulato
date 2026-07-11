@@ -32,6 +32,7 @@ export async function resolveEntry(
     params: match.params,
     props: resolvedProps,
     meta,
+    scroll: cfg.scroll,
     Component: pageMod.default,
   }
 }

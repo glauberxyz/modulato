@@ -8,8 +8,10 @@
     "build": "vite build"
   },
   "dependencies": {
+    "@modulato/gsap": "*",
     "@modulato/server": "*",
     "@modulato/vite": "*",
+    "gsap": "^3.13.0",
     "modulato": "*",
     "react": "^19.1.0",
     "react-dom": "^19.1.0"

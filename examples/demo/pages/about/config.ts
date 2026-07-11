@@ -1,3 +1,6 @@
+// Per-page smooth-scroll tuning — a floatier lerp for the text-heavy page.
+export const scroll = { lerp: 0.08 }
+
 export function meta() {
   return {
     title: 'About — Modulato Demo',

@@ -603,12 +603,22 @@ What it must demonstrate, per phase:
 
 Each phase ends with something runnable in `examples/`.
 
-> **STATUS (2026-07-11):** Phases 0–1 ✅ done and browser-verified, plus most of Phase 3
+> **STATUS (2026-07-10):** Phases 0–2 ✅ done and verified, plus most of Phase 3
 > (transition pair files, `<Shared>` FLIP, per-page intros, the four-moment no-flicker
 > lifecycle) and dev CSS inlining (FOUC fix). npm names claimed under `glauberxyz`.
-> **Next up: Phase 2 + shell intros** (root `intro.ts` — the one gap glauber-2026
-> exposed), then a **pulled-forward mini deploy milestone** ("demo deploys to Vercel")
-> to de-risk the production build early instead of leaving it buried in Phase 9.
+> Phase 2 landed as: `usePage()`/`useScroll()` + per-page Lenis on the framework's
+> single RAF ticker (created on mount, stopped during transitions, destroyed on
+> unmount; per-page `scroll` config), `behaviors/` enhancers with auto-discovery,
+> dev contract warnings, **`@modulato/gsap`** with `useMotion` (gsap.context scoping,
+> auto-revert — verified: an infinite marquee tween dies with its page), and **shell
+> intros** (root `intro.ts` choreographing the persistent Menu/Marker on first load —
+> the gap glauber-2026 exposed; the server hide-style widens to `#__modulato` when it
+> exists). GSAP is now in the demo (SplitText text-reveal intro on home).
+> Note: per-page intros are FILE-based (`intro.ts`), not the `useIntro` hook sketched
+> in §3.1 — first-load choreography is a file concern like transitions; revisit only
+> if Tweak Mode needs otherwise.
+> **Next up: the pulled-forward mini deploy milestone** ("demo deploys to Vercel")
+> to de-risk the production build early, then Phase 4 (CLI).
 > The demo currently runs in dev only.
 
 - **Phase 0 — Skeleton.** Monorepo scaffolding (workspaces, turbo, tsconfig, vitest,

@@ -14,9 +14,22 @@ export interface PageModule {
   default: ComponentType<Record<string, unknown>>
 }
 
+/**
+ * Per-page smooth-scroll options, passed through to Lenis. `false` disables
+ * smooth scrolling for the page entirely.
+ */
+export interface ScrollConfig {
+  lerp?: number
+  duration?: number
+  smoothWheel?: boolean
+  touchMultiplier?: number
+  [option: string]: unknown
+}
+
 export interface ConfigModule {
   load?: (args: LoadArgs) => unknown | Promise<unknown>
   meta?: (args: LoadArgs & { props: Record<string, unknown> }) => MetaResult
+  scroll?: false | ScrollConfig
 }
 
 export interface RouteDef {
@@ -34,6 +47,7 @@ export interface Entry {
   params: Record<string, string>
   props: Record<string, unknown>
   meta: MetaResult
+  scroll?: false | ScrollConfig
   Component: ComponentType<Record<string, unknown>>
 }
 

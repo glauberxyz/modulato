@@ -24,6 +24,7 @@ function htmlDocument({
   payload,
   clientSrc,
   intro,
+  shellIntro,
 }: {
   appHtml: string
   title: string
@@ -31,12 +32,15 @@ function htmlDocument({
   payload: string
   clientSrc: string
   intro?: boolean
+  shellIntro?: boolean
 }): string {
   // Hides the page until the client reveals it in the same task that starts
-  // the intro animations. <noscript> guarantees content is never invisible
-  // when JS is off.
+  // the intro animations. With a shell intro (root intro.ts) the whole app is
+  // hidden so the persistent shell can be choreographed in too. <noscript>
+  // guarantees content is never invisible when JS is off.
+  const hideSelector = shellIntro ? '#__modulato' : '[data-modulato-outlet]'
   const introStyle = intro
-    ? `<style id="__modulato-intro">[data-modulato-outlet]{visibility:hidden}</style>\n<noscript><style>[data-modulato-outlet]{visibility:visible !important}</style></noscript>\n`
+    ? `<style id="__modulato-intro">${hideSelector}{visibility:hidden}</style>\n<noscript><style>${hideSelector}{visibility:visible !important}</style></noscript>\n`
     : ''
   return `<!doctype html>
 <html lang="en">
@@ -59,6 +63,7 @@ export async function render({
   App,
   clientSrc = '/@id/virtual:modulato/client-entry',
   intro = true,
+  shellIntro = false,
 }: {
   url: string
   routes: RouteDef[]
@@ -66,6 +71,8 @@ export async function render({
   clientSrc?: string
   /** Inject the first-load intro hiding style. Enabled by default. */
   intro?: boolean
+  /** A root intro.ts exists — hide the whole app, not just the outlet. */
+  shellIntro?: boolean
 }): Promise<RenderResult> {
   const parsed = new URL(url, 'http://modulato.internal')
   const entry = await resolveEntry(routes, parsed.pathname, `${parsed.pathname}#0`)
@@ -96,6 +103,7 @@ export async function render({
       payload,
       clientSrc,
       intro,
+      shellIntro,
     }),
     status: 200,
     routeId: entry.routeId,

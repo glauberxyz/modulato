@@ -5,6 +5,8 @@ export interface ModulatoPluginOptions {
   pagesDir?: string
   /** Directory scanned for transition pair files. Default: `transitions`. */
   transitionsDir?: string
+  /** Directory scanned for enhancer files. Default: `behaviors`. */
+  behaviorsDir?: string
   /** First-load intro system (per-page `intro.ts`, default fade-in). Default: true. */
   intro?: boolean
 }

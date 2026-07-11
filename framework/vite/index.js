@@ -1,10 +1,23 @@
 import fs from 'node:fs'
+import { createRequire } from 'node:module'
 import path from 'node:path'
+
+const require = createRequire(import.meta.url)
+
+function resolvable(dep) {
+  try {
+    require.resolve(dep)
+    return true
+  } catch {
+    return false
+  }
+}
 
 const VIRTUAL = {
   manifest: 'virtual:modulato/manifest',
   transitions: 'virtual:modulato/transitions',
   intros: 'virtual:modulato/intros',
+  behaviors: 'virtual:modulato/behaviors',
   app: 'virtual:modulato/app',
   clientEntry: 'virtual:modulato/client-entry',
   serverEntry: 'virtual:modulato/server-entry',
@@ -25,6 +38,7 @@ export default function modulato(options = {}) {
   /** @type {string} */ let root
   /** @type {string} */ let pagesDir
   /** @type {string} */ let transitionsDir
+  /** @type {string} */ let behaviorsDir
 
   return {
     name: 'modulato',
@@ -33,15 +47,19 @@ export default function modulato(options = {}) {
       return {
         appType: 'custom',
         resolve: { dedupe: ['react', 'react-dom'] },
-        ssr: { noExternal: ['modulato', '@modulato/server'] },
+        ssr: { noExternal: ['modulato', '@modulato/server', '@modulato/gsap'] },
         optimizeDeps: {
           include: [
             'react',
             'react-dom/client',
             'react/jsx-runtime',
             'react/jsx-dev-runtime',
+            // Reached via dynamic imports (intro files, the core's lazy Lenis)
+            // that the dep scanner misses — pre-bundle to avoid a mid-session
+            // "new dependencies discovered" reload.
+            ...['gsap', 'gsap/SplitText', 'lenis'].filter(resolvable),
           ],
-          exclude: ['modulato', '@modulato/server'],
+          exclude: ['modulato', '@modulato/server', '@modulato/gsap'],
         },
       }
     },
@@ -50,6 +68,7 @@ export default function modulato(options = {}) {
       root = config.root
       pagesDir = path.resolve(root, options.pagesDir ?? 'pages')
       transitionsDir = path.resolve(root, options.transitionsDir ?? 'transitions')
+      behaviorsDir = path.resolve(root, options.behaviorsDir ?? 'behaviors')
     },
 
     resolveId(id) {
@@ -64,7 +83,8 @@ export default function modulato(options = {}) {
     load(id) {
       if (id === VIRTUAL.manifest) return generateManifest(pagesDir)
       if (id === VIRTUAL.transitions) return generateTransitions(transitionsDir)
-      if (id === VIRTUAL.intros) return generateIntros(pagesDir)
+      if (id === VIRTUAL.intros) return generateIntros(pagesDir, root)
+      if (id === VIRTUAL.behaviors) return generateBehaviors(behaviorsDir)
       if (id === VIRTUAL.app)
         return [
           `import { createElement } from 'react'`,
@@ -77,15 +97,16 @@ export default function modulato(options = {}) {
           `import { routes } from '${VIRTUAL.manifest}'`,
           `import * as transitions from '${VIRTUAL.transitions}'`,
           `import * as intros from '${VIRTUAL.intros}'`,
+          `import * as behaviors from '${VIRTUAL.behaviors}'`,
           `import App from '${VIRTUAL.app}'`,
-          `boot({ routes, App, transitions, intros })`,
+          `boot({ routes, App, transitions, intros, behaviors })`,
         ].join('\n')
       if (id === VIRTUAL.serverEntry)
         return [
           `import { render } from '@modulato/server'`,
           `import { routes } from '${VIRTUAL.manifest}'`,
           `import App from '${VIRTUAL.app}'`,
-          `export const handle = (url) => render({ url, routes, App, intro: ${options.intro !== false} })`,
+          `export const handle = (url) => render({ url, routes, App, intro: ${options.intro !== false}, shellIntro: ${options.intro !== false && fs.existsSync(path.resolve(root, 'intro.ts'))} })`,
         ].join('\n')
       return undefined
     },
@@ -100,13 +121,19 @@ export default function modulato(options = {}) {
     },
 
     configureServer(server) {
-      // New/removed pages, transitions or intros invalidate their manifest.
+      // New/removed pages, transitions, intros or behaviors invalidate their
+      // manifest. The root intro.ts also invalidates the server entry (its
+      // presence decides how much of the app the intro hide-style covers).
       const onFileChange = (file) => {
         const virtualIds = file.startsWith(pagesDir)
           ? [VIRTUAL.manifest, VIRTUAL.intros]
           : file.startsWith(transitionsDir)
             ? [VIRTUAL.transitions]
-            : []
+            : file.startsWith(behaviorsDir)
+              ? [VIRTUAL.behaviors]
+              : file === path.resolve(root, 'intro.ts')
+                ? [VIRTUAL.intros, VIRTUAL.serverEntry]
+                : []
         if (!virtualIds.length) return
         for (const id of virtualIds) {
           const mod = server.moduleGraph.getModuleById(id)
@@ -249,8 +276,12 @@ async function collectDevCss(server, entryFiles) {
   return out
 }
 
-/** Scan pagesDir for intro.ts files and emit the intros manifest. */
-function generateIntros(pagesDir) {
+/**
+ * Scan pagesDir for intro.ts files and emit the intros manifest. A root
+ * intro.ts (next to app.tsx) becomes the shell intro — first-load
+ * choreography for the persistent shell, run alongside the page intro.
+ */
+function generateIntros(pagesDir, root) {
   const entries = []
   const walk = (dir, prefix) => {
     if (!fs.existsSync(dir)) return
@@ -267,5 +298,20 @@ function generateIntros(pagesDir) {
     (id) =>
       `  { id: ${JSON.stringify(id)}, load: () => import(${JSON.stringify(`/pages/${id}/intro.ts`)}) },`,
   )
+  const shell = fs.existsSync(path.resolve(root, 'intro.ts'))
+    ? `() => import('/intro.ts')`
+    : 'null'
+  return `export const entries = [\n${lines.join('\n')}\n]\nexport const shell = ${shell}\n`
+}
+
+/** Scan behaviorsDir for enhancer files and emit the behaviors manifest. */
+function generateBehaviors(behaviorsDir) {
+  const lines = []
+  if (fs.existsSync(behaviorsDir)) {
+    for (const file of fs.readdirSync(behaviorsDir)) {
+      if (!file.endsWith('.ts')) continue
+      lines.push(`  { load: () => import(${JSON.stringify(`/behaviors/${file}`)}) },`)
+    }
+  }
   return `export const entries = [\n${lines.join('\n')}\n]\n`
 }

@@ -8,7 +8,7 @@
   ],
   "scripts": {
     "dev": "npm run dev -w examples/demo",
-    "check": "tsc -p examples/demo --noEmit"
+    "check": "tsc -p examples/demo --noEmit && tsc -p framework/server --noEmit"
   },
   "devDependencies": {
     "typescript": "^5.8.0"

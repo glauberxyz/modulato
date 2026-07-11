@@ -1,4 +1,5 @@
 import { useRouter } from './context'
+import { PageScope, type PagePhase } from './page'
 
 /**
  * Where pages mount. During a transition the outgoing and incoming pages are
@@ -15,15 +16,19 @@ export function PageOutlet() {
         // the same task that starts the transition's animations, so no
         // unstyled frame is ever painted (no flicker).
         const isIncoming = entry.key === state.next?.key
+        const phase: PagePhase = isIncoming
+          ? 'entering'
+          : state.next
+            ? 'leaving'
+            : 'active'
         return (
-          <div
+          <PageScope
             key={entry.key}
-            data-page={entry.routeId}
-            style={isIncoming ? { visibility: 'hidden' } : undefined}
-            ref={(el) => registerEl(entry.key, el)}
-          >
-            <entry.Component {...entry.props} />
-          </div>
+            entry={entry}
+            phase={phase}
+            hidden={isIncoming}
+            registerEl={registerEl}
+          />
         )
       })}
     </div>

@@ -18,6 +18,16 @@ body {
   padding: 0;
 }
 
+// Lenis (per-page smooth scroll) recommended base styles.
+html.lenis,
+html.lenis body {
+  height: auto;
+}
+
+.lenis.lenis-smooth {
+  scroll-behavior: auto !important;
+}
+
 body {
   background: var(--bg);
   color: var(--fg);

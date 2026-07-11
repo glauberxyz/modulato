@@ -1,0 +1,17 @@
+{
+  "name": "@modulato/gsap",
+  "version": "0.0.1",
+  "description": "GSAP glue for Modulato: page-scoped motion hooks with auto-revert.",
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "peerDependencies": {
+    "gsap": "^3.13.0",
+    "modulato": "*",
+    "react": "^18.0.0 || ^19.0.0"
+  },
+  "devDependencies": {
+    "@types/react": "^19.0.0"
+  }
+}

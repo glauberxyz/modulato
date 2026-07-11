@@ -3,5 +3,14 @@
   "compilerOptions": {
     "types": ["vite/client"]
   },
-  "include": ["app.tsx", "shell", "pages", "content", "vite.config.ts"]
+  "include": [
+    "app.tsx",
+    "intro.ts",
+    "shell",
+    "pages",
+    "content",
+    "behaviors",
+    "transitions",
+    "vite.config.ts"
+  ]
 }

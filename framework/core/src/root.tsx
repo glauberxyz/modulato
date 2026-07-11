@@ -8,7 +8,10 @@ import {
   type ComponentType,
 } from 'react'
 import { RouterContext, type RouterApi } from './context'
+import { checkDuplicateSharedIds, DEV } from './dev'
+import type { EnhancerDef } from './enhance'
 import { collectSharedPairs } from './flip'
+import { EnhancersContext } from './page'
 import { resolveEntry } from './resolve'
 import {
   crossfade,
@@ -23,7 +26,10 @@ interface ModulatoRootProps {
   App: ComponentType
   initial: RouterState
   transitions?: TransitionsManifest
+  enhancers?: EnhancerDef[]
 }
+
+const NO_ENHANCERS: EnhancerDef[] = []
 
 function toInfo(entry: Entry): RouteInfo {
   return { id: entry.routeId, path: entry.path, params: entry.params }
@@ -38,7 +44,13 @@ const useIsomorphicLayoutEffect =
  * Owns router state and the navigation lifecycle. Rendered by both the server
  * (static, effects never run) and the client (live).
  */
-export function ModulatoRoot({ routes, App, initial, transitions }: ModulatoRootProps) {
+export function ModulatoRoot({
+  routes,
+  App,
+  initial,
+  transitions,
+  enhancers,
+}: ModulatoRootProps) {
   const [state, setState] = useState<RouterState>(initial)
   const [phase, setPhase] = useState<NavPhase>('idle')
   const stateRef = useRef(state)
@@ -114,6 +126,10 @@ export function ModulatoRoot({ routes, App, initial, transitions }: ModulatoRoot
       // PREPARE — synchronous, before this frame paints.
       prepareOutgoing(fromEl, targetScroll.current)
       shared = collectSharedPairs(fromEl, toEl)
+      if (DEV) {
+        checkDuplicateSharedIds(fromEl, from.routeId)
+        checkDuplicateSharedIds(toEl, next.routeId)
+      }
     }
 
     const commit = () => {
@@ -212,7 +228,9 @@ export function ModulatoRoot({ routes, App, initial, transitions }: ModulatoRoot
 
   return (
     <RouterContext.Provider value={api}>
-      <App />
+      <EnhancersContext.Provider value={enhancers ?? NO_ENHANCERS}>
+        <App />
+      </EnhancersContext.Provider>
     </RouterContext.Provider>
   )
 }
