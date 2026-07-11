@@ -3,7 +3,7 @@
   "version": "0.1.0",
   "description": "SSR renderer for Modulato sites.",
   "license": "MIT",
-  "homepage": "https://modulato-demo.vercel.app",
+  "homepage": "https://github.com/glauberxyz/modulato#readme",
   "type": "module",
   "exports": {
     ".": "./src/index.tsx"
@@ -28,5 +28,11 @@
     "@types/node": "^26.1.1",
     "@types/react": "^19.0.0",
     "@types/react-dom": "^19.0.0"
-  }
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/glauberxyz/modulato.git",
+    "directory": "framework/server"
+  },
+  "bugs": "https://github.com/glauberxyz/modulato/issues"
 }

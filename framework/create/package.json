@@ -1,9 +1,9 @@
 {
   "name": "create-modulato",
   "version": "0.1.0",
-  "description": "Scaffold a Modulato site — the animation-first React framework.",
+  "description": "Scaffold a Modulato site \u2014 the animation-first React framework.",
   "license": "MIT",
-  "homepage": "https://modulato-demo.vercel.app",
+  "homepage": "https://github.com/glauberxyz/modulato#readme",
   "type": "module",
   "bin": {
     "create-modulato": "index.mjs"
@@ -24,5 +24,11 @@
     "react",
     "animation",
     "framework"
-  ]
+  ],
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/glauberxyz/modulato.git",
+    "directory": "framework/create"
+  },
+  "bugs": "https://github.com/glauberxyz/modulato/issues"
 }

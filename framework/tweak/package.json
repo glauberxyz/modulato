@@ -3,7 +3,7 @@
   "version": "0.1.0",
   "description": "Tweak Mode for Modulato: dev overlay for motion tokens with save-back into source files.",
   "license": "MIT",
-  "homepage": "https://modulato-demo.vercel.app",
+  "homepage": "https://github.com/glauberxyz/modulato#readme",
   "type": "module",
   "exports": {
     "./overlay": "./src/overlay.tsx",
@@ -28,5 +28,11 @@
   },
   "devDependencies": {
     "@types/react": "^19.0.0"
-  }
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/glauberxyz/modulato.git",
+    "directory": "framework/tweak"
+  },
+  "bugs": "https://github.com/glauberxyz/modulato/issues"
 }

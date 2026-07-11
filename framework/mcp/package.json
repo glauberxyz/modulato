@@ -3,7 +3,7 @@
   "version": "0.1.0",
   "description": "MCP server for Modulato projects: routes, contracts, scaffolds and live motion tokens for agents.",
   "license": "MIT",
-  "homepage": "https://modulato-demo.vercel.app",
+  "homepage": "https://github.com/glauberxyz/modulato#readme",
   "type": "module",
   "bin": {
     "modulato-mcp": "src/server.mjs"
@@ -24,5 +24,11 @@
     "@modulato/tweak": "^0.1.0",
     "modulato": "^0.1.0",
     "zod": "^3.24.0"
-  }
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/glauberxyz/modulato.git",
+    "directory": "framework/mcp"
+  },
+  "bugs": "https://github.com/glauberxyz/modulato/issues"
 }

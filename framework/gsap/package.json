@@ -3,7 +3,7 @@
   "version": "0.1.0",
   "description": "GSAP glue for Modulato: page-scoped motion hooks with auto-revert.",
   "license": "MIT",
-  "homepage": "https://modulato-demo.vercel.app",
+  "homepage": "https://github.com/glauberxyz/modulato#readme",
   "type": "module",
   "exports": {
     ".": "./src/index.ts"
@@ -23,5 +23,11 @@
   },
   "devDependencies": {
     "@types/react": "^19.0.0"
-  }
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/glauberxyz/modulato.git",
+    "directory": "framework/gsap"
+  },
+  "bugs": "https://github.com/glauberxyz/modulato/issues"
 }

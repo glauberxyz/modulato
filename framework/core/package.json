@@ -3,7 +3,7 @@
   "version": "0.1.0",
   "description": "Animation-first React framework for marketing sites, landing pages and portfolios.",
   "license": "MIT",
-  "homepage": "https://modulato-demo.vercel.app",
+  "homepage": "https://github.com/glauberxyz/modulato#readme",
   "type": "module",
   "bin": {
     "modulato": "bin/modulato.mjs"
@@ -46,5 +46,11 @@
     "gsap",
     "lenis",
     "marketing-site"
-  ]
+  ],
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/glauberxyz/modulato.git",
+    "directory": "framework/core"
+  },
+  "bugs": "https://github.com/glauberxyz/modulato/issues"
 }
