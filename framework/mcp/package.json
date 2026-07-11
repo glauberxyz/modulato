@@ -6,7 +6,7 @@
   "homepage": "https://modulato-demo.vercel.app",
   "type": "module",
   "bin": {
-    "modulato-mcp": "./src/server.mjs"
+    "modulato-mcp": "src/server.mjs"
   },
   "exports": {
     ".": "./src/server.mjs"

@@ -6,7 +6,7 @@
   "homepage": "https://modulato-demo.vercel.app",
   "type": "module",
   "bin": {
-    "modulato": "./bin/modulato.mjs"
+    "modulato": "bin/modulato.mjs"
   },
   "exports": {
     ".": "./src/index.ts",
