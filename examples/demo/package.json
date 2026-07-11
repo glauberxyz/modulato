@@ -5,7 +5,8 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "vite build"
+    "build": "vite build && vite build --ssr",
+    "preview": "node preview.mjs"
   },
   "dependencies": {
     "@modulato/gsap": "*",

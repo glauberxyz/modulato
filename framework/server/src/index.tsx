@@ -23,6 +23,7 @@ function htmlDocument({
   description,
   payload,
   clientSrc,
+  styles = [],
   intro,
   shellIntro,
 }: {
@@ -31,9 +32,13 @@ function htmlDocument({
   description?: string
   payload: string
   clientSrc: string
+  styles?: string[]
   intro?: boolean
   shellIntro?: boolean
 }): string {
+  const styleLinks = styles
+    .map((href) => `<link rel="stylesheet" href="${escapeHtml(href)}" />\n`)
+    .join('')
   // Hides the page until the client reveals it in the same task that starts
   // the intro animations. With a shell intro (root intro.ts) the whole app is
   // hidden so the persistent shell can be choreographed in too. <noscript>
@@ -48,7 +53,7 @@ function htmlDocument({
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 <title>${escapeHtml(title)}</title>
-${description ? `<meta name="description" content="${escapeHtml(description)}" />\n` : ''}${introStyle}<script type="application/json" id="__MODULATO_DATA__">${payload}</script>
+${description ? `<meta name="description" content="${escapeHtml(description)}" />\n` : ''}${styleLinks}${introStyle}<script type="application/json" id="__MODULATO_DATA__">${payload}</script>
 </head>
 <body>
 <div id="__modulato">${appHtml}</div>
@@ -62,6 +67,7 @@ export async function render({
   routes,
   App,
   clientSrc = '/@id/virtual:modulato/client-entry',
+  styles = [],
   intro = true,
   shellIntro = false,
 }: {
@@ -69,6 +75,8 @@ export async function render({
   routes: RouteDef[]
   App: ComponentType
   clientSrc?: string
+  /** Built stylesheet hrefs to link in <head> (production builds). */
+  styles?: string[]
   /** Inject the first-load intro hiding style. Enabled by default. */
   intro?: boolean
   /** A root intro.ts exists — hide the whole app, not just the outlet. */
@@ -84,6 +92,7 @@ export async function render({
         title: '404 — Not found',
         payload: '{}',
         clientSrc,
+        styles,
       }),
       status: 404,
     }
@@ -102,6 +111,7 @@ export async function render({
       description: entry.meta.description,
       payload,
       clientSrc,
+      styles,
       intro,
       shellIntro,
     }),

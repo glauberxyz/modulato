@@ -39,12 +39,13 @@ export default function modulato(options = {}) {
   /** @type {string} */ let pagesDir
   /** @type {string} */ let transitionsDir
   /** @type {string} */ let behaviorsDir
+  let isSsrBuild = false
 
   return {
     name: 'modulato',
 
-    config() {
-      return {
+    config(_userConfig, env) {
+      const base = {
         appType: 'custom',
         resolve: { dedupe: ['react', 'react-dom'] },
         ssr: { noExternal: ['modulato', '@modulato/server', '@modulato/gsap'] },
@@ -62,6 +63,34 @@ export default function modulato(options = {}) {
           exclude: ['modulato', '@modulato/server', '@modulato/gsap'],
         },
       }
+      if (env.command !== 'build') return base
+
+      // Production is two passes (`vite build && vite build --ssr`):
+      //   1. client — hashed assets + manifest into dist/client
+      //   2. ssr    — a fully-bundled (noExternal) server module into
+      //               dist/server, with the client's hashed asset URLs baked
+      //               into the server entry (the manifest exists by then).
+      if (env.isSsrBuild) {
+        return {
+          ...base,
+          ssr: { noExternal: true },
+          build: {
+            ssr: true,
+            outDir: 'dist/server',
+            emptyOutDir: true,
+            rollupOptions: { input: { server: VIRTUAL.serverEntry } },
+          },
+        }
+      }
+      return {
+        ...base,
+        build: {
+          manifest: true,
+          outDir: 'dist/client',
+          emptyOutDir: true,
+          rollupOptions: { input: { app: VIRTUAL.clientEntry } },
+        },
+      }
     },
 
     configResolved(config) {
@@ -69,6 +98,7 @@ export default function modulato(options = {}) {
       pagesDir = path.resolve(root, options.pagesDir ?? 'pages')
       transitionsDir = path.resolve(root, options.transitionsDir ?? 'transitions')
       behaviorsDir = path.resolve(root, options.behaviorsDir ?? 'behaviors')
+      isSsrBuild = config.command === 'build' && !!config.build.ssr
     },
 
     resolveId(id) {
@@ -101,14 +131,32 @@ export default function modulato(options = {}) {
           `import App from '${VIRTUAL.app}'`,
           `boot({ routes, App, transitions, intros, behaviors })`,
         ].join('\n')
-      if (id === VIRTUAL.serverEntry)
+      if (id === VIRTUAL.serverEntry) {
+        const flags = `intro: ${options.intro !== false}, shellIntro: ${options.intro !== false && fs.existsSync(path.resolve(root, 'intro.ts'))}`
+        // Production: the client build ran first — bake its hashed asset URLs
+        // (entry script + every stylesheet) into the server module.
+        const assets = isSsrBuild ? clientAssets(root) : null
+        const assetArgs = assets
+          ? `, clientSrc: ${JSON.stringify(assets.entry)}, styles: ${JSON.stringify(assets.styles)}`
+          : ''
         return [
           `import { render } from '@modulato/server'`,
           `import { routes } from '${VIRTUAL.manifest}'`,
           `import App from '${VIRTUAL.app}'`,
-          `export const handle = (url) => render({ url, routes, App, intro: ${options.intro !== false}, shellIntro: ${options.intro !== false && fs.existsSync(path.resolve(root, 'intro.ts'))} })`,
+          `export const handle = (url) => render({ url, routes, App, ${flags}${assetArgs} })`,
         ].join('\n')
+      }
       return undefined
+    },
+
+    // After the SSR build lands, emit Vercel Build Output API v3 when
+    // building on Vercel (VERCEL=1) or when opted in via { vercel: true }.
+    // Deploy with `vercel deploy --prebuilt`.
+    writeBundle() {
+      if (!isSsrBuild) return
+      if (!process.env.VERCEL && !options.vercel) return
+      emitVercelOutput(root)
+      this.info(`emitted .vercel/output (Build Output API v3)`)
     },
 
     transform(code, id) {
@@ -302,6 +350,105 @@ function generateIntros(pagesDir, root) {
     ? `() => import('/intro.ts')`
     : 'null'
   return `export const entries = [\n${lines.join('\n')}\n]\nexport const shell = ${shell}\n`
+}
+
+/**
+ * Read the client build's manifest and return the hashed entry script plus
+ * every emitted stylesheet (page styles are scoped by convention, so linking
+ * them all is safe and gives instant styled paint on any route).
+ */
+function clientAssets(root) {
+  const manifestPath = path.join(root, 'dist/client/.vite/manifest.json')
+  if (!fs.existsSync(manifestPath)) {
+    throw new Error(
+      '[modulato] dist/client/.vite/manifest.json not found — run the client build first (`vite build && vite build --ssr`)',
+    )
+  }
+  const manifest = JSON.parse(fs.readFileSync(manifestPath, 'utf8'))
+  let entry = null
+  const styles = new Set()
+  for (const chunk of Object.values(manifest)) {
+    if (chunk.isEntry) {
+      entry = `/${chunk.file}`
+      for (const css of chunk.css ?? []) styles.add(`/${css}`)
+    }
+  }
+  // Entry CSS first (global styles), then page-level styles.
+  for (const chunk of Object.values(manifest)) {
+    if (!chunk.isEntry) for (const css of chunk.css ?? []) styles.add(`/${css}`)
+  }
+  if (!entry) throw new Error('[modulato] no entry chunk in the client manifest')
+  return { entry, styles: [...styles] }
+}
+
+const VERCEL_LAUNCHER = `import { handle } from './server.js'
+
+export default async function (req, res) {
+  try {
+    const { html, status } = await handle(req.url ?? '/')
+    res.statusCode = status
+    res.setHeader('content-type', 'text/html; charset=utf-8')
+    res.end(html)
+  } catch (error) {
+    console.error('[modulato] SSR failed', error)
+    res.statusCode = 500
+    res.setHeader('content-type', 'text/plain; charset=utf-8')
+    res.end('Internal Server Error')
+  }
+}
+`
+
+/**
+ * Emit Vercel Build Output API v3: the client build as static assets and the
+ * bundled SSR module as one Node serverless function behind a catch-all.
+ */
+function emitVercelOutput(root) {
+  const out = path.join(root, '.vercel/output')
+  fs.rmSync(out, { recursive: true, force: true })
+
+  fs.cpSync(path.join(root, 'dist/client'), path.join(out, 'static'), {
+    recursive: true,
+    filter: (src) => path.basename(src) !== '.vite',
+  })
+
+  const fn = path.join(out, 'functions/__ssr.func')
+  fs.cpSync(path.join(root, 'dist/server'), fn, { recursive: true })
+  fs.writeFileSync(path.join(fn, 'index.mjs'), VERCEL_LAUNCHER)
+  // The SSR bundle's .js files are ESM.
+  fs.writeFileSync(path.join(fn, 'package.json'), JSON.stringify({ type: 'module' }))
+  fs.writeFileSync(
+    path.join(fn, '.vc-config.json'),
+    JSON.stringify(
+      {
+        runtime: 'nodejs22.x',
+        handler: 'index.mjs',
+        launcherType: 'Nodejs',
+        shouldAddHelpers: false,
+      },
+      null,
+      2,
+    ),
+  )
+
+  fs.writeFileSync(
+    path.join(out, 'config.json'),
+    JSON.stringify(
+      {
+        version: 3,
+        routes: [
+          {
+            src: '/assets/(.*)',
+            headers: { 'cache-control': 'public, max-age=31536000, immutable' },
+            continue: true,
+          },
+          { handle: 'filesystem' },
+          { src: '/(.*)', dest: '/__ssr' },
+        ],
+      },
+      null,
+      2,
+    ),
+  )
 }
 
 /** Scan behaviorsDir for enhancer files and emit the behaviors manifest. */

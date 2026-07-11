@@ -617,9 +617,17 @@ Each phase ends with something runnable in `examples/`.
 > Note: per-page intros are FILE-based (`intro.ts`), not the `useIntro` hook sketched
 > in §3.1 — first-load choreography is a file concern like transitions; revisit only
 > if Tweak Mode needs otherwise.
-> **Next up: the pulled-forward mini deploy milestone** ("demo deploys to Vercel")
-> to de-risk the production build early, then Phase 4 (CLI).
-> The demo currently runs in dev only.
+> **Deploy milestone ✅ (build side):** production build works — `vite build && vite
+> build --ssr` through `@modulato/vite` (client: hashed assets + manifest into
+> dist/client; ssr: fully-bundled server module into dist/server with the client's
+> hashed asset URLs + stylesheet links baked into the server entry). With `VERCEL=1`
+> (or `vercel: true`) the plugin emits **Build Output API v3** (`.vercel/output`:
+> static + one `__ssr` Node function + immutable asset caching). Verified locally via
+> `npm run preview` (examples/demo/preview.mjs serves the output Vercel-style): SSR
+> HTML complete, styled first paint, hydration + client routing + intros all work.
+> Project linked as `modulato-demo`; the actual `vercel deploy --prebuilt` awaits the
+> user's go-ahead.
+> **Next up: Phase 4 (CLI).**
 
 - **Phase 0 — Skeleton.** Monorepo scaffolding (workspaces, turbo, tsconfig, vitest,
   changesets), claim `modulato` + `@modulato` on npm with 0.0.1 placeholders.

@@ -9,6 +9,12 @@ export interface ModulatoPluginOptions {
   behaviorsDir?: string
   /** First-load intro system (per-page `intro.ts`, default fade-in). Default: true. */
   intro?: boolean
+  /**
+   * Emit Vercel Build Output API (.vercel/output) after the SSR build.
+   * Auto-enabled when building on Vercel (VERCEL=1). Deploy with
+   * `vercel deploy --prebuilt`.
+   */
+  vercel?: boolean
 }
 
 export default function modulato(options?: ModulatoPluginOptions): Plugin
