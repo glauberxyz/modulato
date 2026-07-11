@@ -527,6 +527,23 @@ Examples consume `framework/*` as **workspace deps** — no version drift betwee
 and reference site (the 22-vs-24 problem), and every framework change is validated against
 the demo site immediately.
 
+### Distribution & repo privacy (decided 2026-07-11)
+
+The GitHub repo stays **private** until the framework is ready; npm is the public
+distribution channel. Already claimed: `modulato@0.0.1` placeholder + the `@modulato` org
+(scope fully reserved). At first real release (0.1.0):
+
+- Framework packages publish from the private repo (tsup build step first — exports
+  currently point at raw TS source, which only works inside the workspace).
+- **Examples ship as `@modulato/examples`** — a published package of template folders.
+  `create-modulato` fetches its tarball from the registry at scaffold time (NOT bundled,
+  NOT degit-from-GitHub — the repo is private) and unpacks the chosen template onto the
+  user's machine, rewriting package.json to point at published versions. Version-pinned
+  to the framework release so examples always match. Publishable only alongside 0.1.0,
+  since examples import the framework.
+- Revisit making the repo public at/after launch: npm provenance attestation, Socket/Snyk
+  trust scores, and LLM-first adoption all favor an eventually-public repo.
+
 ---
 
 ## 10. The proof: `examples/demo` — a 3-page showcase site

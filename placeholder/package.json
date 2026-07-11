@@ -1,0 +1,25 @@
+{
+  "name": "modulato",
+  "version": "0.0.1",
+  "description": "Animation-first React framework for marketing sites, landing pages and portfolios. In development — this is a name-claim placeholder, not a usable release.",
+  "license": "MIT",
+  "type": "module",
+  "main": "index.js",
+  "files": [
+    "index.js"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/glauberxyz/modulato.git"
+  },
+  "homepage": "https://modulato.org",
+  "keywords": [
+    "react",
+    "animation",
+    "framework",
+    "page-transitions",
+    "gsap",
+    "marketing-sites"
+  ],
+  "author": "Glauber Sampaio"
+}
