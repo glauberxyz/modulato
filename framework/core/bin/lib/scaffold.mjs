@@ -33,12 +33,26 @@ function names(routeId) {
   return { className, component, title }
 }
 
-function write(root, relPath, content, created) {
-  const abs = path.resolve(root, relPath)
-  if (fs.existsSync(abs)) fail(`${relPath} already exists — refusing to overwrite`)
-  fs.mkdirSync(path.dirname(abs), { recursive: true })
-  fs.writeFileSync(abs, content)
-  created.push(relPath)
+/**
+ * Scaffolds are ATOMIC: every target path is checked before anything is
+ * written, so a failed scaffold changes nothing — agents can retry with a
+ * different name without cleaning up partial output first.
+ */
+function write(root, relPath, content, queued) {
+  queued.push({ relPath, content })
+}
+
+function commit(root, queued) {
+  for (const { relPath } of queued) {
+    if (fs.existsSync(path.resolve(root, relPath)))
+      fail(`${relPath} already exists — refusing to overwrite (nothing was created)`)
+  }
+  for (const { relPath, content } of queued) {
+    const abs = path.resolve(root, relPath)
+    fs.mkdirSync(path.dirname(abs), { recursive: true })
+    fs.writeFileSync(abs, content)
+  }
+  return queued.map(({ relPath }) => relPath)
 }
 
 export function newPage(root, routeId) {
@@ -106,7 +120,7 @@ ${
   )
 
   return {
-    created,
+    created: commit(root, created),
     note: `route ${toPattern(routeId)} is live (no registration needed). Link to it with <a href="${toPattern(routeId)}">. Finish with: modulato check`,
   }
 }
@@ -153,7 +167,10 @@ export default transition({
 `,
     created,
   )
-  return { created, note: `runs on ${from} → ${to}${symmetric ? ` and ${to} → ${from}` : ''}. Finish with: modulato check` }
+  return {
+    created: commit(root, created),
+    note: `runs on ${from} → ${to}${symmetric ? ` and ${to} → ${from}` : ''}. Finish with: modulato check`,
+  }
 }
 
 export function newBehavior(root, name) {
@@ -179,7 +196,10 @@ export default enhance('[data-${name}]', ({ element, data, page }) => {
 `,
     created,
   )
-  return { created, note: `auto-discovered — applies to [data-${name}] nodes on every page.` }
+  return {
+    created: commit(root, created),
+    note: `auto-discovered — applies to [data-${name}] nodes on every page.`,
+  }
 }
 
 export function newIntro(root, routeId) {
@@ -209,7 +229,10 @@ export default intro({
 `,
       created,
     )
-    return { created, note: 'runs on first load, choreographing the persistent shell.' }
+    return {
+      created: commit(root, created),
+      note: 'runs on first load, choreographing the persistent shell.',
+    }
   }
 
   const routes = scanRoutes(root)
@@ -240,7 +263,10 @@ export default intro({
 `,
     created,
   )
-  return { created, note: `replaces the default fade-in on first loads of ${toPattern(routeId)}.` }
+  return {
+    created: commit(root, created),
+    note: `replaces the default fade-in on first loads of ${toPattern(routeId)}.`,
+  }
 }
 
 export { ScaffoldError }
