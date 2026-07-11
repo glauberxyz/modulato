@@ -31,6 +31,7 @@ const S: Record<string, CSSProperties> = {
     width: 300,
     maxHeight: '70vh',
     overflowY: 'auto',
+    overscrollBehavior: 'contain',
     font: '11px/1.5 ui-monospace, monospace',
     background: 'rgba(20,20,24,0.94)',
     color: '#ddd',
@@ -201,7 +202,9 @@ function Overlay() {
         {open ? '× motion' : '✦ motion'}
       </button>
       {open && (
-        <div style={S.panel} data-version={version}>
+        // data-lenis-prevent: the page's Lenis must not intercept wheel/touch
+        // over the panel, or its own scrollbar never moves.
+        <div style={S.panel} data-version={version} data-lenis-prevent="">
           <div style={S.controls}>
             <button style={S.button} onClick={() => void handle.replayIntro()}>
               replay intro
