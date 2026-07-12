@@ -478,10 +478,20 @@ SSR HTML is always complete — view-source shows the whole page.
 
 - Page root class = folder name (`pages/work/` → `.work`) — the styles.scss
   scope convention.
+- **Pages STACK during transitions** — the incoming page renders underneath
+  the outgoing one from frame zero. Give every page root an opaque
+  `background`, or the incoming page shows through the outgoing page's
+  transparent areas the moment navigation starts. To reproduce a classic
+  "swap" choreography, hide the outgoing page mid-timeline
+  (`timeline.set(from.element, { autoAlpha: 0 }, swapAt)`) and start the
+  enter animations at that same position.
 - `<Shared>` ids must be unique per page; unmatched ids simply don't FLIP.
   Shared-element FLIP animates the element's BOX (position/size), not its
   content — give the from/to elements the same `object-fit` (and similar
   aspect) so the image doesn't pop when the clone lands.
+- To start a FLIP flight mid-choreography use `flipShared(pair, { delay })` —
+  it hides both originals SYNCHRONOUSLY and flies later. Never wrap
+  flipShared in a setTimeout: the incoming cover stays visible until it runs.
 - ScrollTrigger auto-syncs with the page's Lenis when you use `useMotion`
   (from `@modulato/gsap`) and have registered `ScrollTrigger` — no per-project
   `lenis.on('scroll', …)` glue needed.

@@ -37,12 +37,17 @@ export function collectSharedPairs(
  * FLIP a shared pair: clone the outgoing element into a fixed overlay, hide
  * both originals, fly the clone from rect to rect, then reveal the target.
  * The clone keeps its class names, so CSS (object-fit, border-radius) applies.
+ *
+ * `delay` postpones the FLIGHT, not the hiding: the clone is created and both
+ * originals are hidden SYNCHRONOUSLY (before the reveal frame paints), so the
+ * incoming page's cover can never flash at its final position while you wait.
+ * Prefer this over wrapping flipShared in a setTimeout.
  */
 export async function flipShared(
   pair: SharedPair,
-  options: { duration?: number; easing?: string } = {},
+  options: { duration?: number; easing?: string; delay?: number } = {},
 ): Promise<void> {
-  const { duration = 600, easing = 'cubic-bezier(0.16, 1, 0.3, 1)' } = options
+  const { duration = 600, easing = 'cubic-bezier(0.16, 1, 0.3, 1)', delay = 0 } = options
   const clone = pair.from.cloneNode(true) as HTMLElement
   clone.removeAttribute('data-shared')
   clone.setAttribute('data-modulato-clone', '')
@@ -59,6 +64,8 @@ export async function flipShared(
   document.body.appendChild(clone)
   pair.from.style.visibility = 'hidden'
   pair.to.style.visibility = 'hidden'
+
+  if (delay > 0) await new Promise((resolve) => setTimeout(resolve, delay))
 
   try {
     await clone.animate(

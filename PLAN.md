@@ -759,6 +759,20 @@ Each phase ends with something runnable in `examples/`.
 > unpacked. `create-modulato` npm name confirmed unclaimed.
 > Publish (user, from repo root, npm login as glauberxyz first):
 > `for p in core vite server gsap tweak content-local mcp create; do (cd framework/$p && npm publish --access public); done`
+> **FLIP flash fixed (2026-07-12):** real-browser screenshots from the user
+> showed the archive cover appearing at its final position on click. Root
+> cause was architectural: pages STACK in Modulato (v1 swapped them), so
+> transparent page roots let the incoming page show through — plus the site
+> delayed flipShared behind a setTimeout, leaving the target cover visible
+> until it ran. Fixes: `flipShared(pair, { delay })` (core, folds into pending
+> 0.1.3) hides both originals SYNCHRONOUSLY and flies later; MODULATO.md
+> gotchas now mandate opaque page-root backgrounds + swap-point sequencing
+> (`timeline.set(from.element, {autoAlpha: 0}, swapAt)`); glauber-2026-v2 got
+> opaque roots + v1's swap sequencing across all four choreographed pairs.
+> Verified at timeline checkpoints: t0 cover hidden + clone present + home
+> opaque; post-swap outgoing hidden, cover hidden until clone lands; commit
+> clean.
+>
 > **Framework head API + Lenis↔ScrollTrigger sync (2026-07-12):** driven by the
 > glauber-2026-v2 rewrite, which kept hitting framework gaps. (1) **Head/link
 > API** — `MetaResult` gains `link[]`/`meta[]` (per-page, SSR'd: og:title,
