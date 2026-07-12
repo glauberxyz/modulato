@@ -14,6 +14,6 @@
     "dev:site": "npm run dev -w docs/site"
   },
   "devDependencies": {
-    "typescript": "^5.8.0"
+    "typescript": "^7.0.0"
   }
 }

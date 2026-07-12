@@ -759,6 +759,13 @@ Each phase ends with something runnable in `examples/`.
 > unpacked. `create-modulato` npm name confirmed unclaimed.
 > Publish (user, from repo root, npm login as glauberxyz first):
 > `for p in core vite server gsap tweak content-local mcp create; do (cd framework/$p && npm publish --access public); done`
+> **TypeScript 7 (native compiler) adopted (2026-07-11):** `typescript@latest`
+> is now 7.0.2 — the Go rewrite (~2.5× faster checks here). Scaffold template
+> default bumped 5.9.3 → ^7.0.0, monorepo devDep too. Verified clean on: fresh
+> scaffold, glauber-2026-v2 (hand-rolled unions + p5 @types + portable-text),
+> and all four monorepo tsconfigs. Only affects `tsc --noEmit` (the check) —
+> vite build/dev use esbuild, unchanged. Ships in create-modulato@0.1.2.
+>
 > **portless by default (decided 2026-07-11):** scaffolded sites run
 > `npm run dev` through portless → stable, port-free `https://<name>.localhost`
 > named after the project — deterministic URLs an agent can derive without
