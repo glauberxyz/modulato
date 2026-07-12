@@ -102,8 +102,11 @@ export function meta({ props }: LoadArgs & { props: ReturnType<typeof load> }) {
   return { title: props.project?.title ?? 'Not found', description: props.project?.description }
 }
 
-// Optional per-page smooth-scroll tuning (Lenis options), or `false` to disable:
-export const scroll = { lerp: 0.08 }
+// Optional per-page smooth-scroll tuning (Lenis options), or `false` to disable.
+// `restore: true` = scroll memory: link navigations BACK to this page land at
+// the position it was left at (grid → detail → back-to-grid). Session-only;
+// a fresh landing starts at the top. Back/Forward restore regardless.
+export const scroll = { lerp: 0.08, restore: true }
 ```
 
 `load` runs server-side for the first paint and client-side on navigations —

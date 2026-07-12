@@ -759,6 +759,15 @@ Each phase ends with something runnable in `examples/`.
 > unpacked. `create-modulato` npm name confirmed unclaimed.
 > Publish (user, from repo root, npm login as glauberxyz first):
 > `for p in core vite server gsap tweak content-local mcp create; do (cd framework/$p && npm publish --access public); done`
+> **Scroll memory (2026-07-12, user concept):** `scroll = { restore: true }` in
+> a page's config — the router records every page's position on leave
+> (session-only Map by pathname) and LINK navigations back to a restore page
+> land where it was left (grid → detail → back-to-grid). Fresh landings start
+> at top; Back/Forward unaffected (history-state path takes precedence).
+> Rides prepareOutgoing's existing target-scroll, so transitions and FLIP
+> measure correctly at the restored offset. Verified both cases in-browser.
+> modulato@0.1.4 (publish pending). Demo home + glauber-v2 home/archives opted in.
+>
 > **FLIP flash fixed (2026-07-12):** real-browser screenshots from the user
 > showed the archive cover appearing at its final position on click. Root
 > cause was architectural: pages STACK in Modulato (v1 swapped them), so

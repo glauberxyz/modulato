@@ -42,6 +42,11 @@ function toInfo(entry: Entry): RouteInfo {
 const useIsomorphicLayoutEffect =
   typeof window !== 'undefined' ? useLayoutEffect : useEffect
 
+// Scroll memory (session-only): every page's position is recorded when you
+// navigate away; link navigations back to a page with `scroll.restore` land
+// there instead of at the top. A fresh landing has no entry — starts at 0.
+const scrollMemory = new Map<string, number>()
+
 /**
  * Owns router state and the navigation lifecycle. Rendered by both the server
  * (static, effects never run) and the client (live).
@@ -78,6 +83,11 @@ export function ModulatoRoot({
       const t = ++token.current
       setPhase('loading')
 
+      // Record the departing page's position for scroll memory (both link
+      // and popstate navigations — a Back-visited page can be returned to
+      // via a link later).
+      scrollMemory.set(stateRef.current.current.path, window.scrollY)
+
       let entry = null
       try {
         entry = await resolveEntry(
@@ -104,7 +114,13 @@ export function ModulatoRoot({
         )
         window.history.pushState({}, '', url.pathname + url.search)
       }
-      targetScroll.current = opts.scrollY ?? 0
+      // Explicit target (popstate) → remembered position (scroll.restore
+      // pages, link navs) → top.
+      const remembered =
+        entry.scroll !== false && entry.scroll?.restore
+          ? scrollMemory.get(pathname)
+          : undefined
+      targetScroll.current = opts.scrollY ?? remembered ?? 0
       setPhase('transition')
       setState((s) => ({ current: s.current, next: entry }))
     },

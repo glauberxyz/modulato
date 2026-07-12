@@ -60,6 +60,13 @@ export interface ScrollConfig {
   duration?: number
   smoothWheel?: boolean
   touchMultiplier?: number
+  /**
+   * Scroll memory: when a LINK navigation returns to this page, land at the
+   * position it was left at instead of the top (grid → detail → back-to-grid).
+   * Session-only — a fresh landing always starts at the top. The browser
+   * Back/Forward buttons restore scroll regardless of this flag.
+   */
+  restore?: boolean
   [option: string]: unknown
 }
 

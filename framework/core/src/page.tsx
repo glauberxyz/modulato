@@ -133,9 +133,11 @@ export function PageScope({ entry, phase, hidden, registerEl }: PageScopeProps) 
     let cancelled = false
     let instance: Lenis | null = null
     let detach: (() => void) | null = null
+    // `restore` is router-level scroll memory, not a Lenis option.
+    const { restore: _restore, ...lenisOptions } = entry.scroll ?? {}
     void import('lenis').then(({ default: LenisCtor }) => {
       if (cancelled) return
-      instance = new LenisCtor({ autoRaf: false, ...(entry.scroll ?? {}) })
+      instance = new LenisCtor({ autoRaf: false, ...lenisOptions })
       instance.on('scroll', emitScroll)
       detach = ticker.add((time) => instance!.raf(time))
       // Scroll stays locked while a transition choreographs both pages.
