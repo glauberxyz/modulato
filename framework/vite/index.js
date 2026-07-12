@@ -120,7 +120,7 @@ export default function modulato(options = {}) {
 
     load(id) {
       if (id === VIRTUAL.manifest) return generateManifest(pagesDir)
-      if (id === VIRTUAL.transitions) return generateTransitions(transitionsDir)
+      if (id === VIRTUAL.transitions) return generateTransitions(transitionsDir, pagesDir)
       if (id === VIRTUAL.intros) return generateIntros(pagesDir, root)
       if (id === VIRTUAL.behaviors) return generateBehaviors(behaviorsDir)
       if (id === VIRTUAL.content) {
@@ -403,11 +403,16 @@ function generateManifest(pagesDir) {
 
 /**
  * Scan transitionsDir for pair files and emit the transitions manifest.
- * Naming: `<from>__<to>.ts` where `.` encodes `/` in nested route ids —
- * e.g. `work__work.[slug].ts` matches work → work/[slug]. `default.ts` is
- * the fallback for unmatched pairs.
+ * Naming: `<from>__<to>.ts` where a route id is written with dashes —
+ * `/` becomes `-` and param brackets are dropped, so work/[slug] is
+ * `work-slug` and `home__work-slug.ts` matches home → work/[slug].
+ * Filenames resolve against the real route ids from pages/, so the
+ * dash form stays unambiguous (colliding ids are a build error). The
+ * legacy dot/bracket encoding (`home__work.[slug].ts`) still resolves.
+ * `default.ts` is the fallback for unmatched pairs.
  */
-function generateTransitions(transitionsDir) {
+function generateTransitions(transitionsDir, pagesDir) {
+  const resolveId = routeIdResolver(pagesDir)
   const entries = []
   let hasDefault = false
   if (fs.existsSync(transitionsDir)) {
@@ -422,7 +427,7 @@ function generateTransitions(transitionsDir) {
       }
       const parts = name.split('__')
       if (parts.length !== 2) continue
-      entries.push({ from: decodeRouteId(parts[0]), to: decodeRouteId(parts[1]), file })
+      entries.push({ from: resolveId(parts[0]), to: resolveId(parts[1]), file })
     }
   }
   const lines = entries.map(
@@ -433,7 +438,42 @@ function generateTransitions(transitionsDir) {
   return `export const entries = [\n${lines.join('\n')}\n]\nexport const fallback = ${fallback}\n`
 }
 
-/** `work.[slug]` → `work/[slug]` — dots encode path separators in filenames. */
+/** `work/[slug]` → `work-slug` — dashes walk into folders, brackets drop. */
+function slugRouteId(id) {
+  return id.replaceAll('/', '-').replaceAll(/[[\]]/g, '')
+}
+
+/**
+ * Filename side → route id, resolved against the routes that actually exist:
+ * dash form first, then the legacy dot/bracket encoding. Unknown names pass
+ * through the legacy decode so `modulato check` can name the bad reference.
+ */
+function routeIdResolver(pagesDir) {
+  const bySlug = new Map()
+  const byLegacy = new Map()
+  const walk = (dir, prefix) => {
+    if (!fs.existsSync(dir)) return
+    for (const dirent of fs.readdirSync(dir, { withFileTypes: true })) {
+      if (!dirent.isDirectory()) continue
+      const id = prefix ? `${prefix}/${dirent.name}` : dirent.name
+      const abs = path.join(dir, dirent.name)
+      if (fs.existsSync(path.join(abs, 'page.tsx'))) {
+        const slug = slugRouteId(id)
+        if (bySlug.has(slug) && bySlug.get(slug) !== id)
+          throw new Error(
+            `[modulato] routes "${bySlug.get(slug)}" and "${id}" both shorten to "${slug}" in transition filenames — rename one of the folders.`,
+          )
+        bySlug.set(slug, id)
+        byLegacy.set(encodeRouteId(id), id)
+      }
+      walk(abs, id)
+    }
+  }
+  walk(pagesDir, '')
+  return (name) => bySlug.get(name) ?? byLegacy.get(name) ?? decodeRouteId(name)
+}
+
+/** Legacy filename encoding: dots for `/`, brackets kept. Still accepted. */
 function decodeRouteId(encoded) {
   return encoded.replaceAll('.', '/')
 }

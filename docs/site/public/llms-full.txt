@@ -48,9 +48,9 @@ my-site/
       [slug]/page.tsx          ← route "/work/:slug"
   transitions/
     default.ts                 ← optional fallback (built-in crossfade otherwise)
-    home__about.ts             ← home → about pair ("/" in route ids is "." in filenames)
+    home__about.ts             ← home → about pair
     home__about.motion.ts      ← optional colocated tokens for that pair
-    work__work.[slug].ts       ← work → work/:slug
+    work__work-slug.ts         ← work → work/:slug (route ids: "/" is "-", brackets drop)
   behaviors/
     reveal.ts                  ← enhancers for HTML you don't control (CMS output)
   content/                     ← content source for @modulato/content-local
@@ -194,13 +194,18 @@ export default intro({
 })
 ```
 
-**Transitions** are one file per route pair: `transitions/<from>__<to>.ts`,
-where `/` in a route id is written as `.` (`work__work.[slug].ts`).
+**Transitions** are one file per route pair: `transitions/<from>__<to>.ts`.
+In filenames a route id is written with dashes — `/` becomes `-` and param
+brackets drop — so `work/[slug]` is `work-slug` and work → work/:slug is
+`work__work-slug.ts`. Names resolve against the routes that actually exist
+(`modulato check` errors if two routes would shorten to the same name, and
+still accepts the older `work__work.[slug].ts` dot form). The only dot in a
+transition filename is a file kind: `.motion.ts` tokens, `.ts` code.
 Resolution: exact pair → reversed pair if it sets `symmetric: true` →
 `default.ts` → built-in crossfade.
 
 ```ts
-// transitions/work__work.[slug].ts
+// transitions/work__work-slug.ts
 import { transition, flipShared } from 'modulato'
 
 export default transition({

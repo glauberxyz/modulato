@@ -19,8 +19,8 @@ non-interactive and JSON-friendly — prefer it over doing things by hand:
 - Page folder companions (all optional): `config.ts` (meta/load/scroll),
   `styles.scss` (auto-imported, scoped to the page's root class),
   `intro.ts` (first-load animation), `motion.ts` (tweakable motion tokens).
-- Transitions live in `transitions/<from>__<to>.ts` — `/` in a route id is
-  written as `.` in the filename (`work__work.[slug].ts`).
+- Transitions live in `transitions/<from>__<to>.ts` — a route id is written
+  with dashes: `/` becomes `-`, param brackets drop (`work__work-slug.ts`).
 - Animation numbers belong in `motion.ts` token modules (`motion({...})`),
   not hardcoded in animation code — that's what makes them tweakable live
   (dev overlay ✦ motion) and editable via `set_motion_tokens` (MCP).

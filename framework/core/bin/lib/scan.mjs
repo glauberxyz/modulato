@@ -15,7 +15,15 @@ export function toPattern(id) {
   )
 }
 
-/** Route ids ↔ transition filenames: `/` is encoded as `.`. */
+/**
+ * Route id → transition filename form: `/` becomes `-`, param brackets drop.
+ * `work/[slug]` → `work-slug`, so home → work/[slug] is `home__work-slug.ts`.
+ */
+export function slugRouteId(id) {
+  return id.replaceAll('/', '-').replaceAll(/[[\]]/g, '')
+}
+
+/** Legacy filename encoding (dots for `/`, brackets kept). Still accepted. */
 export function encodeRouteId(id) {
   return id.replaceAll('/', '.')
 }
@@ -54,11 +62,27 @@ export function scanRoutes(root, pagesDir = 'pages') {
   return routes
 }
 
-/** Scan transitions/ for pair files. Malformed names are reported, not skipped. */
+/**
+ * Scan transitions/ for pair files, resolving each side against the real
+ * route ids (dash form first, then the legacy dot/bracket encoding — those
+ * entries get `legacy: true` so check can suggest the rename). Malformed
+ * names are reported, not skipped.
+ */
 export function scanTransitions(root, transitionsDir = 'transitions') {
   const base = path.resolve(root, transitionsDir)
   const entries = []
   if (!fs.existsSync(base)) return entries
+  const bySlug = new Map()
+  const byLegacy = new Map()
+  for (const route of scanRoutes(root)) {
+    bySlug.set(slugRouteId(route.id), route.id)
+    byLegacy.set(encodeRouteId(route.id), route.id)
+  }
+  const resolve = (name) => {
+    if (bySlug.has(name)) return { id: bySlug.get(name), legacy: false }
+    if (byLegacy.has(name)) return { id: byLegacy.get(name), legacy: name !== slugRouteId(byLegacy.get(name)) }
+    return { id: decodeRouteId(name), legacy: false }
+  }
   for (const file of fs.readdirSync(base)) {
     if (!file.endsWith('.ts')) continue
     // Colocated token modules for pair files, not transitions themselves.
@@ -73,7 +97,9 @@ export function scanTransitions(root, transitionsDir = 'transitions') {
       entries.push({ file, malformed: true })
       continue
     }
-    entries.push({ file, from: decodeRouteId(parts[0]), to: decodeRouteId(parts[1]) })
+    const from = resolve(parts[0])
+    const to = resolve(parts[1])
+    entries.push({ file, from: from.id, to: to.id, legacy: from.legacy || to.legacy })
   }
   return entries
 }

@@ -1,6 +1,6 @@
 import fs from 'node:fs'
 import path from 'node:path'
-import { encodeRouteId, scanRoutes, scanTransitions } from './scan.mjs'
+import { scanRoutes, scanTransitions, slugRouteId } from './scan.mjs'
 
 const COMPANIONS = ['styles.scss', 'config.ts', 'intro.ts', 'motion.ts', 'server.ts']
 
@@ -55,6 +55,18 @@ export function check(root) {
       )
   }
 
+  // Two routes may never shorten to the same transition-filename form.
+  const slugOwners = new Map()
+  for (const route of routes) {
+    const slug = slugRouteId(route.id)
+    if (slugOwners.has(slug))
+      error(
+        `pages/${route.id}`,
+        `routes "${slugOwners.get(slug)}" and "${route.id}" both shorten to "${slug}" in transition filenames — rename one of the folders.`,
+      )
+    slugOwners.set(slug, route.id)
+  }
+
   // Transition pair files must reference existing routes.
   const known = routes.map((r) => r.id)
   for (const entry of scanTransitions(root)) {
@@ -62,8 +74,8 @@ export function check(root) {
     if (entry.malformed) {
       error(
         `transitions/${entry.file}`,
-        `malformed name — expected <from>__<to>.ts (double underscore), where "/" in a route id is written as ".": e.g. ${
-          known[1] ? `${encodeRouteId(known[0])}__${encodeRouteId(known[1])}.ts` : 'home__about.ts'
+        `malformed name — expected <from>__<to>.ts (double underscore), where a route id is written with dashes ("/" becomes "-", param brackets drop): e.g. ${
+          known[1] ? `${slugRouteId(known[0])}__${slugRouteId(known[1])}.ts` : 'home__about.ts'
         }`,
       )
       continue
@@ -78,6 +90,11 @@ export function check(root) {
           `"${id}" (${side} side) is not a page. Known routes: ${known.join(', ')}. This transition can never run.`,
         )
     }
+    if (entry.legacy && known.includes(entry.from) && known.includes(entry.to))
+      warn(
+        `transitions/${entry.file}`,
+        `legacy dot/bracket name — still works, but the dash form is the convention now: rename to ${slugRouteId(entry.from)}__${slugRouteId(entry.to)}.ts (and its .motion.ts sibling, if any)`,
+      )
   }
 
   // The shell must render <PageOutlet/> or no page ever mounts.

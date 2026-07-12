@@ -1,6 +1,6 @@
 import fs from 'node:fs'
 import path from 'node:path'
-import { encodeRouteId, scanRoutes, toPattern } from './scan.mjs'
+import { scanRoutes, slugRouteId, toPattern } from './scan.mjs'
 
 const SEGMENT = /^([a-z0-9-]+|\[[a-z0-9-]+\])$/
 
@@ -134,7 +134,7 @@ export function newTransition(root, from, to, { symmetric = false } = {}) {
         `"${id}" is not a page. Known routes: ${known.join(', ') || '(none)'}. Create it first: modulato new page ${id}`,
       )
   }
-  const file = `transitions/${encodeRouteId(from)}__${encodeRouteId(to)}.ts`
+  const file = `transitions/${slugRouteId(from)}__${slugRouteId(to)}.ts`
   const created = []
   write(
     root,

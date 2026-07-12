@@ -759,6 +759,14 @@ Each phase ends with something runnable in `examples/`.
 > unpacked. `create-modulato` npm name confirmed unclaimed.
 > Publish (user, from repo root, npm login as glauberxyz first):
 > `for p in core vite server gsap tweak content-local mcp create; do (cd framework/$p && npm publish --access public); done`
+> **Transition filename convention v2 (2026-07-12, user call):** route ids in
+> transition filenames are now dash-form — `/` becomes `-`, param brackets
+> drop (`home__archive-slug.ts`, `archive-slug__archive-slug-generate.ts`).
+> Dots now mean exactly one thing: a file kind (`.motion.ts`). Names resolve
+> against the real route manifest (slug collisions are a hard error); the
+> legacy dot/bracket form still resolves and `modulato check` suggests the
+> rename. modulato@0.1.7 + @modulato/vite@0.1.2 + create-modulato@0.1.6.
+>
 > **Analytics story + per-page script (2026-07-12):** site-wide analytics load
 > via `head.script` (SSR'd; SimpleAnalytics/GA4 auto-detect History API navs;
 > Mixpanel needs track_pageview config). `MetaResult` gains `script[]` for
