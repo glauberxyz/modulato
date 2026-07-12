@@ -34,7 +34,7 @@ my-site/
   app.tsx                      ← the shell: persistent components + <PageOutlet/>
   intro.ts                     ← OPTIONAL shell intro (first-load choreography)
   motion.ts                    ← OPTIONAL shell motion tokens
-  modulato.config.ts           ← content adapter + breakpoints
+  modulato.config.ts           ← content adapter, breakpoints, site-wide <head>
   pages/
     home/                      ← route "/"        (the folder named `home` is the index)
       page.tsx                 ← REQUIRED — the page component (markup + behavior)
