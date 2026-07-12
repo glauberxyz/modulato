@@ -48,10 +48,13 @@ const walk = (from, to) => {
     const out = path.join(to, outName)
     if (dirent.isDirectory()) {
       walk(src, out)
-    } else {
-      let content = fs.readFileSync(src, 'utf8')
-      if (dirent.name === 'package.json') content = content.replace('__NAME__', name)
+    } else if (dirent.name === 'package.json') {
+      const content = fs.readFileSync(src, 'utf8').replace('__NAME__', name)
       fs.writeFileSync(out, content)
+      created.push(path.relative(dest, out))
+    } else {
+      // copyFileSync, not read-as-utf8: templates ship binaries (favicon.ico).
+      fs.copyFileSync(src, out)
       created.push(path.relative(dest, out))
     }
   }
