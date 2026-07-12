@@ -16,5 +16,20 @@ export function meta({ props }: LoadArgs & { props: ReturnType<typeof load> }) {
           { property: 'og:image', content: project.image },
         ]
       : [],
+    // Per-page script: JSON-LD structured data for crawlers.
+    script: project
+      ? [
+          {
+            type: 'application/ld+json',
+            children: JSON.stringify({
+              '@context': 'https://schema.org',
+              '@type': 'CreativeWork',
+              name: project.title,
+              image: project.image,
+              description: project.description,
+            }),
+          },
+        ]
+      : [],
   }
 }

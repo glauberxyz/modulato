@@ -45,6 +45,12 @@ export interface MetaResult {
   link?: HeadLink[]
   /** Per-page `<meta>` tags (SSR'd), e.g. og:title, og:image, twitter:*. */
   meta?: HeadMeta[]
+  /**
+   * Per-page `<script>` tags (SSR'd) — e.g. JSON-LD structured data. Head
+   * scripts run on FIRST LOAD only; behavior on client navigation belongs in
+   * hooks (see the analytics recipe in the docs), not here.
+   */
+  script?: HeadScript[]
 }
 
 export interface PageModule {

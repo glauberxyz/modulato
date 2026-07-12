@@ -356,9 +356,71 @@ export function meta({ props }) {
 ```
 
 `MetaResult` (returned by `meta()`) accepts `title`, `description`, `link[]`,
-`meta[]`. Head tags are SSR-only; `document.title` still updates on client
-navigation. Public files live in `public/` and are served from the root
-(`public/favicon.svg` → `/favicon.svg`).
+`meta[]`, `script[]`. Head tags are SSR-only; `document.title` still updates
+on client navigation. Public files live in `public/` and are served from the
+root (`public/favicon.svg` → `/favicon.svg`).
+
+Per-page `script[]` is for crawler-facing payloads like JSON-LD:
+
+```ts
+// pages/work/[slug]/config.ts — structured data per project
+export function meta({ props }) {
+  return {
+    title: props.project.title,
+    script: [{
+      type: 'application/ld+json',
+      children: JSON.stringify({
+        '@context': 'https://schema.org',
+        '@type': 'CreativeWork',
+        name: props.project.title,
+      }),
+    }],
+  }
+}
+```
+
+### Analytics
+
+Load any vendor site-wide via `head.script` — it's SSR'd into every page:
+
+```ts
+// modulato.config.ts
+head: {
+  script: [
+    { src: 'https://scripts.simpleanalyticscdn.com/latest.js', async: true },
+    // GA: { src: 'https://www.googletagmanager.com/gtag/js?id=G-XXX', async: true },
+    // Mixpanel/GA init snippets: { children: '…init code…' },
+  ],
+},
+```
+
+**The SPA gotcha:** snippets only see the FIRST page load — Modulato swaps
+pages client-side after that. Track navigations from the shell with
+`useRoute()`:
+
+```tsx
+// shell/Analytics.tsx — rendered in app.tsx, vendor-agnostic
+import { useEffect, useRef } from 'react'
+import { useRoute } from 'modulato'
+
+export function Analytics() {
+  const { path } = useRoute()          // commits when a transition completes
+  const first = useRef(true)
+  useEffect(() => {
+    if (first.current) return void (first.current = false) // initial load: snippet handles it
+    // mixpanel?.track_pageview()
+    // gtag?.('event', 'page_view', { page_path: path })
+    // window.sa_pageview?.(path)
+  }, [path])
+  return null
+}
+```
+
+Vendor notes: SimpleAnalytics and GA4 (enhanced measurement) auto-detect
+History API navigations — script alone is usually enough. Mixpanel needs
+`track_pageview: 'url-with-path'` in its init, or the manual call above.
+Never put analytics in per-page `script[]` — head scripts don't re-run on
+client navigation.
 
 ## 10. Server actions
 

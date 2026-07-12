@@ -759,6 +759,15 @@ Each phase ends with something runnable in `examples/`.
 > unpacked. `create-modulato` npm name confirmed unclaimed.
 > Publish (user, from repo root, npm login as glauberxyz first):
 > `for p in core vite server gsap tweak content-local mcp create; do (cd framework/$p && npm publish --access public); done`
+> **Analytics story + per-page script (2026-07-12):** site-wide analytics load
+> via `head.script` (SSR'd; SimpleAnalytics/GA4 auto-detect History API navs;
+> Mixpanel needs track_pageview config). `MetaResult` gains `script[]` for
+> per-page crawler payloads (JSON-LD demoed on work/[slug]) — head scripts run
+> on first load only; navigation behavior belongs in a useRoute() shell effect
+> (recipe in MODULATO.md §9b Analytics). glauber-v2 got SimpleAnalytics back
+> (v1 parity). modulato@0.1.5 + @modulato/server@0.1.2 (publish pending, with
+> create-modulato@0.1.4).
+>
 > **Scroll memory (2026-07-12, user concept):** `scroll = { restore: true }` in
 > a page's config — the router records every page's position on leave
 > (session-only Map by pathname) and LINK navigations back to a restore page

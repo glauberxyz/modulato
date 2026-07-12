@@ -82,7 +82,7 @@ function htmlDocument({
   const siteLinks = renderLinks(head?.link)
   const pageMeta = renderMetas(meta.meta)
   const pageLinks = renderLinks(meta.link)
-  const scripts = renderScripts(head?.script)
+  const scripts = renderScripts(head?.script) + renderScripts(meta.script)
   const lang = head?.lang ?? 'en'
   // Hides the page until the client reveals it in the same task that starts
   // the intro animations. With a shell intro (root intro.ts) the whole app is
