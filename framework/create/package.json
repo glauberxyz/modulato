@@ -1,7 +1,7 @@
 {
   "name": "create-modulato",
-  "version": "0.1.4",
-  "description": "Scaffold a Modulato site \u2014 the animation-first React framework.",
+  "version": "0.1.5",
+  "description": "Scaffold a Modulato site — the animation-first React framework.",
   "license": "MIT",
   "homepage": "https://github.com/glauberxyz/modulato#readme",
   "type": "module",
