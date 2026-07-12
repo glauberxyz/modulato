@@ -166,15 +166,24 @@ export default function modulato(options = {}) {
         const assetArgs = assets
           ? `, clientSrc: ${JSON.stringify(assets.entry)}, styles: ${JSON.stringify(assets.styles)}`
           : ''
-        return [
+        // Site-wide <head> comes from modulato.config.ts. The server runs in
+        // Node, so importing the full config (incl. the node-only content
+        // adapter) is safe — only its `head` field is read at render time.
+        const hasConfig = fs.existsSync(path.resolve(root, 'modulato.config.ts'))
+        const lines = [
           `import { render, nodeAction } from '@modulato/server'`,
           `import { routes } from '${VIRTUAL.manifest}'`,
           `import content from '${VIRTUAL.content}'`,
           `import * as actions from '${VIRTUAL.actions}'`,
           `import App from '${VIRTUAL.app}'`,
-          `export const handle = (url) => render({ url, routes, App, content, ${flags}${assetArgs} })`,
+        ]
+        if (hasConfig) lines.push(`import __config from '/modulato.config.ts'`)
+        const headArg = hasConfig ? `, head: __config?.head` : ''
+        lines.push(
+          `export const handle = (url) => render({ url, routes, App, content${headArg}, ${flags}${assetArgs} })`,
           `export const handleActionNode = (req, res) => nodeAction({ actions, req, res })`,
-        ].join('\n')
+        )
+        return lines.join('\n')
       }
       return undefined
     },

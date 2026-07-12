@@ -9,6 +9,20 @@ export interface ContentAdapter {
   pull(ctx: { root: string }): Promise<Record<string, unknown>>
 }
 
+/**
+ * Site-wide `<head>` tags, SSR'd into every page: favicon, web manifest,
+ * theme-color, font <link>s, default OG/Twitter tags, analytics scripts.
+ * Per-page tags (og:title, og:image) come from `config.ts` `meta()` instead
+ * and are appended after these, so a page can override.
+ */
+export interface HeadConfig {
+  /** Document language (the `<html lang>` attribute). Default: 'en'. */
+  lang?: string
+  link?: import('./types').HeadLink[]
+  meta?: import('./types').HeadMeta[]
+  script?: import('./types').HeadScript[]
+}
+
 export interface ModulatoConfig {
   /** Content source — e.g. localJson() from @modulato/content-local. */
   content?: ContentAdapter
@@ -20,6 +34,8 @@ export interface ModulatoConfig {
    * phone ≤767px, tablet 768–1279px.
    */
   breakpoints?: Record<string, string>
+  /** Site-wide <head> tags (favicon, manifest, fonts, default OG, analytics). */
+  head?: HeadConfig
 }
 
 /** Identity helper for typed modulato.config.ts files. */

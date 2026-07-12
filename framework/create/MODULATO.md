@@ -307,6 +307,56 @@ import type { ModulatoContent } from 'modulato'
 export type Project = ModulatoContent['projects'][number]
 ```
 
+## 9b. Head tags & SEO (SSR'd)
+
+Site-wide `<head>` tags — favicon, web manifest, theme-color, fonts, default
+OG, analytics — go in `modulato.config.ts` `head` and are rendered on every
+page. Per-page tags (og:title, og:image, canonical) come from `config.ts`
+`meta()` and are appended after the site-wide ones. Everything is
+server-rendered, so crawlers and link-preview bots see it on first load.
+
+```ts
+// modulato.config.ts
+export default defineConfig({
+  content: localJson(),
+  head: {
+    lang: 'en',                                    // <html lang> (default 'en')
+    link: [
+      { rel: 'icon', href: '/favicon.svg', type: 'image/svg+xml' },
+      { rel: 'manifest', href: '/site.webmanifest' },
+      { rel: 'preconnect', href: 'https://use.typekit.net' },
+    ],
+    meta: [
+      { name: 'theme-color', content: '#111' },
+      { property: 'og:site_name', content: 'My Studio' },
+      { property: 'og:type', content: 'website' },
+    ],
+    script: [
+      { src: 'https://scripts.simpleanalyticscdn.com/latest.js', async: true },
+    ],
+  },
+})
+```
+
+```ts
+// pages/work/[slug]/config.ts — per-page OG for share previews
+export function meta({ props }) {
+  return {
+    title: `${props.project.title} — My Studio`,
+    description: props.project.summary,
+    meta: [
+      { property: 'og:title', content: props.project.title },
+      { property: 'og:image', content: props.project.cover },
+    ],
+  }
+}
+```
+
+`MetaResult` (returned by `meta()`) accepts `title`, `description`, `link[]`,
+`meta[]`. Head tags are SSR-only; `document.title` still updates on client
+navigation. Public files live in `public/` and are served from the root
+(`public/favicon.svg` → `/favicon.svg`).
+
 ## 10. Server actions
 
 ```ts
@@ -429,6 +479,12 @@ SSR HTML is always complete — view-source shows the whole page.
 - Page root class = folder name (`pages/work/` → `.work`) — the styles.scss
   scope convention.
 - `<Shared>` ids must be unique per page; unmatched ids simply don't FLIP.
+  Shared-element FLIP animates the element's BOX (position/size), not its
+  content — give the from/to elements the same `object-fit` (and similar
+  aspect) so the image doesn't pop when the clone lands.
+- ScrollTrigger auto-syncs with the page's Lenis when you use `useMotion`
+  (from `@modulato/gsap`) and have registered `ScrollTrigger` — no per-project
+  `lenis.on('scroll', …)` glue needed.
 - `motion.ts` values must be serializable data (numbers/strings/booleans);
   breakpoint blocks are per-group, merged over the base, `reduced` last.
 - `modulato.config.ts` runs in Node (content adapters can use fs/secrets);

@@ -759,6 +759,22 @@ Each phase ends with something runnable in `examples/`.
 > unpacked. `create-modulato` npm name confirmed unclaimed.
 > Publish (user, from repo root, npm login as glauberxyz first):
 > `for p in core vite server gsap tweak content-local mcp create; do (cd framework/$p && npm publish --access public); done`
+> **Framework head API + Lenis↔ScrollTrigger sync (2026-07-12):** driven by the
+> glauber-2026-v2 rewrite, which kept hitting framework gaps. (1) **Head/link
+> API** — `MetaResult` gains `link[]`/`meta[]` (per-page, SSR'd: og:title,
+> og:image, canonical); `modulato.config.ts` gains `head: { lang, link, meta,
+> script }` (site-wide: favicon, manifest, theme-color, fonts, default OG,
+> analytics), imported by the SSR server entry. Replaces client-injected head
+> hacks; OG tags now crawler-visible. (2) **@modulato/gsap** auto-wires
+> `ScrollTrigger.update` to the page's Lenis (once per instance, dies with
+> lenis.destroy) — no per-project scroll glue. Verified via demo SSR curl
+> (site + per-page tags) + typecheck. Also confirmed live: the home→archive
+> FLIP is correct (from-rect = click position, to-rect = archive cover,
+> object-fit unified) — residual concerns are motion-feel only. Bumps:
+> modulato@0.1.3, @modulato/server@0.1.1 (peer modulato ^0.1.3),
+> @modulato/gsap@0.1.1, @modulato/vite@0.1.1 (publish pending). Still open:
+> shared-FLIP inner-content morph option, off-screen-click scroll-into-view.
+>
 > **TypeScript 7 (native compiler) adopted (2026-07-11):** `typescript@latest`
 > is now 7.0.2 — the Go rewrite (~2.5× faster checks here). Scaffold template
 > default bumped 5.9.3 → ^7.0.0, monorepo devDep too. Verified clean on: fresh

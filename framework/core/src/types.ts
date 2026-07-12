@@ -12,9 +12,39 @@ export interface LoadArgs {
   content: ModulatoContent
 }
 
+/** A `<link>` tag: `rel` + `href` required, any other attributes allowed. */
+export interface HeadLink {
+  rel: string
+  href: string
+  [attr: string]: string | boolean | undefined
+}
+
+/** A `<meta>` tag: `name` OR `property`, plus `content`. */
+export interface HeadMeta {
+  name?: string
+  property?: string
+  content: string
+  [attr: string]: string | boolean | undefined
+}
+
+/** A `<script>` tag: external (`src`) or inline (`children`). */
+export interface HeadScript {
+  src?: string
+  /** Inline script body (not escaped — you own it). */
+  children?: string
+  async?: boolean
+  defer?: boolean
+  type?: string
+  [attr: string]: string | boolean | undefined
+}
+
 export interface MetaResult {
   title?: string
   description?: string
+  /** Per-page `<link>` tags (SSR'd), e.g. canonical, per-project preload. */
+  link?: HeadLink[]
+  /** Per-page `<meta>` tags (SSR'd), e.g. og:title, og:image, twitter:*. */
+  meta?: HeadMeta[]
 }
 
 export interface PageModule {

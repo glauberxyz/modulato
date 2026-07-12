@@ -5,10 +5,16 @@ export function load({ params, content }: LoadArgs) {
 }
 
 export function meta({ props }: LoadArgs & { props: ReturnType<typeof load> }) {
+  const { project } = props
   return {
-    title: props.project
-      ? `${props.project.title} — Modulato Demo`
-      : 'Not found — Modulato Demo',
-    description: props.project?.description,
+    title: project ? `${project.title} — Modulato Demo` : 'Not found — Modulato Demo',
+    description: project?.description,
+    // Per-page OG tags (SSR'd, so shared links preview correctly).
+    meta: project
+      ? [
+          { property: 'og:title', content: project.title },
+          { property: 'og:image', content: project.image },
+        ]
+      : [],
   }
 }

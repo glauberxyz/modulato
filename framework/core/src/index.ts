@@ -16,7 +16,12 @@ export {
 } from './viewport'
 export type { Viewport, ViewportState } from './viewport'
 export type { ImgProps } from './img'
-export type { ContentAdapter, ModulatoConfig, ModulatoContent } from './config'
+export type {
+  ContentAdapter,
+  ModulatoConfig,
+  ModulatoContent,
+  HeadConfig,
+} from './config'
 export { useRoute, useNavigation, useRouter } from './context'
 export { usePage, useScroll, useTicker } from './page'
 export { ticker } from './ticker'
@@ -67,5 +72,8 @@ export type {
   PageModule,
   LoadArgs,
   MetaResult,
+  HeadLink,
+  HeadMeta,
+  HeadScript,
   ScrollConfig,
 } from './types'

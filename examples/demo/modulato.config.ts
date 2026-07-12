@@ -10,4 +10,16 @@ export default defineConfig({
     phone: '(max-width: 767px)',
     tablet: '(min-width: 768px) and (max-width: 1279px)',
   },
+  // Site-wide <head> — favicon, theme-color, default OG, all SSR'd.
+  head: {
+    link: [
+      { rel: 'icon', href: '/favicon.svg', type: 'image/svg+xml' },
+      { rel: 'preconnect', href: 'https://picsum.photos' },
+    ],
+    meta: [
+      { name: 'theme-color', content: '#f4f1ea' },
+      { property: 'og:site_name', content: 'Modulato Demo' },
+      { property: 'og:type', content: 'website' },
+    ],
+  },
 })

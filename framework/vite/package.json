@@ -1,6 +1,6 @@
 {
   "name": "@modulato/vite",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Vite plugin for Modulato: file-based routing, SSR bridge, style auto-import.",
   "license": "MIT",
   "homepage": "https://github.com/glauberxyz/modulato#readme",

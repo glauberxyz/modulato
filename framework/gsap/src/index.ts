@@ -23,6 +23,21 @@ export interface MotionScope {
   gsap: typeof gsap
 }
 
+// Lenis smooth-scroll drives GSAP's ScrollTrigger, once per page Lenis
+// instance. Without this, scroll-linked animations read native scroll and
+// jitter against the smoothed position. The listener dies with the page's
+// lenis.destroy() on unmount, so no manual teardown is needed.
+const scrollTriggerWired = new WeakSet<object>()
+
+function wireScrollTrigger(lenis: { on: (e: 'scroll', cb: () => void) => void }): void {
+  // `gsap.core.globals()` returns registered plugins (runtime API not in types).
+  const globals = (gsap.core as { globals?: () => Record<string, unknown> }).globals?.() ?? {}
+  const ST = globals.ScrollTrigger as { update: () => void } | undefined
+  if (!ST || scrollTriggerWired.has(lenis)) return
+  scrollTriggerWired.add(lenis)
+  lenis.on('scroll', () => ST.update())
+}
+
 /**
  * Page-scoped GSAP. `create` runs inside a `gsap.context()` bound to the
  * page element: selector strings in tweens are scoped to the page, and every
@@ -40,9 +55,14 @@ export function useMotion(
   create: (scope: MotionScope) => void | (() => void),
   deps: unknown[] = [],
 ): void {
-  const { element } = usePage()
+  const { element, lenis } = usePage()
   const createRef = useRef(create)
   createRef.current = create
+
+  // Sync ScrollTrigger to this page's Lenis when both are present (idempotent).
+  useEffect(() => {
+    if (lenis) wireScrollTrigger(lenis)
+  }, [lenis])
 
   // Responsive: revert + re-run when the breakpoint (or reduced-motion)
   // changes, so resolveTokens() reads fresh values — write the animation
