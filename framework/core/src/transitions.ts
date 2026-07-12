@@ -62,7 +62,10 @@ export async function resolveTransition(
 export function prepareOutgoing(fromEl: HTMLElement, scrollY: number): void {
   Object.assign(fromEl.style, {
     position: 'absolute',
-    top: `${-window.scrollY}px`,
+    // Compensate for BOTH scrolls: where the outgoing page was, and where the
+    // viewport is about to land (non-zero when scroll memory / popstate
+    // restores a position). Net viewport position must stay unchanged.
+    top: `${scrollY - window.scrollY}px`,
     left: '0',
     width: '100%',
     zIndex: '1',
