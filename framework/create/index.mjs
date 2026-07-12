@@ -58,6 +58,11 @@ const walk = (from, to) => {
 }
 walk(TEMPLATE, dest)
 
+// Pin the dev domain: portless resolves <name>.localhost from this file,
+// independent of later package.json renames or scoped names.
+fs.writeFileSync(path.join(dest, 'portless.json'), JSON.stringify({ name }, null, 2) + '\n')
+created.push('portless.json')
+
 // The scaffolded project carries the full framework reference.
 const reference = path.join(HERE, 'MODULATO.md')
 if (fs.existsSync(reference)) {
