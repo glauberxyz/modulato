@@ -13,8 +13,12 @@ export default intro({
 
     let split: SplitText | null = null
     if (titleEl) {
-      split = new SplitText(titleEl, { type: 'lines', mask: 'lines' })
-      tl.from(split.lines, { yPercent: title.yPercent, duration: title.duration, ease: title.ease }, 0)
+      split = new SplitText(titleEl, { type: 'chars', mask: 'chars' })
+      tl.from(
+        split.chars,
+        { yPercent: title.yPercent, duration: title.duration, stagger: title.stagger, ease: title.ease },
+        0,
+      )
     }
     tl.from(
       element.querySelectorAll('.home__tagline, .home__command, .home__note, .home__links a'),

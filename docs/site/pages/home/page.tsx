@@ -28,7 +28,7 @@ export default function Home() {
           <a href="https://x.com/glauberxyz" target="_blank" rel="noreferrer">
             Glauber
           </a>{' '}
-          &amp; Claude
+          &amp; <a href="https://x.com/claudeai" target="_blank" rel="noreferrer">Claude</a>
         </p>
         <nav className="home__links" aria-label="External links">
           {LINKS.map((link) => (

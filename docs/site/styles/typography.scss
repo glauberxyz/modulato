@@ -6,7 +6,7 @@
   font-family: var(--font-sans);
   font-weight: 900;
   font-size: 40px;
-  letter-spacing: 0.03em;
+  letter-spacing: -0.03em;
   line-height: 1;
 }
 
@@ -15,7 +15,7 @@
   font-weight: 400;
   font-size: 24px;
   line-height: 1.1;
-  letter-spacing: 0.02em;
+  letter-spacing: -0.02em;
 }
 
 @mixin copy {
