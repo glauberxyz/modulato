@@ -89,7 +89,7 @@ export function Scene() {
 
     renderRef.current = (timeMs) => {
       const t = resolveTokens(tokens)
-      const { speed, radius, size, count, camHeight, camDist, clear } = t.scene
+      const { speed, radius, size, count, camHeight, camDist, bandY, clear } = t.scene
       const print = t.print
 
       // Pass 1: the 3D scene into the framebuffer
@@ -101,6 +101,7 @@ export function Scene() {
       gl.uniform1f(u(sceneProg, 'u_time'), (timeMs / 1000) * speed)
       gl.uniform3f(u(sceneProg, 'u_ring'), radius, size, count)
       gl.uniform2f(u(sceneProg, 'u_cam'), camHeight, camDist)
+      gl.uniform1f(u(sceneProg, 'u_band'), bandY)
       gl.uniform1f(u(sceneProg, 'u_clear'), clear)
       gl.drawArrays(gl.TRIANGLES, 0, 3)
 
@@ -174,7 +175,8 @@ in vec2 v_uv;
 uniform vec2 u_resolution;
 uniform float u_time;
 uniform vec3 u_ring;  /* ring radius, cube half-size, cube count */
-uniform vec2 u_cam;   /* camera height, camera distance */
+uniform vec2 u_cam;   /* camera height, pull-back from ring center */
+uniform float u_band;  /* vertical band position on screen (uv units, + = up) */
 uniform float u_clear; /* text knockout strength, 0..1 */
 out vec4 fragColor;
 
@@ -253,13 +255,12 @@ void main() {
   vec2 px = v_uv * u_resolution;
   vec2 uv = (px - 0.5 * u_resolution) / u_resolution.y;
 
-  /* Camera above the ring plane, looking at its center — the ring reads as
-     an ellipse around the page column; bottom cubes are near, top far. */
+  /* Straight front view: camera level with the ring plane (no tilt),
+     pulled back outside the ring — the near arc prints big and dark, the
+     back half dissolves to white (only half the array reads). u_band is a
+     lens shift placing the band vertically without perspective distortion. */
   vec3 ro = vec3(0.0, u_cam.x, u_cam.y);
-  vec3 fwd = normalize(-ro);
-  vec3 right = normalize(cross(fwd, vec3(0.0, 1.0, 0.0)));
-  vec3 up = cross(right, fwd);
-  vec3 rd = normalize(fwd * 1.5 + right * uv.x + up * uv.y);
+  vec3 rd = normalize(vec3(uv.x, uv.y - u_band, -1.5));
 
   float t = 0.0;
   float hit = -1.0;
@@ -288,7 +289,7 @@ void main() {
     vec3 shaded = mix(vec3(0.17, 0.13, 0.10), vec3(1.0), lum);
 
     /* Closer to the camera = more present; farther dissolves to white. */
-    float depth = smoothstep(u_cam.y - u_ring.x - 1.2, u_cam.y + u_ring.x + 3.0, hit);
+    float depth = smoothstep(u_cam.y - u_ring.x * 1.05, u_cam.y + u_ring.x * 1.1, hit);
     col = mix(shaded, vec3(1.0), depth * 0.8);
   }
 

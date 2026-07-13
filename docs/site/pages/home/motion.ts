@@ -19,30 +19,33 @@ export default motion({
       reduced: { y: 0, duration: 0, at: 0, stagger: 0 },
     },
   },
-  // Background cube ring: rotation speed, ring radius / cube half-size /
-  // cube count (world units), camera height and distance above the ring
-  // plane. The text column sits inside the ring.
+  // Background cube ring seen FRONT-ON, full width: camera level with the
+  // ring plane, pulled back outside it — the near arc prints big and dark,
+  // the back half dissolves to white. camHeight tilts off the plane (0 =
+  // pure front view), camDist is the pull-back from ring center, bandY
+  // places the band vertically on screen (uv units, + = up).
   scene: {
-    speed: 1,
-    radius: 2.7,
-    size: 0.42,
+    speed: 0.2,
+    radius: 2,
+    size: 0.4,
     count: 13,
-    camHeight: 2.6,
-    camDist: 3.4,
+    camHeight: 0,
+    camDist: 5.5,
+    bandY: 0.24,
     // Print knockout over the text column (0 = none, 1 = fully clear).
-    clear: 0.2,
-    phone: { radius: 2.3, size: 0.38, count: 9, camHeight: 3.4, camDist: 4.8, clear: 1 },
+    clear: 0.8,
+    phone: { size: 0.34, count: 9, camDist: 7, bandY: 0.3, clear: 1 },
     reduced: { speed: 0 },
   },
   // Paper Shaders HalftoneCmyk plate controls (Apache-2.0, paper.design).
   // size: dot scale 0..1; type: 0 dots, 1 ink, 2 sharp.
   print: {
-    size: 0.72,
-    softness: 0.2,
-    contrast: 1.35,
+    size: 0.3,
+    softness: 0,
+    contrast: 1.2,
     // Base K-plate dot printed even on white paper (0 = clean page).
     floodK: 0,
-    gridNoise: 0.6,
+    gridNoise: 0.3,
     grainOverlay: 0.08,
     type: 0,
     phone: { size: 0.6 },
