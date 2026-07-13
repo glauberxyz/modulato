@@ -79,6 +79,10 @@ export function Scene() {
     }
     resize()
     window.addEventListener('resize', resize)
+    // The effect can run while the page is still intro-hidden (clientWidth
+    // 0) — observe the element so the buffer sizes as soon as layout does.
+    const observer = new ResizeObserver(resize)
+    observer.observe(canvas)
 
     const rgba = (hex: string): [number, number, number, number] => [
       parseInt(hex.slice(1, 3), 16) / 255,
@@ -150,6 +154,7 @@ export function Scene() {
     // refresh reuses the element, and a lost context stays lost).
     return () => {
       window.removeEventListener('resize', resize)
+      observer.disconnect()
       renderRef.current = () => {}
     }
   }, [])
@@ -299,12 +304,14 @@ void main() {
        camera (projecting mid-viewport) and dissolves as it travels toward
        the sides — coherent with the drift, immune to window shape. */
     float ang = abs(atan(p.x, p.z));
-    float side = smoothstep(0.5, 1.45, ang);
+    float side = smoothstep(0.25, 0.85, ang);
     col = mix(col, vec3(1.0), side * u_focus);
   }
 
-  /* Print knockout: fade the scene to paper over the text column. */
-  vec2 k = (px - vec2(0.5, 0.78) * u_resolution) / u_resolution.y;
+  /* Print knockout: fade the scene to paper over the text column.
+     v_uv/px are y-UP (GL) — the bottom text column is y ~0.22, NOT 0.78;
+     at 0.78 this eraser sat exactly on the cube band. */
+  vec2 k = (px - vec2(0.5, 0.22) * u_resolution) / u_resolution.y;
   float protect = smoothstep(0.23, 0.55, length(k * vec2(0.85, 1.3)));
   col = mix(vec3(1.0), col, mix(1.0, protect, u_clear));
 
