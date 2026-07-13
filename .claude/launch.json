@@ -26,7 +26,7 @@
       "runtimeExecutable": "npm",
       "runtimeArgs": [
         "run",
-        "dev",
+        "dev:plain",
         "-w",
         "docs/site"
       ],
