@@ -1,8 +1,7 @@
 # Modulato
 
-Modulato is a visual-design-first React framework for marketing websites
-leveraging custom transitions and animations — designed to be the fastest
-framework for LLMs to build visually impactful websites.
+A visual-design-first React framework for making websites, leveraging
+custom transitions and animations. Built for humans and LLMs alike.
 
 ```sh
 npm create modulato@latest my-site
