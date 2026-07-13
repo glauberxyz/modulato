@@ -9,33 +9,14 @@ export default motion({
       phone: { yPercent: 70, duration: 0.9 },
       reduced: { yPercent: 0, duration: 0 },
     },
-    tagline: {
+    // Everything below the title rises as ONE staggered tween.
+    rise: {
       at: 0.3,
-      y: 22,
+      y: 20,
       duration: 0.9,
+      stagger: 0.13,
       ease: 'expo.out',
-      reduced: { y: 0, duration: 0, at: 0 },
-    },
-    command: {
-      at: 0.45,
-      y: 22,
-      duration: 0.9,
-      ease: 'expo.out',
-      reduced: { y: 0, duration: 0, at: 0 },
-    },
-    note: {
-      at: 0.58,
-      y: 16,
-      duration: 0.9,
-      ease: 'expo.out',
-      reduced: { y: 0, duration: 0, at: 0 },
-    },
-    links: {
-      at: 0.7,
-      y: 14,
-      duration: 0.8,
-      ease: 'expo.out',
-      reduced: { y: 0, duration: 0, at: 0 },
+      reduced: { y: 0, duration: 0, at: 0, stagger: 0 },
     },
   },
   // Background cube ring: rotation speed, halftone dot size (px), ring
@@ -43,7 +24,7 @@ export default motion({
   // distance above the ring plane. The text column sits inside the ring.
   scene: {
     speed: 1,
-    dot: 5,
+    dot: 12,
     radius: 2.7,
     size: 0.42,
     count: 11,
