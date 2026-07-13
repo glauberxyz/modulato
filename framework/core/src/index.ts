@@ -23,6 +23,8 @@ export type {
   HeadConfig,
 } from './config'
 export { useRoute, useNavigation, useRouter } from './context'
+export { useSearchParam, setSearchParam } from './search'
+export type { SetSearchParamOptions } from './search'
 export { usePage, useScroll, useTicker } from './page'
 export { ticker } from './ticker'
 export { enhance } from './enhance'

@@ -236,6 +236,10 @@ export function ModulatoRoot({
   useEffect(() => {
     window.history.scrollRestoration = 'manual'
     const onPopState = (event: PopStateEvent) => {
+      // A query/hash-only change on the SAME page (e.g. an overlay's ?param
+      // pushed by useSearchParam) must not re-resolve or remount the page —
+      // useSearchParam readers pick it up via their own popstate listener.
+      if (window.location.pathname === stateRef.current.current.path) return
       const scrollY = (event.state?.__modulatoScroll as number | undefined) ?? 0
       void navigate(window.location.pathname + window.location.search, {
         pop: true,

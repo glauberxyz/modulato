@@ -46,6 +46,21 @@
         "--strictPort"
       ],
       "port": 5175
+    },
+    {
+      "name": "expa-modulato",
+      "runtimeExecutable": "npm",
+      "runtimeArgs": [
+        "run",
+        "dev:plain",
+        "--prefix",
+        "/Users/glauber/Documents/Github/Expa-Website-Modulato",
+        "--",
+        "--port",
+        "5180",
+        "--strictPort"
+      ],
+      "port": 5180
     }
   ]
 }
