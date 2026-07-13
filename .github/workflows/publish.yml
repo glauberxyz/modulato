@@ -32,10 +32,14 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      # No `registry-url`: it writes an .npmrc with `_authToken=${NODE_AUTH_TOKEN}`,
+      # and with OIDC there is no token — the empty value breaks the anonymous
+      # registry reads Changesets uses to detect what's already published (it then
+      # tries to republish everything). OIDC authenticates at publish time on its
+      # own (npm >= 11.5.1 + id-token: write; default registry is npmjs).
       - uses: actions/setup-node@v4
         with:
           node-version: 24
-          registry-url: https://registry.npmjs.org
 
       # Ensure npm >= 11.5.1 for OIDC trusted publishing. npm@latest (12.x)
       # needs Node >= 22.22.2, so the runner must be 22+/24+ (not 20).
