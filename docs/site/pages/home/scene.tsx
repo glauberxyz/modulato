@@ -5,9 +5,9 @@ import tokens from './motion'
 /**
  * Full-viewport background, two WebGL2 passes:
  *
- *   1. A circular array of 3D cubes — raymarched with a directional light,
- *      soft shadows and ambient occlusion, warm-shadow tinting, depth fading
- *      to the white page — rendered into a framebuffer texture.
+ *   1. A circle of tall bare cuboids — raymarched, one directional light
+ *      from the left with soft cast shadows and ambient occlusion —
+ *      rendered into a framebuffer texture.
  *   2. Paper Shaders' HalftoneCmyk fragment shader, VERBATIM, with u_image
  *      pointed at that live texture: real CMYK plate separation, rotated dot
  *      screens (C 15deg / M 75deg / Y 0 / K 45deg), grain.
@@ -93,7 +93,7 @@ export function Scene() {
 
     renderRef.current = (timeMs) => {
       const t = resolveTokens(tokens)
-      const { speed, radius, size, count, camHeight, camDist, bandY, centerFocus, clear } = t.scene
+      const { speed, radius, height, count, camHeight, camDist, bandY, clear } = t.scene
       const print = t.print
 
       // Pass 1: the 3D scene into the framebuffer
@@ -103,10 +103,9 @@ export function Scene() {
       bindQuad(sceneProg)
       gl.uniform2f(u(sceneProg, 'u_resolution'), canvas.width, canvas.height)
       gl.uniform1f(u(sceneProg, 'u_time'), (timeMs / 1000) * speed)
-      gl.uniform3f(u(sceneProg, 'u_ring'), radius, size, count)
+      gl.uniform3f(u(sceneProg, 'u_ring'), radius, height, count)
       gl.uniform2f(u(sceneProg, 'u_cam'), camHeight, camDist)
       gl.uniform1f(u(sceneProg, 'u_band'), bandY)
-      gl.uniform1f(u(sceneProg, 'u_focus'), centerFocus)
       gl.uniform1f(u(sceneProg, 'u_clear'), clear)
       gl.drawArrays(gl.TRIANGLES, 0, 3)
 
@@ -180,10 +179,9 @@ precision highp float;
 in vec2 v_uv;
 uniform vec2 u_resolution;
 uniform float u_time;
-uniform vec3 u_ring;  /* ring radius, cube half-size, cube count */
+uniform vec3 u_ring;  /* circle radius, pillar half-height, pillar count */
 uniform vec2 u_cam;   /* camera height, pull-back from ring center */
 uniform float u_band;  /* vertical band position on screen (uv units, + = up) */
-uniform float u_focus; /* center focus: fade cubes toward the side edges, 0..1 */
 uniform float u_clear; /* text knockout strength, 0..1 */
 out vec4 fragColor;
 
@@ -201,15 +199,12 @@ float sdBox(vec3 p, vec3 b) {
   return length(max(q, 0.0)) + min(max(q.x, max(q.y, q.z)), 0.0);
 }
 
-/* One cube of the ring, in sector-local space. */
+/* One pillar of the circle, in sector-local space: a tall bare cuboid.
+   Width self-adjusts to the spacing so count/radius always compose. */
 float cube(vec3 p, float sector) {
-  sector = mod(sector, floor(u_ring.z + 0.5)); /* wrap so the atan seam agrees */
   p.x -= u_ring.x;                       /* out to the ring radius */
-  float tumble = u_time * 0.4 + sector * 2.4 + hash(sector) * 6.28;
-  p.xy = rot(tumble) * p.xy;             /* each cube rotates infinitely */
-  p.yz = rot(tumble * 0.7) * p.yz;
-  float s = u_ring.y * (0.8 + 0.4 * hash(sector + 13.0));
-  return sdBox(p, vec3(s));
+  float w = 0.28 * u_ring.x * 3.14159 / floor(u_ring.z + 0.5);
+  return sdBox(p, vec3(w, u_ring.y, w));
 }
 
 /* Circular array via polar repetition; neighbors checked so near cubes
@@ -285,31 +280,18 @@ void main() {
   if (hit > 0.0) {
     vec3 p = ro + rd * hit;
     vec3 n = normalAt(p);
-    vec3 l = normalize(vec3(0.45, 0.85, 0.3));
+    /* One light, from the LEFT — it shades the pillars and casts their
+       shadows across the circle. That is the whole lighting model. */
+    vec3 l = normalize(vec3(-0.75, 0.45, 0.35));
 
     float diffuse = max(dot(n, l), 0.0);
     float shadow = softShadow(p + n * 0.02, l);
     float occ = ambientOcclusion(p, n);
-    float lum = clamp(0.3 + 0.7 * diffuse * shadow, 0.0, 1.0) * occ;
+    float lum = clamp(0.34 + 0.66 * diffuse * shadow, 0.0, 1.0) * occ;
 
     /* Warm-dark shadows so the C/M/Y plates separate (pure gray would
        print K only). */
-    vec3 shaded = mix(vec3(0.17, 0.13, 0.10), vec3(1.0), lum);
-
-    /* Closer to the camera = more present; farther dissolves to white. */
-    float depth = smoothstep(u_cam.y - u_ring.x * 1.05, u_cam.y + u_ring.x * 1.1, hit);
-    col = mix(shaded, vec3(1.0), depth * 0.8);
-
-    /* Center focus, by VIEW ANGLE: fade each cube by where its CENTER
-       sits horizontally in the camera's view — uniform across the cube,
-       symmetric around the screen center, follows the drift. */
-    float fstep = 6.28318 / floor(u_ring.z + 0.5);
-    float fa = atan(p.z, p.x) + u_time * 0.06;
-    float fs = floor(fa / fstep + 0.5) * fstep - u_time * 0.06;
-    vec2 cc = vec2(cos(fs), sin(fs)) * u_ring.x; /* cube center (x, z) */
-    float va = abs(atan(cc.x, u_cam.y - cc.y));  /* 0 = straight ahead */
-    float side = smoothstep(0.12, 0.42, va);
-    col = mix(col, vec3(1.0), side * u_focus);
+    col = mix(vec3(0.17, 0.13, 0.10), vec3(1.0), lum);
   }
 
   /* Print knockout: fade the scene to paper over the text column.

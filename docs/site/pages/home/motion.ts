@@ -19,24 +19,21 @@ export default motion({
       reduced: { y: 0, duration: 0, at: 0, stagger: 0 },
     },
   },
-  // Background cube ring seen FRONT-ON, full width: camera level with the
-  // ring plane, pulled back outside it — the near arc prints big and dark,
-  // the back half dissolves to white. camHeight tilts off the plane (0 =
-  // pure front view), camDist is the pull-back from ring center, bandY
-  // places the band vertically on screen (uv units, + = up).
+  // A circle of tall pillars, front-on. count/radius/height shape the
+  // sequence; camHeight looks down from slightly above (0 = dead level),
+  // camDist pulls the camera back, bandY places the circle vertically on
+  // screen (uv units, + = up).
   scene: {
-    speed: 0.847,
-    radius: 3.11,
-    size: 0.203,
-    count: 31,
-    camHeight: 0,
-    camDist: 6.21,
-    bandY: 0.269,
-    // Cubes print strongest mid-viewport, fading toward the side edges.
-    centerFocus: 0.8,
+    speed: 0.2,
+    radius: 1.5,
+    count: 13,
+    height: 0.6,
+    camHeight: 1.1,
+    camDist: 6.2,
+    bandY: 0.34,
     // Print knockout over the text column (0 = none, 1 = fully clear).
     clear: 0.8,
-    phone: { size: 0.34, count: 9, camDist: 7, bandY: 0.3, clear: 1 },
+    phone: { count: 9, camDist: 7, bandY: 0.3, clear: 1 },
     reduced: { speed: 0 },
   },
   // Paper Shaders HalftoneCmyk plate controls (Apache-2.0, paper.design).
