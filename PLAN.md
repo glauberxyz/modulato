@@ -759,6 +759,15 @@ Each phase ends with something runnable in `examples/`.
 > unpacked. `create-modulato` npm name confirmed unclaimed.
 > Publish (user, from repo root, npm login as glauberxyz first):
 > `for p in core vite server gsap tweak content-local mcp create; do (cd framework/$p && npm publish --access public); done`
+> **Design tokens convention (2026-07-12, user concept):** the CSS mirror of
+> motion tokens — styles/tokens.scss (colors/fonts as CSS variables on :root)
+> + styles/typography.scss (every text style as a mixin; pages @use +
+> @include, never declare font-* directly; page styles.scss = layout only).
+> Scaffolded by default, demonstrated on modulato.org, and § Styles & design
+> tokens in MODULATO.md teaches LLMs the default behavior: new color = token
+> first, type change = mixin first. create-modulato@0.1.7 (also carries the
+> default favicon + binary-safe copy from earlier today).
+>
 > **Transition filename convention v2 (2026-07-12, user call):** route ids in
 > transition filenames are now dash-form — `/` becomes `-`, param brackets
 > drop (`home__archive-slug.ts`, `archive-slug__archive-slug-generate.ts`).

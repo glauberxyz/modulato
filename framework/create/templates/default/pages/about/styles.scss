@@ -1,3 +1,5 @@
+@use '../../styles/typography' as type;
+
 .about {
   padding: 12rem 6vw 6rem;
   max-width: 38rem;
@@ -9,8 +11,7 @@
   }
 
   p {
-    font-size: 1.125rem;
-    line-height: 1.7;
+    @include type.body;
   }
 
   code {

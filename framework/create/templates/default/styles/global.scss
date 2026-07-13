@@ -1,19 +1,14 @@
-* { box-sizing: border-box; }
+@use './tokens';
+@use './typography' as type;
 
-:root {
-  --bg: #f5f3ee;
-  --fg: #171717;
-  --muted: #6f6f6f;
-  --accent: #d96f4e;
-  --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
-}
+* { box-sizing: border-box; }
 
 html, body { margin: 0; padding: 0; }
 
 body {
   background: var(--bg);
   color: var(--fg);
-  font-family: ui-sans-serif, system-ui, sans-serif;
+  font-family: var(--font-sans);
   -webkit-font-smoothing: antialiased;
   min-height: 100dvh;
 }
@@ -48,11 +43,11 @@ html.lenis, html.lenis body { height: auto; }
     text-align: center;
 
     a {
+      @include type.small;
       display: block;
       padding: 0.625rem 0;
       text-decoration: none;
       color: var(--muted);
-      font-size: 0.875rem;
       transition: color 0.4s;
     }
 

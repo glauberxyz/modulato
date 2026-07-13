@@ -114,6 +114,49 @@ export const scroll = { lerp: 0.08, restore: true }
 same code, same `content` snapshot. `meta` sets title/description (SSR +
 client title sync).
 
+### Styles & design tokens
+
+Design values are data, same philosophy as motion tokens — they live in one
+place and everything references them:
+
+```
+styles/
+  tokens.scss      ← colors, fonts, shared values, as CSS variables on :root
+  typography.scss  ← every text style, as SCSS mixins
+  global.scss      ← reset + base; @use './tokens'
+```
+
+```scss
+// styles/tokens.scss
+:root {
+  --fg: #231f20;
+  --muted: #7a7a75;
+  --font-sans: 'franklin-gothic-urw', sans-serif;
+}
+
+// styles/typography.scss — one mixin per text style in the design
+@mixin headline { font-family: var(--font-sans); font-size: clamp(3rem, 8vw, 6.5rem); line-height: 1; }
+@mixin copy { font-family: var(--font-sans); font-size: 14px; line-height: 1.3; }
+
+// pages/home/styles.scss — layout only; type comes from the shared mixins
+@use '../../styles/typography' as type;
+.home__title { @include type.headline; margin: 0; }
+```
+
+The rules, non-negotiable for consistency:
+
+- **Introducing a color?** Add a CSS variable to `tokens.scss` FIRST, then
+  `var(--name)` everywhere. Never hardcode a hex in a page stylesheet.
+- **Touching typography?** The change belongs in a `typography.scss` mixin —
+  if a text style doesn't have one yet, create it there, then `@include` it.
+  Page stylesheets never declare `font-*`/`letter-spacing`/`line-height`
+  directly.
+- Page `styles.scss` files are for LAYOUT (position, spacing, size). If two
+  pages would repeat a declaration, it belongs in `styles/`.
+- CSS variables (not SCSS variables) for anything with a runtime life:
+  themes, and JS/WebGL reading brand colors via `getComputedStyle`.
+
+
 ## 4. The shell (app.tsx)
 
 ```tsx

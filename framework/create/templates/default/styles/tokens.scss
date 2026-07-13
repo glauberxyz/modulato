@@ -1,0 +1,12 @@
+// Design tokens — the single source for colors, fonts and shared values.
+// New color? Add a variable here FIRST, then use var(--name) everywhere.
+// CSS custom properties are visible at runtime: themeable, and readable
+// from JS/WebGL (getComputedStyle) when a scene needs brand colors.
+:root {
+  --bg: #f5f3ee;
+  --fg: #171717;
+  --muted: #6f6f6f;
+  --accent: #d96f4e;
+  --font-sans: ui-sans-serif, system-ui, sans-serif;
+  --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+}

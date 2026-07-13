@@ -1,12 +1,6 @@
-* { box-sizing: border-box; }
+@use './tokens';
 
-:root {
-  --bg: #ffffff;
-  --fg: #231f20;
-  --muted: #7a7a75;
-  --font-sans: 'franklin-gothic-urw', sans-serif;
-  --font-serif: 'adobe-garamond-pro', serif;
-}
+* { box-sizing: border-box; }
 
 html, body { margin: 0; padding: 0; }
 

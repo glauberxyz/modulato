@@ -1,0 +1,10 @@
+// Design tokens — the single source for colors, fonts and shared values.
+// CSS custom properties on :root: visible at runtime (themeable, readable
+// from JS/WebGL), usable from any stylesheet without imports.
+:root {
+  --bg: #ffffff;
+  --fg: #231f20;
+  --muted: #7a7a75;
+  --font-sans: 'franklin-gothic-urw', sans-serif;
+  --font-serif: 'adobe-garamond-pro', serif;
+}

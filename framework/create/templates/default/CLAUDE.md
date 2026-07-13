@@ -18,6 +18,12 @@ registration); animation numbers live in `motion.ts` token modules;
 transitions are `transitions/<from>__<to>.ts`; the persistent shell lives in
 `app.tsx` outside `<PageOutlet/>`.
 
+Design tokens mirror motion tokens: colors/fonts are CSS variables in
+`styles/tokens.scss` (new color = add a variable there FIRST), and every
+text style is a mixin in `styles/typography.scss` (pages `@use` and
+`@include` — never declare font properties in a page stylesheet). Page
+`styles.scss` files are layout only.
+
 Dev server: `npm run dev` serves **https://<project-name>.localhost** (stable,
 port-free, via portless — needs Node >= 24). In non-TTY/CI contexts or on
 older Node, use `npm run dev:plain` (plain Vite on a port; honors PORT).
