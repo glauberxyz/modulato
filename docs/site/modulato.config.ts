@@ -9,5 +9,8 @@ export default defineConfig({
       { rel: 'preconnect', href: 'https://use.typekit.net', crossorigin: true },
       { rel: 'stylesheet', href: 'https://use.typekit.net/ujh5gkg.css' },
     ],
+    // SimpleAnalytics — auto-tracks History API navigations, so the script
+    // tag alone covers the client-side route changes.
+    script: [{ src: 'https://scripts.simpleanalyticscdn.com/latest.js', async: true }],
   },
 })
