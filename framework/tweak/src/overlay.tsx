@@ -28,7 +28,7 @@ const S: Record<string, CSSProperties> = {
     right: 12,
     bottom: 48,
     zIndex: 99999,
-    width: 300,
+    width: 340,
     maxHeight: '70vh',
     overflowY: 'auto',
     overscrollBehavior: 'contain',
@@ -49,13 +49,18 @@ const S: Record<string, CSSProperties> = {
     color: '#9a9aa2',
   },
   input: {
-    width: 76,
+    width: 46,
     font: 'inherit',
     background: 'rgba(255,255,255,0.07)',
     color: '#fff',
     border: '1px solid rgba(255,255,255,0.15)',
     borderRadius: 4,
     padding: '2px 5px',
+  },
+  slider: {
+    width: 86,
+    margin: 0,
+    accentColor: '#8fa8ff',
   },
   button: {
     font: 'inherit',
@@ -93,6 +98,101 @@ function useHandle(): ModulatoDevHandle | null {
   return handle
 }
 
+const fmt = (v: number) => String(parseFloat(v.toFixed(4)))
+
+/** Slider bounds from the value the session started at: 0..2x for positives
+ * (symmetric for negatives/zero), a power-of-ten step. The number box takes
+ * exact/out-of-range values — the slider stretches to include them. */
+function sliderRange(initial: number) {
+  const magnitude = Math.max(Math.abs(initial), 0.5)
+  const min = initial < 0 || initial === 0 ? -2 * magnitude : 0
+  const max = 2 * magnitude
+  const step = Math.pow(10, Math.floor(Math.log10((max - min) / 200)))
+  return { min, max, step }
+}
+
+function NumberRow({
+  label,
+  value,
+  onChange,
+}: {
+  label: string
+  value: number
+  onChange: (value: number) => void
+}) {
+  // Bounds are frozen at mount so the scale never shifts mid-drag.
+  const [range] = useState(() => sliderRange(value))
+  // Draft while the box is focused — external updates (reset, breakpoint
+  // force) flow straight through when not editing. No value-derived key:
+  // remounting a focused input is what caused the per-keystroke blur.
+  const [draft, setDraft] = useState<string | null>(null)
+  return (
+    <div style={S.row}>
+      <span style={S.label} title={label}>
+        {label}
+      </span>
+      <input
+        type="range"
+        style={S.slider}
+        min={Math.min(range.min, value)}
+        max={Math.max(range.max, value)}
+        step={range.step}
+        value={value}
+        onChange={(e) => onChange(Number(e.target.value))}
+      />
+      <input
+        style={S.input}
+        type="text"
+        inputMode="decimal"
+        value={draft ?? fmt(value)}
+        onFocus={() => setDraft(fmt(value))}
+        onBlur={() => setDraft(null)}
+        onKeyDown={(e) => {
+          if (e.key === 'Enter') (e.target as HTMLInputElement).blur()
+        }}
+        onChange={(e) => {
+          setDraft(e.target.value)
+          const parsed = Number(e.target.value)
+          if (!Number.isNaN(parsed) && e.target.value.trim() !== '') onChange(parsed)
+        }}
+      />
+    </div>
+  )
+}
+
+function TextRow({
+  label,
+  value,
+  onChange,
+}: {
+  label: string
+  value: string
+  onChange: (value: string) => void
+}) {
+  const [draft, setDraft] = useState<string | null>(null)
+  return (
+    <div style={S.row}>
+      <span style={S.label} title={label}>
+        {label}
+      </span>
+      <input
+        style={{ ...S.input, width: 108 }}
+        type="text"
+        value={draft ?? value}
+        onFocus={() => setDraft(value)}
+        onBlur={() => setDraft(null)}
+        onKeyDown={(e) => {
+          if (e.key === 'Enter') (e.target as HTMLInputElement).blur()
+        }}
+        onChange={(e) => {
+          setDraft(e.target.value)
+          onChange(e.target.value)
+        }}
+      />
+    </div>
+  )
+}
+
 function LeafRow({
   leaf,
   onChange,
@@ -114,28 +214,9 @@ function LeafRow({
         />
       </div>
     )
-  return (
-    <div style={S.row}>
-      <span style={S.label} title={label}>
-        {label}
-      </span>
-      <input
-        style={S.input}
-        type={typeof leaf.value === 'number' ? 'number' : 'text'}
-        step={typeof leaf.value === 'number' && Math.abs(leaf.value) < 10 ? 0.05 : 1}
-        defaultValue={String(leaf.value)}
-        key={`${label}:${String(leaf.value)}`}
-        onChange={(e) => {
-          if (typeof leaf.value === 'number') {
-            const parsed = Number(e.target.value)
-            if (!Number.isNaN(parsed)) onChange(parsed)
-          } else {
-            onChange(e.target.value)
-          }
-        }}
-      />
-    </div>
-  )
+  if (typeof leaf.value === 'number')
+    return <NumberRow label={label} value={leaf.value} onChange={onChange} />
+  return <TextRow label={label} value={leaf.value} onChange={onChange} />
 }
 
 function Overlay() {
