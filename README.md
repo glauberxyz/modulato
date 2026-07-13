@@ -42,3 +42,7 @@ npm run check   # TypeScript across demo + framework
 ```
 
 See [PLAN.md](./PLAN.md) for the design document and build log.
+
+---
+
+Maintained by [Glauber](https://x.com/glauberxyz) & Claude
