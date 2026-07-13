@@ -93,7 +93,7 @@ export function Scene() {
 
     renderRef.current = (timeMs) => {
       const t = resolveTokens(tokens)
-      const { speed, radius, height, count, camHeight, camDist, bandY, clear } = t.scene
+      const { speed, radius, height, count, camHeight, camDist, bandY, highlightCap, clear } = t.scene
       const print = t.print
 
       // Pass 1: the 3D scene into the framebuffer
@@ -106,6 +106,7 @@ export function Scene() {
       gl.uniform3f(u(sceneProg, 'u_ring'), radius, height, count)
       gl.uniform2f(u(sceneProg, 'u_cam'), camHeight, camDist)
       gl.uniform1f(u(sceneProg, 'u_band'), bandY)
+      gl.uniform1f(u(sceneProg, 'u_cap'), highlightCap)
       gl.uniform1f(u(sceneProg, 'u_clear'), clear)
       gl.drawArrays(gl.TRIANGLES, 0, 3)
 
@@ -182,6 +183,7 @@ uniform float u_time;
 uniform vec3 u_ring;  /* circle radius, pillar half-height, pillar count */
 uniform vec2 u_cam;   /* camera height, pull-back from ring center */
 uniform float u_band;  /* vertical band position on screen (uv units, + = up) */
+uniform float u_cap;   /* highlight cap: max printable luminance, 0..1 */
 uniform float u_clear; /* text knockout strength, 0..1 */
 out vec4 fragColor;
 
@@ -289,7 +291,7 @@ void main() {
     float occ = ambientOcclusion(p, n);
     /* Cap the highlights: a fully lit face would print white-on-white
        and the pillar would vanish as it rotates through the light. */
-    float lum = min(clamp(0.34 + 0.66 * diffuse * shadow, 0.0, 1.0) * occ, 0.72);
+    float lum = min(clamp(0.34 + 0.66 * diffuse * shadow, 0.0, 1.0) * occ, u_cap);
 
     /* Warm-dark shadows so the C/M/Y plates separate (pure gray would
        print K only). */

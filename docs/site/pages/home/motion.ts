@@ -31,6 +31,9 @@ export default motion({
     camHeight: 1.1,
     camDist: 6.2,
     bandY: 0.34,
+    // Brightest printable tone (lower = lit faces keep more dots; at 1 a
+    // fully lit pillar disappears into the white paper).
+    highlightCap: 0.72,
     // Print knockout over the text column (0 = none, 1 = fully clear).
     clear: 0.8,
     phone: { count: 9, camDist: 7, bandY: 0.3, clear: 1 },
