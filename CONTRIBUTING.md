@@ -75,6 +75,16 @@ Skip it for changes that don't ship to npm (docs site, demo, internal tooling).
 Internal deps cascade automatically: a `modulato` bump carries its dependents
 (`content-local`, `gsap`, `mcp`, `server`, `tweak`) via `updateInternalDependencies`.
 
+> **Peer-dep bump behaviour — decide before your first core *minor*.**
+> `content-local`, `gsap`, `tweak`, and `server` peer-depend on `modulato`
+> (`^0.1.x`). `onlyUpdatePeerDependentsWhenOutOfRange` (in `.changeset/config.json`)
+> keeps a core **patch** from touching them. But a core **minor** (`0.1.x →
+> 0.2.0`) falls outside `^0.1.x`, so Changesets bumps those four peers — and,
+> per peer semantics, bumps them **major → 1.0.0**. That's correct, just abrupt
+> for a 0.x framework. If you'd rather core minors stay quiet, widen the plugins'
+> peer ranges (e.g. `^0.1.0` → `>=0.1.0`) so minors stay in range. Leave as-is if
+> a `1.0.0` on plugins alongside a core minor is fine by you.
+
 **To cut the release (default — fully automated):**
 
 1. Land your changesets on `main`. CI opens/refreshes a **"Version Packages"**
