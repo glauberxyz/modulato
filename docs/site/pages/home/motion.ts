@@ -38,18 +38,20 @@ export default motion({
       reduced: { y: 0, duration: 0, at: 0 },
     },
   },
-  // Background halftone squares: rotation speed, halftone dot size (px),
-  // squares grid cell (viewport-height units).
+  // Background cube ring: rotation speed, halftone dot size (px), ring
+  // radius / cube half-size / cube count (world units), camera height and
+  // distance above the ring plane. The text column sits inside the ring.
   scene: {
     speed: 1,
     dot: 5,
-    cell: 0.3,
-    // Clear zone protecting the text column: center (fraction of viewport
-    // height), inner radius (fully clear), outer radius (full ink).
-    maskY: 0.7,
-    maskIn: 0.3,
-    maskOut: 0.75,
-    phone: { dot: 4, cell: 0.42, maskY: 0.76, maskIn: 0.55, maskOut: 1.05 },
+    radius: 2.7,
+    size: 0.42,
+    count: 11,
+    camHeight: 2.3,
+    camDist: 3.6,
+    // Print knockout over the text column (0 = none, 1 = fully clear).
+    clear: 0.35,
+    phone: { dot: 4, radius: 2.3, size: 0.38, count: 9, camHeight: 3.4, camDist: 4.8, clear: 1 },
     reduced: { speed: 0 },
   },
 })
