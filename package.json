@@ -11,9 +11,13 @@
     "dev": "npm run dev -w examples/demo",
     "check": "tsc -p examples/demo --noEmit && tsc -p framework/server --noEmit && tsc -p framework/tweak --noEmit && tsc -p docs/site --noEmit",
     "sync:docs": "cp docs/MODULATO.md framework/create/MODULATO.md && cp docs/MODULATO.md docs/site/public/llms-full.txt",
-    "dev:site": "npm run dev -w docs/site"
+    "dev:site": "npm run dev -w docs/site",
+    "changeset": "changeset",
+    "changeset:version": "changeset version && npm install --package-lock-only",
+    "changeset:publish": "changeset publish"
   },
   "devDependencies": {
+    "@changesets/cli": "^2.31.0",
     "typescript": "^7.0.0"
   }
 }

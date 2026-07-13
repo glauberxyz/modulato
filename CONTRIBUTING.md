@@ -57,17 +57,51 @@ Run it after ANY docs edit. The copies still only reach users via a
 
 ## Release ritual
 
-1. Bump `version` in each changed package (and dependents' peer ranges, e.g.
-   `@modulato/server` peers on `modulato`).
-2. `npm run sync:docs` if docs changed; commit + push.
-3. `(cd framework/<pkg> && npm publish --access public)` per changed package.
-   Gotchas: scoped packages under this org have landed PRIVATE despite
-   `--access public` — fix with `npm access set status=public @modulato/<pkg>`;
-   stale npm tokens surface as 404 on PUT — `npm logout && npm login`.
-4. If docs changed: rebuild + redeploy modulato.org
-   (`cd docs/site && VERCEL=1 npx modulato build && vercel deploy --prebuilt --prod --scope glauber-house`)
-   and publish `create-modulato` so scaffolds carry the fresh reference.
-5. Verify from the registry (`npm view`, `npm pack` spot-checks), not just locally.
+Releases run on [Changesets](https://github.com/changesets/changesets) +
+npm **Trusted Publishing (OIDC)** — there is no `NPM_TOKEN`, and versions are
+never hand-edited. The CI is `.github/workflows/publish.yml`; all 8 packages'
+trusted-publisher configs on npm point at that filename, so **do not rename
+it**. Only public `framework/*` packages publish (`demo`, `modulato-org` are
+`private` and skipped automatically).
+
+**As you make a publishable change** — add a changeset in the same commit:
+
+```sh
+npm run changeset          # interview: which packages, patch/minor/major, summary
+```
+
+This writes `.changeset/<name>.md` (intent to release; nothing publishes yet).
+Skip it for changes that don't ship to npm (docs site, demo, internal tooling).
+Internal deps cascade automatically: a `modulato` bump carries its dependents
+(`content-local`, `gsap`, `mcp`, `server`, `tweak`) via `updateInternalDependencies`.
+
+**To cut the release (default — fully automated):**
+
+1. Land your changesets on `main`. CI opens/refreshes a **"Version Packages"**
+   PR that applies every pending bump + writes changelogs.
+2. Merge that PR. CI then publishes each changed package to npm over OIDC,
+   tags it, and creates a **GitHub Release** per package.
+3. First real run: confirm the OIDC publish authenticated with no token (the
+   one thing to eyeball, since npm must be ≥ 11.5.1 on the runner — the
+   workflow upgrades it).
+
+**Manual fallback** (local, uses your own `npm login` — OIDC only works in CI):
+
+```sh
+npm run changeset:version   # apply bumps + changelogs + refresh lockfile; commit
+npm run changeset:publish   # npm publish per changed package + git tags
+```
+
+Gotchas: scoped packages under this org have landed PRIVATE despite
+`access: public` — fix with `npm access set status=public @modulato/<pkg>`;
+stale npm tokens surface as 404 on PUT — `npm logout && npm login`.
+
+**Docs are not part of the npm release** — `npm run sync:docs` after any docs
+edit, and the reference only reaches users via a `create-modulato` publish
+(add a changeset for it) plus a modulato.org redeploy:
+`cd docs/site && VERCEL=1 npx modulato build && vercel deploy --prebuilt --prod --scope glauber-house`.
+
+Verify from the registry (`npm view`, `npm pack` spot-checks), not just locally.
 
 ## Style
 
