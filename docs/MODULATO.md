@@ -1,7 +1,8 @@
 # MODULATO.md — the complete reference
 
-> Modulato is an animation-first React framework for marketing sites, landing
-> pages and portfolios. This file is the entire API surface in one read —
+> Modulato is a visual-design-first React framework for marketing websites,
+> leveraging custom transitions and animations. This file is the entire API
+> surface in one read —
 > written for humans and language models alike. If you are an agent working on
 > a Modulato project: scaffold with `npx modulato new`, edit files directly,
 > and ALWAYS finish with `npx modulato check`.

@@ -1,7 +1,7 @@
 export function meta() {
   return {
-    title: 'Modulato — the animation-first React framework',
+    title: 'Modulato — the visual-design-first React framework',
     description:
-      'Page transitions with coexisting layouts, a persistent URL-aware shell, and motion tokens you tweak live. Built for humans and LLMs alike.',
+      'Modulato is a visual-design-first React framework for marketing websites leveraging custom transitions and animations — built for humans and LLMs alike.',
   }
 }

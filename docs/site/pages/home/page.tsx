@@ -8,9 +8,9 @@ export default function Home() {
     <main className="home">
       <h1 className="home__title">Modulato</h1>
       <p className="home__description">
-        The animation-first React framework. Page transitions with coexisting
-        layouts, a persistent URL-aware shell, and motion tokens you tweak
-        live — built for humans and LLMs alike.
+        A visual-design-first React framework for marketing websites,
+        leveraging custom transitions and animations. Motion tokens you tweak
+        live, a persistent URL-aware shell — built for humans and LLMs alike.
       </p>
       <CommandBox />
     </main>
