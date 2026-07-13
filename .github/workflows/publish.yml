@@ -1,0 +1,50 @@
+name: Publish to npm
+
+# Publishes the public framework/* packages to npm using npm Trusted
+# Publishing (OIDC) — no NPM_TOKEN secret required. Runs when a GitHub
+# Release is published, or on demand. Modulato publishes source (no build
+# step), so this only bumps what changed: any package whose version already
+# exists on npm is skipped, so the job is safe to re-run.
+
+on:
+  release:
+    types: [published]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  id-token: write # required for OIDC trusted publishing + provenance
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          registry-url: https://registry.npmjs.org
+
+      # Trusted Publishing (OIDC) needs npm >= 11.5.1; node 20 ships npm 10.x.
+      - run: npm install -g npm@latest
+
+      - name: Publish changed public packages
+        run: |
+          set -euo pipefail
+          for dir in framework/*; do
+            [ -f "$dir/package.json" ] || continue
+            name=$(node -p "require('./$dir/package.json').name")
+            version=$(node -p "require('./$dir/package.json').version")
+            private=$(node -p "require('./$dir/package.json').private === true")
+            if [ "$private" = "true" ]; then
+              echo "· skip $name (private)"
+              continue
+            fi
+            if npm view "$name@$version" version >/dev/null 2>&1; then
+              echo "· skip $name@$version (already on npm)"
+            else
+              echo "· publish $name@$version"
+              npm publish -w "$dir" --provenance --access public
+            fi
+          done
