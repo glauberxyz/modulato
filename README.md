@@ -20,8 +20,11 @@ npm create modulato@latest my-site
 - **SSR + hydration** — view-source is always complete; deploys to Vercel
   from a prebuilt Build Output.
 
-Live demo: https://modulato-demo.vercel.app · Full reference:
-[docs/MODULATO.md](./docs/MODULATO.md) (ships inside every scaffolded project).
+## Demo
+- [Example](https://modulato-demo.vercel.app)
+- [Glauber.org](https://glauber.org)
+
+Full reference: [docs/MODULATO.md](./docs/MODULATO.md) (ships inside every scaffolded project).
 
 ## Packages
 
