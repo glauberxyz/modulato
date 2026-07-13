@@ -3,6 +3,35 @@ import { createRequire } from 'node:module'
 import path from 'node:path'
 import { pathToFileURL } from 'node:url'
 
+/**
+ * Load `.env` then `.env.local` into process.env before running the adapter.
+ * `modulato content` is a plain Node process (not the Vite dev server), so
+ * without this a credentialed adapter (Sanity, Contentful, …) never sees the
+ * vars a developer put in a dotenv file — `pull()` gets `undefined`.
+ * Precedence: a variable already in the real environment wins; among files
+ * `.env.local` overrides `.env`. Tiny hand-rolled parser — no dependency.
+ */
+function loadEnvFiles(root) {
+  const fromRealEnv = new Set(Object.keys(process.env))
+  for (const file of ['.env', '.env.local']) {
+    const p = path.join(root, file)
+    if (!fs.existsSync(p)) continue
+    for (const line of fs.readFileSync(p, 'utf8').split('\n')) {
+      const match = line.match(/^\s*(?:export\s+)?([A-Za-z_][A-Za-z0-9_]*)\s*=\s*(.*?)\s*$/)
+      if (!match) continue
+      const [, key, rawValue] = match
+      if (fromRealEnv.has(key)) continue // an exported var beats any file
+      let value = rawValue
+      if (
+        (value.startsWith('"') && value.endsWith('"')) ||
+        (value.startsWith("'") && value.endsWith("'"))
+      )
+        value = value.slice(1, -1)
+      process.env[key] = value // .env.local (loaded second) overrides .env
+    }
+  }
+}
+
 /** Load modulato.config.ts through vite's TS-capable config loader. */
 async function loadModulatoConfig(root) {
   const file = path.join(root, 'modulato.config.ts')
@@ -85,6 +114,7 @@ export {}
  * builds are reproducible without content-source credentials.
  */
 export async function pullContent(root) {
+  loadEnvFiles(root)
   const config = await loadModulatoConfig(root)
   const adapter = config.content
   if (!adapter || typeof adapter.pull !== 'function')
