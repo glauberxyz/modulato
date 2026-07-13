@@ -209,19 +209,22 @@ float cube(vec3 p, float sector) {
   return sdBox(p, vec3(w, u_ring.y, w));
 }
 
-/* Circular array via polar repetition; neighbors checked so near cubes
-   never get clipped at sector borders. */
+/* The circle, evaluated EXACTLY — every pillar, no angular-window
+   shortcut (a window under-reports distance for rays crossing the circle
+   interior, and the march tunnels through pillars: sliced-off cubes).
+   A bounding-tube lower bound keeps rays fast when far from the circle. */
 float map(vec3 p) {
-  float cnt = floor(u_ring.z + 0.5); /* fractional counts would break the seam */
+  float cnt = floor(u_ring.z + 0.5);
+  float w = 0.28 * u_ring.x * 3.14159 / cnt;
+  float lb = max(abs(length(p.xz) - u_ring.x) - w * 1.5, abs(p.y) - u_ring.y);
+  if (lb > 0.3) return lb; /* safely outside every pillar */
   float step = 6.28318 / cnt;
-  float a = atan(p.z, p.x) + u_time * 0.06; /* the whole ring drifts */
-  float sector = floor(a / step + 0.5);
   float d = 1e5;
-  for (int i = -2; i <= 2; i++) {
-    float s = sector + float(i);
-    float sa = s * step - u_time * 0.06;
+  for (float i = 0.0; i < 48.0; i++) {
+    if (i >= cnt) break;
+    float sa = i * step - u_time * 0.06; /* the whole circle drifts */
     vec3 q = vec3(cos(sa) * p.x + sin(sa) * p.z, p.y, -sin(sa) * p.x + cos(sa) * p.z);
-    d = min(d, cube(q, s));
+    d = min(d, cube(q, i));
   }
   return d;
 }
