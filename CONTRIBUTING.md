@@ -3,7 +3,7 @@
 Written for humans and agents alike — Modulato is built LLM-first, and that
 includes how it's built. If you're an agent: read this file plus
 [docs/MODULATO.md](./docs/MODULATO.md) (the complete API) before changing
-anything; [PLAN.md](./PLAN.md)'s STATUS section is the build log.
+anything.
 
 ## Setup
 
