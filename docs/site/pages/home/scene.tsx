@@ -89,7 +89,7 @@ export function Scene() {
 
     renderRef.current = (timeMs) => {
       const t = resolveTokens(tokens)
-      const { speed, radius, size, count, camHeight, camDist, bandY, clear } = t.scene
+      const { speed, radius, size, count, camHeight, camDist, bandY, centerFocus, clear } = t.scene
       const print = t.print
 
       // Pass 1: the 3D scene into the framebuffer
@@ -102,6 +102,7 @@ export function Scene() {
       gl.uniform3f(u(sceneProg, 'u_ring'), radius, size, count)
       gl.uniform2f(u(sceneProg, 'u_cam'), camHeight, camDist)
       gl.uniform1f(u(sceneProg, 'u_band'), bandY)
+      gl.uniform1f(u(sceneProg, 'u_focus'), centerFocus)
       gl.uniform1f(u(sceneProg, 'u_clear'), clear)
       gl.drawArrays(gl.TRIANGLES, 0, 3)
 
@@ -177,6 +178,7 @@ uniform float u_time;
 uniform vec3 u_ring;  /* ring radius, cube half-size, cube count */
 uniform vec2 u_cam;   /* camera height, pull-back from ring center */
 uniform float u_band;  /* vertical band position on screen (uv units, + = up) */
+uniform float u_focus; /* center focus: fade cubes toward the side edges, 0..1 */
 uniform float u_clear; /* text knockout strength, 0..1 */
 out vec4 fragColor;
 
@@ -196,7 +198,7 @@ float sdBox(vec3 p, vec3 b) {
 
 /* One cube of the ring, in sector-local space. */
 float cube(vec3 p, float sector) {
-  sector = mod(sector, u_ring.z);        /* wrap so the atan seam agrees */
+  sector = mod(sector, floor(u_ring.z + 0.5)); /* wrap so the atan seam agrees */
   p.x -= u_ring.x;                       /* out to the ring radius */
   float tumble = u_time * 0.4 + sector * 2.4 + hash(sector) * 6.28;
   p.xy = rot(tumble) * p.xy;             /* each cube rotates infinitely */
@@ -208,7 +210,8 @@ float cube(vec3 p, float sector) {
 /* Circular array via polar repetition; neighbors checked so near cubes
    never get clipped at sector borders. */
 float map(vec3 p) {
-  float step = 6.28318 / u_ring.z;
+  float cnt = floor(u_ring.z + 0.5); /* fractional counts would break the seam */
+  float step = 6.28318 / cnt;
   float a = atan(p.z, p.x) + u_time * 0.06; /* the whole ring drifts */
   float sector = floor(a / step + 0.5);
   float d = 1e5;
@@ -291,6 +294,11 @@ void main() {
     /* Closer to the camera = more present; farther dissolves to white. */
     float depth = smoothstep(u_cam.y - u_ring.x * 1.05, u_cam.y + u_ring.x * 1.1, hit);
     col = mix(shaded, vec3(1.0), depth * 0.8);
+
+    /* Center focus: the ring's limb piles cubes up at the side edges —
+       keep the print strongest mid-viewport, easing outward. */
+    float edge = smoothstep(0.2, 0.95, abs(uv.x));
+    col = mix(col, vec3(1.0), edge * u_focus);
   }
 
   /* Print knockout: fade the scene to paper over the text column. */

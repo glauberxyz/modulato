@@ -26,12 +26,14 @@ export default motion({
   // places the band vertically on screen (uv units, + = up).
   scene: {
     speed: 0.2,
-    radius: 2,
-    size: 0.4,
-    count: 13,
+    radius: 3.11,
+    size: 0.203,
+    count: 31.9,
     camHeight: 0,
-    camDist: 5.5,
-    bandY: 0.24,
+    camDist: 6.21,
+    bandY: 0.269,
+    // Cubes print strongest mid-viewport, fading toward the side edges.
+    centerFocus: 0.75,
     // Print knockout over the text column (0 = none, 1 = fully clear).
     clear: 0.8,
     phone: { size: 0.34, count: 9, camDist: 7, bandY: 0.3, clear: 1 },
