@@ -295,11 +295,12 @@ void main() {
     float depth = smoothstep(u_cam.y - u_ring.x * 1.05, u_cam.y + u_ring.x * 1.1, hit);
     col = mix(shaded, vec3(1.0), depth * 0.8);
 
-    /* Center focus: the ring's limb piles cubes up at the side edges —
-       keep the print strongest at the middle of the VIEWPORT (radial from
-       the true screen center, both axes proportional), easing outward. */
-    float edge = smoothstep(0.28, 0.72, length(v_uv - 0.5));
-    col = mix(col, vec3(1.0), edge * u_focus);
+    /* Center focus, by RING ANGLE: a cube is strongest while it faces the
+       camera (projecting mid-viewport) and dissolves as it travels toward
+       the sides — coherent with the drift, immune to window shape. */
+    float ang = abs(atan(p.x, p.z));
+    float side = smoothstep(0.5, 1.45, ang);
+    col = mix(col, vec3(1.0), side * u_focus);
   }
 
   /* Print knockout: fade the scene to paper over the text column. */
