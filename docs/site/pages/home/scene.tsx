@@ -300,11 +300,15 @@ void main() {
     float depth = smoothstep(u_cam.y - u_ring.x * 1.05, u_cam.y + u_ring.x * 1.1, hit);
     col = mix(shaded, vec3(1.0), depth * 0.8);
 
-    /* Center focus, by RING ANGLE: a cube is strongest while it faces the
-       camera (projecting mid-viewport) and dissolves as it travels toward
-       the sides — coherent with the drift, immune to window shape. */
-    float ang = abs(atan(p.x, p.z));
-    float side = smoothstep(0.25, 0.85, ang);
+    /* Center focus, by VIEW ANGLE: fade each cube by where its CENTER
+       sits horizontally in the camera's view — uniform across the cube,
+       symmetric around the screen center, follows the drift. */
+    float fstep = 6.28318 / floor(u_ring.z + 0.5);
+    float fa = atan(p.z, p.x) + u_time * 0.06;
+    float fs = floor(fa / fstep + 0.5) * fstep - u_time * 0.06;
+    vec2 cc = vec2(cos(fs), sin(fs)) * u_ring.x; /* cube center (x, z) */
+    float va = abs(atan(cc.x, u_cam.y - cc.y));  /* 0 = straight ahead */
+    float side = smoothstep(0.12, 0.42, va);
     col = mix(col, vec3(1.0), side * u_focus);
   }
 
