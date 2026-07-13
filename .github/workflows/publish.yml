@@ -41,9 +41,11 @@ jobs:
         with:
           node-version: 24
 
-      # Ensure npm >= 11.5.1 for OIDC trusted publishing. npm@latest (12.x)
-      # needs Node >= 22.22.2, so the runner must be 22+/24+ (not 20).
-      - run: npm install -g npm@latest
+      # Pin npm 11 (>= 11.5.1, so OIDC trusted publishing works). NOT npm@latest:
+      # npm 12 dropped the `versions` array from `npm info <pkg> --json`, which
+      # Changesets 2.31.0 reads to detect what's already published — under npm 12
+      # every package looks unpublished and it tries to republish all of them.
+      - run: npm install -g npm@11
 
       - run: npm ci
 
