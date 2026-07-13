@@ -1,4 +1,7 @@
-# Modulato
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="./docs/brand/banner-dark.png">
+  <img src="./docs/brand/banner-light.png" alt="Modulato" width="100%">
+</picture>
 
 A visual-design-first React framework for making websites, leveraging
 custom transitions and animations. Built for humans and LLMs alike.
