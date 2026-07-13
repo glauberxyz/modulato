@@ -1,9 +1,20 @@
 {
-  "extends": "../../tsconfig.base.json",
+  // Self-contained (no "extends"): this folder deploys standalone to Vercel,
+  // where ../../tsconfig.base.json doesn't exist and Vite hard-fails on it.
   "compilerOptions": {
-    "types": [
-      "vite/client"
-    ]
+    "target": "ES2022",
+    "lib": ["ES2022", "DOM", "DOM.Iterable"],
+    "module": "ESNext",
+    "moduleResolution": "bundler",
+    "jsx": "react-jsx",
+    "strict": true,
+    "noEmit": true,
+    "skipLibCheck": true,
+    "isolatedModules": true,
+    "esModuleInterop": true,
+    "forceConsistentCasingInFileNames": true,
+    "resolveJsonModule": true,
+    "types": ["vite/client"]
   },
   "include": [
     ".modulato/content.d.ts",
