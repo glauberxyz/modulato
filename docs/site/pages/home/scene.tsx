@@ -287,7 +287,9 @@ void main() {
     float diffuse = max(dot(n, l), 0.0);
     float shadow = softShadow(p + n * 0.02, l);
     float occ = ambientOcclusion(p, n);
-    float lum = clamp(0.34 + 0.66 * diffuse * shadow, 0.0, 1.0) * occ;
+    /* Cap the highlights: a fully lit face would print white-on-white
+       and the pillar would vanish as it rotates through the light. */
+    float lum = min(clamp(0.34 + 0.66 * diffuse * shadow, 0.0, 1.0) * occ, 0.72);
 
     /* Warm-dark shadows so the C/M/Y plates separate (pure gray would
        print K only). */
