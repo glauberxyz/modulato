@@ -1,6 +1,6 @@
 {
   "name": "@modulato/content-local",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Local JSON content adapter for Modulato: content/*.json becomes the typed content snapshot.",
   "license": "MIT",
   "homepage": "https://github.com/glauberxyz/modulato#readme",
