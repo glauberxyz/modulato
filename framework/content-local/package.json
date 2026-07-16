@@ -20,7 +20,7 @@
     "node": ">=20"
   },
   "peerDependencies": {
-    "modulato": "^0.1.0"
+    "modulato": ">=0.1.0 <1.0.0"
   },
   "repository": {
     "type": "git",
