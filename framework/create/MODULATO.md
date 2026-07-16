@@ -359,6 +359,18 @@ import type { ModulatoContent } from 'modulato'
 export type Project = ModulatoContent['projects'][number]
 ```
 
+**Build-time refresh (optional).** By default the committed snapshot is the source
+of truth — `modulato build` uses whatever `.modulato/content.json` was committed.
+A CMS-backed site that rebuilds on publish can set `refetchOnBuild: true` in
+`modulato.config.ts`: `modulato build` then re-runs the adapter's `pull()` first, so
+a deploy-hook rebuild ships current content. A failed pull warns and falls back to
+the committed snapshot (an outage never breaks a deploy); `modulato build
+--no-content` forces the snapshot, `--refetch` forces a pull even when the flag is
+off. Adapter-agnostic — local JSON, a CMS API, a database; the flag only changes
+*when* `pull()` runs. (Loaders can also skip the snapshot and `fetch()` live per
+request — `load()` may be async — with any secret proxied through a `server.ts`
+action, since a client-side `load()` runs in the browser.)
+
 ## 9b. Head tags & SEO (SSR'd)
 
 Site-wide `<head>` tags — favicon, web manifest, theme-color, fonts, default

@@ -19,6 +19,8 @@ const HELP = `modulato — the animation-first React framework
 Usage
   modulato dev                          start the dev server (SSR + HMR)
   modulato build                        production build (client + ssr passes)
+                                          --refetch     pull fresh content first (see refetchOnBuild)
+                                          --no-content  build from the committed snapshot
 
   modulato new page <route>             scaffold pages/<route>/ (page, config, styles)
                                           e.g. modulato new page archive/[slug]
@@ -125,10 +127,28 @@ try {
       break
     }
 
-    case 'build':
-      await runVite(['build', ...rest])
-      await runVite(['build', '--ssr', ...rest])
+    case 'build': {
+      // Optionally refresh the content snapshot before building — opt in via
+      // `refetchOnBuild` in the config, or --refetch; --no-content forces skip.
+      const { refreshContentForBuild } = await import('./lib/content.mjs')
+      const refresh = await refreshContentForBuild(cwd, {
+        force: flags.has('--refetch'),
+        skip: flags.has('--no-content'),
+      })
+      if (refresh.status === 'refreshed')
+        console.log(
+          `✓ content refreshed at build from "${refresh.adapter}" (${refresh.keys.length} keys)`,
+        )
+      else if (refresh.status === 'failed')
+        console.warn(
+          `⚠ content refresh failed (${refresh.error}) — building from the committed snapshot`,
+        )
+      // Our flags aren't vite's — strip them before the passes.
+      const viteArgs = rest.filter((a) => a !== '--refetch' && a !== '--no-content')
+      await runVite(['build', ...viteArgs])
+      await runVite(['build', '--ssr', ...viteArgs])
       break
+    }
 
     case 'new': {
       const [kind, ...params] = args

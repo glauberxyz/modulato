@@ -36,6 +36,17 @@ export interface ModulatoConfig {
   breakpoints?: Record<string, string>
   /** Site-wide <head> tags (favicon, manifest, fonts, default OG, analytics). */
   head?: HeadConfig
+  /**
+   * Re-run the content adapter's `pull()` at the START of `modulato build`, so a
+   * deploy ships freshly-pulled content instead of the committed
+   * `.modulato/content.json`. OFF by default — builds stay reproducible and need
+   * no content-source credentials. Turn it on for CMS-backed sites that rebuild
+   * via a deploy hook (publish → hook → rebuild → fresh content). A pull failure
+   * at build warns and falls back to the committed snapshot; `modulato build
+   * --no-content` forces the snapshot, `--refetch` forces a pull even when this is
+   * off. Keep committing the snapshot either way — it's the offline fallback.
+   */
+  refetchOnBuild?: boolean
 }
 
 /** Identity helper for typed modulato.config.ts files. */

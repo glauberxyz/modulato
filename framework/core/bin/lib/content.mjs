@@ -113,7 +113,7 @@ export {}
  * The snapshot feeds page loaders (typed as \`content\`); commit it so
  * builds are reproducible without content-source credentials.
  */
-export async function pullContent(root) {
+export async function pullContent(root, { typegen = true } = {}) {
   loadEnvFiles(root)
   const config = await loadModulatoConfig(root)
   const adapter = config.content
@@ -132,11 +132,43 @@ export async function pullContent(root) {
     path.join(outDir, 'content.json'),
     JSON.stringify(snapshot, null, 2) + '\n',
   )
-  fs.writeFileSync(path.join(outDir, 'content.d.ts'), generateTypes(snapshot))
+  const files = ['.modulato/content.json']
+  // Build-time refreshes skip typegen (`{ typegen: false }`): a build only needs
+  // the snapshot, and rewriting content.d.ts in CI is a pointless, dirtying write.
+  if (typegen) {
+    fs.writeFileSync(path.join(outDir, 'content.d.ts'), generateTypes(snapshot))
+    files.push('.modulato/content.d.ts')
+  }
 
-  return {
-    adapter: adapter.name,
-    keys: Object.keys(snapshot),
-    files: ['.modulato/content.json', '.modulato/content.d.ts'],
+  return { adapter: adapter.name, keys: Object.keys(snapshot), files }
+}
+
+/**
+ * Build-time content refresh, called at the start of `modulato build`. Pulls a
+ * fresh snapshot (content.json only — no typegen) so a deploy ships current
+ * content. Gated: opt in with `refetchOnBuild: true` in modulato.config, or force
+ * it with `--refetch`; `--no-content` (skip) always wins. A pull failure is caught
+ * and reported — a content-source outage must never break a deploy (the build
+ * falls back to the committed snapshot).
+ *
+ * Returns { status: 'skipped' | 'disabled' | 'refreshed' | 'failed', … }.
+ */
+export async function refreshContentForBuild(root, { force = false, skip = false } = {}) {
+  if (skip) return { status: 'skipped' }
+  if (!force) {
+    // Read only the flag here — the adapter isn't used, so env need not be loaded.
+    try {
+      const config = await loadModulatoConfig(root)
+      if (config.refetchOnBuild !== true) return { status: 'disabled' }
+    } catch {
+      return { status: 'disabled' } // no config → nothing to refresh
+    }
+  }
+  try {
+    // pullContent loads .env then the config, so the adapter sees its credentials.
+    const result = await pullContent(root, { typegen: false })
+    return { status: 'refreshed', adapter: result.adapter, keys: result.keys }
+  } catch (err) {
+    return { status: 'failed', error: err instanceof Error ? err.message : String(err) }
   }
 }
