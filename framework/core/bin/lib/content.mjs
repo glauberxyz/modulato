@@ -11,7 +11,7 @@ import { pathToFileURL } from 'node:url'
  * Precedence: a variable already in the real environment wins; among files
  * `.env.local` overrides `.env`. Tiny hand-rolled parser — no dependency.
  */
-function loadEnvFiles(root) {
+export function loadEnvFiles(root) {
   const fromRealEnv = new Set(Object.keys(process.env))
   for (const file of ['.env', '.env.local']) {
     const p = path.join(root, file)

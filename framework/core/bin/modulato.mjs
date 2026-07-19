@@ -123,6 +123,13 @@ try {
           devArgs.push('--host', process.env.HOST ?? '127.0.0.1')
         }
       }
+      // Load .env/.env.local into process.env so a server-side `load()` (SSR on
+      // first paint) sees the same vars a credentialed adapter does — Vite only
+      // exposes dotenv via import.meta.env, not process.env. Mirrors the loading
+      // `modulato content` already does. After the port logic, so a dotenv PORT
+      // doesn't change the dev port binding.
+      const { loadEnvFiles } = await import('./lib/content.mjs')
+      loadEnvFiles(cwd)
       await runVite(devArgs)
       break
     }
