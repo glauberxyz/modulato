@@ -4,102 +4,18 @@ import {
   useRef,
   useState,
   useSyncExternalStore,
-  type CSSProperties,
+  type ReactNode,
 } from 'react'
 import type { ModulatoDevHandle } from 'modulato/client'
 import type { TokenLeaf, TokenValue } from 'modulato'
-
-const S: Record<string, CSSProperties> = {
-  toggle: {
-    position: 'fixed',
-    right: 12,
-    bottom: 12,
-    zIndex: 99999,
-    font: '600 11px/1 ui-monospace, monospace',
-    padding: '8px 10px',
-    borderRadius: 999,
-    border: '1px solid rgba(255,255,255,0.2)',
-    background: 'rgba(20,20,24,0.92)',
-    color: '#eee',
-    cursor: 'pointer',
-  },
-  panel: {
-    position: 'fixed',
-    right: 12,
-    bottom: 48,
-    zIndex: 99999,
-    width: 340,
-    maxHeight: '70vh',
-    overflowY: 'auto',
-    overscrollBehavior: 'contain',
-    font: '11px/1.5 ui-monospace, monospace',
-    background: 'rgba(20,20,24,0.94)',
-    color: '#ddd',
-    border: '1px solid rgba(255,255,255,0.14)',
-    borderRadius: 10,
-    padding: 10,
-    backdropFilter: 'blur(8px)',
-  },
-  row: { display: 'flex', alignItems: 'center', gap: 6, margin: '2px 0' },
-  label: {
-    flex: 1,
-    whiteSpace: 'nowrap',
-    overflow: 'hidden',
-    textOverflow: 'ellipsis',
-    color: '#9a9aa2',
-  },
-  input: {
-    width: 46,
-    font: 'inherit',
-    background: 'rgba(255,255,255,0.07)',
-    color: '#fff',
-    border: '1px solid rgba(255,255,255,0.15)',
-    borderRadius: 4,
-    padding: '2px 5px',
-  },
-  slider: {
-    width: 86,
-    margin: 0,
-    accentColor: '#8fa8ff',
-  },
-  button: {
-    font: 'inherit',
-    background: 'rgba(255,255,255,0.08)',
-    color: '#eee',
-    border: '1px solid rgba(255,255,255,0.16)',
-    borderRadius: 5,
-    padding: '3px 8px',
-    cursor: 'pointer',
-  },
-  file: {
-    margin: '10px 0 4px',
-    padding: '4px 0',
-    borderTop: '1px solid rgba(255,255,255,0.1)',
-    color: '#fff',
-    fontWeight: 600,
-  },
-  controls: { display: 'flex', flexWrap: 'wrap', gap: 5, marginBottom: 6 },
-  rowReset: {
-    font: 'inherit',
-    background: 'none',
-    color: '#8fa8ff',
-    border: 'none',
-    padding: '0 2px',
-    cursor: 'pointer',
-    lineHeight: 1,
-  },
-  filter: {
-    width: '100%',
-    boxSizing: 'border-box',
-    font: 'inherit',
-    background: 'rgba(255,255,255,0.07)',
-    color: '#fff',
-    border: '1px solid rgba(255,255,255,0.15)',
-    borderRadius: 5,
-    padding: '4px 7px',
-    marginBottom: 6,
-  },
-}
+import { Button } from './ui/button'
+import { Input } from './ui/input'
+import { Slider } from './ui/slider'
+import { Checkbox } from './ui/checkbox'
+import { Separator } from './ui/separator'
+import { Badge } from './ui/badge'
+import { cn } from './ui/utils'
+import css from './overlay.css?inline'
 
 function useHandle(): ModulatoDevHandle | null {
   const [handle, setHandle] = useState<ModulatoDevHandle | null>(
@@ -131,32 +47,53 @@ function sliderRange(initial: number) {
   return { min, max, step }
 }
 
-function NumberControl({
-  value,
-  onChange,
-}: {
-  value: number
-  onChange: (value: number) => void
-}) {
+// The GSAP ease catalog. Every well-known curve is selectable; a value outside
+// the catalog (a project-registered CustomEase) is kept as its own option so
+// nothing breaks. Next step (designed, not built): custom curves declared in
+// modulato.config — tailwind.config-style extend — surfaced here by name.
+const EASE_FAMILIES = ['power1', 'power2', 'power3', 'power4', 'sine', 'expo', 'circ', 'back', 'elastic', 'bounce']
+const EASES = ['none', ...EASE_FAMILIES.flatMap((f) => [`${f}.in`, `${f}.out`, `${f}.inOut`])]
+
+function isEaseLeaf(leaf: TokenLeaf): boolean {
+  if (typeof leaf.value !== 'string') return false
+  const key = leaf.path[leaf.path.length - 1]?.toLowerCase() ?? ''
+  return key.includes('ease') || EASES.includes(leaf.value)
+}
+
+const selectClass =
+  'h-7 rounded-md border border-input bg-input/30 px-2 text-xs text-foreground outline-none focus-visible:ring-2 focus-visible:ring-ring/50 cursor-pointer'
+
+function EaseControl({ value, onChange }: { value: string; onChange: (v: string) => void }) {
+  const options = EASES.includes(value) ? EASES : [value, ...EASES]
+  return (
+    <select className={selectClass} value={value} onChange={(e) => onChange(e.target.value)}>
+      {options.map((ease) => (
+        <option key={ease} value={ease}>
+          {ease}
+        </option>
+      ))}
+    </select>
+  )
+}
+
+function NumberControl({ value, onChange }: { value: number; onChange: (v: number) => void }) {
   // Bounds are frozen at mount so the scale never shifts mid-drag.
   const [range] = useState(() => sliderRange(value))
   // Draft while the box is focused — external updates (reset, breakpoint
-  // force) flow straight through when not editing. No value-derived key:
-  // remounting a focused input is what caused the per-keystroke blur.
+  // force) flow straight through when not editing.
   const [draft, setDraft] = useState<string | null>(null)
   return (
     <>
-      <input
-        type="range"
-        style={S.slider}
+      <Slider
+        className="w-24 shrink-0 data-horizontal:w-24"
         min={Math.min(range.min, value)}
         max={Math.max(range.max, value)}
         step={range.step}
-        value={value}
-        onChange={(e) => onChange(Number(e.target.value))}
+        value={[value]}
+        onValueChange={(v: number | readonly number[]) => onChange(Array.isArray(v) ? v[0] : (v as number))}
       />
-      <input
-        style={S.input}
+      <Input
+        className="h-7 w-14 px-1.5 text-right text-xs"
         type="text"
         inputMode="decimal"
         value={draft ?? fmt(value)}
@@ -175,17 +112,11 @@ function NumberControl({
   )
 }
 
-function TextControl({
-  value,
-  onChange,
-}: {
-  value: string
-  onChange: (value: string) => void
-}) {
+function TextControl({ value, onChange }: { value: string; onChange: (v: string) => void }) {
   const [draft, setDraft] = useState<string | null>(null)
   return (
-    <input
-      style={{ ...S.input, width: 108 }}
+    <Input
+      className="h-7 w-32 px-1.5 text-xs"
       type="text"
       value={draft ?? value}
       onFocus={() => setDraft(value)}
@@ -212,27 +143,36 @@ function LeafRow({
   onChange: (value: TokenValue) => void
   onReset: () => void
 }) {
-  const label = leaf.path.join('.')
-  // Dirty rows are visibly marked (what Save will write) and individually
-  // undoable — a stray slider drag can't ride into a save unnoticed.
-  const labelStyle = dirty ? { ...S.label, color: '#8fa8ff' } : S.label
+  const name = leaf.path[leaf.path.length - 1]
   const control =
     typeof leaf.value === 'boolean' ? (
-      <input type="checkbox" checked={leaf.value} onChange={(e) => onChange(e.target.checked)} />
+      <Checkbox checked={leaf.value} onCheckedChange={(c: boolean) => onChange(c === true)} />
     ) : typeof leaf.value === 'number' ? (
       <NumberControl value={leaf.value} onChange={onChange} />
+    ) : isEaseLeaf(leaf) ? (
+      <EaseControl value={leaf.value} onChange={onChange} />
     ) : (
       <TextControl value={leaf.value} onChange={onChange} />
     )
   return (
-    <div style={S.row}>
-      <span style={labelStyle} title={label}>
-        {dirty ? '● ' : ''}
-        {label}
+    <div className="flex items-center gap-2 py-0.5">
+      <span
+        className={cn(
+          'min-w-0 flex-1 truncate text-xs',
+          dirty ? 'font-medium text-primary' : 'text-muted-foreground',
+        )}
+        title={leaf.path.join('.')}
+      >
+        {name}
       </span>
       {control}
+      {/* Dirty rows are marked and individually undoable — a stray drag can't
+          ride into a save unnoticed. */}
       <button
-        style={{ ...S.rowReset, visibility: dirty ? 'visible' : 'hidden' }}
+        className={cn(
+          'w-4 shrink-0 cursor-pointer text-primary hover:text-foreground',
+          dirty ? 'visible' : 'invisible',
+        )}
         title="reset this token"
         onClick={onReset}
       >
@@ -240,6 +180,28 @@ function LeafRow({
       </button>
     </div>
   )
+}
+
+function SectionLabel({ children }: { children: ReactNode }) {
+  return (
+    <div className="mb-1.5 text-[10px] font-medium tracking-widest text-muted-foreground uppercase">
+      {children}
+    </div>
+  )
+}
+
+/** Group leaves by parent path (`shell.menu.phone.yPercent` → group
+ * "shell › menu › phone", row "yPercent") — the hierarchy reads once per
+ * group instead of repeating on every row. */
+function groupLeaves(leaves: TokenLeaf[]): Array<{ group: string; leaves: TokenLeaf[] }> {
+  const groups: Array<{ group: string; leaves: TokenLeaf[] }> = []
+  for (const leaf of leaves) {
+    const group = leaf.path.slice(0, -1).join(' › ')
+    const last = groups[groups.length - 1]
+    if (last && last.group === group) last.leaves.push(leaf)
+    else groups.push({ group, leaves: [leaf] })
+  }
+  return groups
 }
 
 function Overlay() {
@@ -305,38 +267,50 @@ function Overlay() {
 
   return (
     <>
-      <button style={S.toggle} onClick={() => setOpen((o) => !o)}>
+      <Button
+        size="sm"
+        className="fixed right-3 bottom-3 z-50 rounded-full font-mono text-xs shadow-lg"
+        onClick={() => setOpen((o) => !o)}
+      >
         {open ? '× motion' : '✦ motion'}
-      </button>
+      </Button>
       {open && (
         // data-lenis-prevent: the page's Lenis must not intercept wheel/touch
         // over the panel, or its own scrollbar never moves.
-        <div style={S.panel} data-version={version} data-lenis-prevent="">
-          <div style={S.controls}>
-            <button style={S.button} onClick={() => void handle.replayIntro()}>
-              replay intro
-            </button>
-            <button style={S.button} onClick={() => void handle.replayShellIntro()}>
+        <div
+          className="fixed right-3 bottom-14 z-50 max-h-[75vh] w-[380px] overflow-y-auto overscroll-contain rounded-xl border bg-background p-4 text-xs shadow-2xl"
+          data-version={version}
+          data-lenis-prevent=""
+        >
+          {/* ── replay: what to play ─────────────────────────────────── */}
+          <SectionLabel>replay</SectionLabel>
+          <div className="flex flex-wrap items-center gap-1.5">
+            <Button variant="secondary" size="sm" className="h-7 px-2.5 text-xs" onClick={() => void handle.replayIntro()}>
+              intro
+            </Button>
+            <Button variant="secondary" size="sm" className="h-7 px-2.5 text-xs" onClick={() => void handle.replayShellIntro()}>
               shell
-            </button>
-            <button style={S.button} onClick={() => handle.replayMotions()}>
+            </Button>
+            <Button variant="secondary" size="sm" className="h-7 px-2.5 text-xs" onClick={() => handle.replayMotions()}>
               motions
-            </button>
-            <label style={{ ...S.row, cursor: 'pointer' }}>
-              <input type="checkbox" checked={loop} onChange={(e) => setLoop(e.target.checked)} />
+            </Button>
+            <label className="ml-1 flex cursor-pointer items-center gap-1.5 text-muted-foreground">
+              <Checkbox checked={loop} onCheckedChange={(c: boolean) => setLoop(c === true)} />
               loop
             </label>
           </div>
-          <div style={S.controls}>
-            {/* Preview another breakpoint's resolved tokens without resizing. */}
+
+          <Separator className="my-3" />
+
+          {/* ── preview context: replays run AS this breakpoint/speed ──── */}
+          <SectionLabel>preview as</SectionLabel>
+          <div className="flex flex-wrap items-center gap-1.5">
             {[null, ...handle.viewport.names()].map((name) => (
-              <button
+              <Button
                 key={name ?? 'auto'}
-                style={{
-                  ...S.button,
-                  background:
-                    forcedBp === name ? 'rgba(120,160,255,0.3)' : S.button.background,
-                }}
+                variant={forcedBp === name ? 'default' : 'outline'}
+                size="sm"
+                className="h-7 px-2.5 text-xs"
                 onClick={() => {
                   setForcedBp(name)
                   handle.viewport.force(name)
@@ -344,52 +318,66 @@ function Overlay() {
                 }}
               >
                 {name ?? 'auto'}
-              </button>
+              </Button>
             ))}
-            <label style={{ ...S.row, cursor: 'pointer' }}>
-              <input
-                type="checkbox"
+            <label className="flex cursor-pointer items-center gap-1.5 text-muted-foreground">
+              <Checkbox
                 checked={forcedReduced}
-                onChange={(e) => {
-                  setForcedReduced(e.target.checked)
-                  handle.viewport.forceReduced(e.target.checked ? true : null)
+                onCheckedChange={(c: boolean) => {
+                  setForcedReduced(c === true)
+                  handle.viewport.forceReduced(c === true ? true : null)
                   queueReplay()
                 }}
               />
               reduced
             </label>
           </div>
-          <div style={S.controls}>
+          <div className="mt-1.5 flex flex-wrap items-center gap-1.5">
             {[1, 0.5, 0.25, 0.1].map((s) => (
-              <button
+              <Button
                 key={s}
-                style={{
-                  ...S.button,
-                  background: handle.speed === s ? 'rgba(120,160,255,0.3)' : S.button.background,
-                }}
+                variant={handle.speed === s ? 'default' : 'outline'}
+                size="sm"
+                className="h-7 px-2.5 text-xs"
                 onClick={() => {
                   handle.setSpeed(s)
                   setStatus(s === 1 ? '' : `${s}× speed`)
                 }}
               >
                 {s}×
-              </button>
+              </Button>
             ))}
           </div>
+
+          <Separator className="my-3" />
+
+          {/* ── tokens ──────────────────────────────────────────────── */}
+          <SectionLabel>tokens</SectionLabel>
           {!files.length && (
-            <div style={{ color: '#9a9aa2' }}>
+            <div className="text-muted-foreground">
               no motion tokens registered — create a motion.ts next to a page and read it
               from your intro/useMotion code.
             </div>
           )}
           {files.length > 0 && (
-            <input
-              style={S.filter}
-              type="text"
-              placeholder="filter tokens…"
-              value={filter}
-              onChange={(e) => setFilter(e.target.value)}
-            />
+            <div className="relative">
+              <Input
+                className="h-7 pr-7 text-xs"
+                type="text"
+                placeholder="filter tokens…"
+                value={filter}
+                onChange={(e) => setFilter(e.target.value)}
+              />
+              {filter && (
+                <button
+                  className="absolute top-1/2 right-2 -translate-y-1/2 cursor-pointer text-muted-foreground hover:text-foreground"
+                  title="clear filter"
+                  onClick={() => setFilter('')}
+                >
+                  ×
+                </button>
+              )}
+            </div>
           )}
           {files.map(({ file }) => {
             const leaves = handle.tokens.leaves(file)
@@ -406,39 +394,57 @@ function Overlay() {
               : leaves
             if (query && !shown.length) return null
             return (
-              <div key={file}>
-                <div style={S.file}>
-                  {file}
-                  {dirtySet.size ? ` · ${dirtySet.size} unsaved` : ''}
+              <div key={file} className="mt-3">
+                <div className="mb-1 flex items-center gap-2">
+                  <span className="font-mono font-medium text-foreground">{file}</span>
+                  {dirtySet.size > 0 && (
+                    <Badge variant="secondary" className="h-4 px-1.5 text-[10px]">
+                      {dirtySet.size} unsaved
+                    </Badge>
+                  )}
                 </div>
-                {shown.map((leaf) => {
-                  const key = leaf.path.join('.')
-                  return (
-                    <LeafRow
-                      key={key}
-                      leaf={leaf}
-                      dirty={dirtySet.has(key)}
-                      onChange={(value) => {
-                        handle.tokens.set(file, leaf.path, value)
-                        queueReplay()
-                      }}
-                      onReset={() => {
-                        handle.tokens.resetLeaf(file, leaf.path)
-                        queueReplay()
-                      }}
-                    />
-                  )
-                })}
-                <div style={{ ...S.controls, marginTop: 4 }}>
-                  <button
-                    style={S.button}
+                {groupLeaves(shown).map(({ group, leaves: groupLeaves }) => (
+                  <div key={group || '(root)'} className="mb-1.5">
+                    {group && (
+                      <div className="mt-1.5 mb-0.5 text-[10px] font-medium text-muted-foreground/70">
+                        {group}
+                      </div>
+                    )}
+                    <div className={group ? 'pl-2' : ''}>
+                      {groupLeaves.map((leaf) => {
+                        const key = leaf.path.join('.')
+                        return (
+                          <LeafRow
+                            key={key}
+                            leaf={leaf}
+                            dirty={dirtySet.has(key)}
+                            onChange={(value) => {
+                              handle.tokens.set(file, leaf.path, value)
+                              queueReplay()
+                            }}
+                            onReset={() => {
+                              handle.tokens.resetLeaf(file, leaf.path)
+                              queueReplay()
+                            }}
+                          />
+                        )
+                      })}
+                    </div>
+                  </div>
+                ))}
+                <div className="mt-1.5 flex gap-1.5">
+                  <Button
+                    size="sm"
+                    className="h-7 px-2.5 text-xs"
                     disabled={!dirtySet.size}
                     onClick={() => void save(file)}
                   >
                     save{dirtySet.size ? ` (${dirtySet.size})` : ''}
-                  </button>
-                  <button
-                    style={S.button}
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="h-7 px-2.5 text-xs"
                     disabled={!dirtySet.size}
                     onClick={() => {
                       handle.tokens.reset(file)
@@ -446,26 +452,35 @@ function Overlay() {
                     }}
                   >
                     reset
-                  </button>
+                  </Button>
                 </div>
               </div>
             )
           })}
-          {status && <div style={{ marginTop: 6, color: '#8fc' }}>{status}</div>}
+          {status && <div className="mt-2 text-primary">{status}</div>}
         </div>
       )}
     </>
   )
 }
 
-/** Mount the Tweak overlay (idempotent). Called by the dev client entry. */
+/** Mount the Tweak overlay (idempotent). Shadow DOM keeps the shadcn styles
+ * fully isolated from the host site — and the host's styles out. */
 export function mount(): void {
   if (typeof document === 'undefined') return
   if (document.getElementById('__modulato-tweak')) return
   const host = document.createElement('div')
   host.id = '__modulato-tweak'
+  host.setAttribute('data-lenis-prevent', '')
   document.body.appendChild(host)
+  const shadow = host.attachShadow({ mode: 'open' })
+  const style = document.createElement('style')
+  style.textContent = css
+  shadow.appendChild(style)
+  const root = document.createElement('div')
+  root.className = 'dark font-sans text-foreground'
+  shadow.appendChild(root)
   void import('react-dom/client').then(({ createRoot }) => {
-    createRoot(host).render(<Overlay />)
+    createRoot(root).render(<Overlay />)
   })
 }

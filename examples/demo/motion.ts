@@ -4,7 +4,7 @@ import { motion } from 'modulato'
 export default motion({
   shell: {
     menu: {
-      yPercent: -220,
+      yPercent: -164,
       duration: 1,
       ease: 'expo.out',
       phone: { yPercent: -160, duration: 0.8 },
