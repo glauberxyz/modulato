@@ -15,3 +15,6 @@ host site (no Tailwind at runtime, host styles can't bleed in or out).
   sine / expo / circ / back / elastic / bounce × in/out/inOut); an unknown
   value (project CustomEase) is preserved as its own option.
 - Filter box got a clear button; dirty rows keep their ● accent + per-row ↺.
+
+- Breakpoint pills use icons (phone / tablet / desktop, inlined lucide shapes)
+  with the name as tooltip + aria-label; unknown breakpoint names keep text.

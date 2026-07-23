@@ -60,6 +60,58 @@ function isEaseLeaf(leaf: TokenLeaf): boolean {
   return key.includes('ease') || EASES.includes(leaf.value)
 }
 
+// Inlined lucide icons for the breakpoint pills (Smartphone / Tablet /
+// Monitor) — same no-dep policy as CheckIcon. Names are site-defined, so the
+// mapping is fuzzy and unknown names fall back to their text label.
+function iconProps(props: React.SVGProps<SVGSVGElement>): React.SVGProps<SVGSVGElement> {
+  return {
+    xmlns: 'http://www.w3.org/2000/svg',
+    width: 14,
+    height: 14,
+    viewBox: '0 0 24 24',
+    fill: 'none',
+    stroke: 'currentColor',
+    strokeWidth: 2,
+    strokeLinecap: 'round',
+    strokeLinejoin: 'round',
+    ...props,
+  }
+}
+
+function PhoneIcon(props: React.SVGProps<SVGSVGElement>) {
+  return (
+    <svg {...iconProps(props)}>
+      <rect width="14" height="20" x="5" y="2" rx="2" ry="2" />
+      <path d="M12 18h.01" />
+    </svg>
+  )
+}
+function TabletIcon(props: React.SVGProps<SVGSVGElement>) {
+  return (
+    <svg {...iconProps(props)}>
+      <rect width="16" height="20" x="4" y="2" rx="2" ry="2" />
+      <path d="M12 18h.01" />
+    </svg>
+  )
+}
+function MonitorIcon(props: React.SVGProps<SVGSVGElement>) {
+  return (
+    <svg {...iconProps(props)}>
+      <rect width="20" height="14" x="2" y="3" rx="2" />
+      <line x1="8" x2="16" y1="21" y2="21" />
+      <line x1="12" x2="12" y1="17" y2="21" />
+    </svg>
+  )
+}
+
+function breakpointIcon(name: string): ReactNode | null {
+  const n = name.toLowerCase()
+  if (n.includes('phone') || n.includes('mobile')) return <PhoneIcon />
+  if (n.includes('tablet')) return <TabletIcon />
+  if (n.includes('desktop') || n.includes('wide') || n.includes('laptop')) return <MonitorIcon />
+  return null
+}
+
 const selectClass =
   'h-7 rounded-md border border-input bg-input/30 px-2 text-xs text-foreground outline-none focus-visible:ring-2 focus-visible:ring-ring/50 cursor-pointer'
 
@@ -305,21 +357,26 @@ function Overlay() {
           {/* ── preview context: replays run AS this breakpoint/speed ──── */}
           <SectionLabel>preview as</SectionLabel>
           <div className="flex flex-wrap items-center gap-1.5">
-            {[null, ...handle.viewport.names()].map((name) => (
-              <Button
-                key={name ?? 'auto'}
-                variant={forcedBp === name ? 'default' : 'outline'}
-                size="sm"
-                className="h-7 px-2.5 text-xs"
-                onClick={() => {
-                  setForcedBp(name)
-                  handle.viewport.force(name)
-                  queueReplay()
-                }}
-              >
-                {name ?? 'auto'}
-              </Button>
-            ))}
+            {[null, ...handle.viewport.names()].map((name) => {
+              const icon = name ? breakpointIcon(name) : null
+              return (
+                <Button
+                  key={name ?? 'auto'}
+                  variant={forcedBp === name ? 'default' : 'outline'}
+                  size="sm"
+                  className={icon ? 'h-7 w-7 px-0 text-xs' : 'h-7 px-2.5 text-xs'}
+                  title={name ?? 'auto (follow the real viewport)'}
+                  aria-label={name ?? 'auto'}
+                  onClick={() => {
+                    setForcedBp(name)
+                    handle.viewport.force(name)
+                    queueReplay()
+                  }}
+                >
+                  {icon ?? (name ?? 'auto')}
+                </Button>
+              )
+            })}
             <label className="flex cursor-pointer items-center gap-1.5 text-muted-foreground">
               <Checkbox
                 checked={forcedReduced}
