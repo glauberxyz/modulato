@@ -79,6 +79,26 @@ const S: Record<string, CSSProperties> = {
     fontWeight: 600,
   },
   controls: { display: 'flex', flexWrap: 'wrap', gap: 5, marginBottom: 6 },
+  rowReset: {
+    font: 'inherit',
+    background: 'none',
+    color: '#8fa8ff',
+    border: 'none',
+    padding: '0 2px',
+    cursor: 'pointer',
+    lineHeight: 1,
+  },
+  filter: {
+    width: '100%',
+    boxSizing: 'border-box',
+    font: 'inherit',
+    background: 'rgba(255,255,255,0.07)',
+    color: '#fff',
+    border: '1px solid rgba(255,255,255,0.15)',
+    borderRadius: 5,
+    padding: '4px 7px',
+    marginBottom: 6,
+  },
 }
 
 function useHandle(): ModulatoDevHandle | null {
@@ -111,12 +131,10 @@ function sliderRange(initial: number) {
   return { min, max, step }
 }
 
-function NumberRow({
-  label,
+function NumberControl({
   value,
   onChange,
 }: {
-  label: string
   value: number
   onChange: (value: number) => void
 }) {
@@ -127,10 +145,7 @@ function NumberRow({
   // remounting a focused input is what caused the per-keystroke blur.
   const [draft, setDraft] = useState<string | null>(null)
   return (
-    <div style={S.row}>
-      <span style={S.label} title={label}>
-        {label}
-      </span>
+    <>
       <input
         type="range"
         style={S.slider}
@@ -156,73 +171,82 @@ function NumberRow({
           if (!Number.isNaN(parsed) && e.target.value.trim() !== '') onChange(parsed)
         }}
       />
-    </div>
+    </>
   )
 }
 
-function TextRow({
-  label,
+function TextControl({
   value,
   onChange,
 }: {
-  label: string
   value: string
   onChange: (value: string) => void
 }) {
   const [draft, setDraft] = useState<string | null>(null)
   return (
-    <div style={S.row}>
-      <span style={S.label} title={label}>
-        {label}
-      </span>
-      <input
-        style={{ ...S.input, width: 108 }}
-        type="text"
-        value={draft ?? value}
-        onFocus={() => setDraft(value)}
-        onBlur={() => setDraft(null)}
-        onKeyDown={(e) => {
-          if (e.key === 'Enter') (e.target as HTMLInputElement).blur()
-        }}
-        onChange={(e) => {
-          setDraft(e.target.value)
-          onChange(e.target.value)
-        }}
-      />
-    </div>
+    <input
+      style={{ ...S.input, width: 108 }}
+      type="text"
+      value={draft ?? value}
+      onFocus={() => setDraft(value)}
+      onBlur={() => setDraft(null)}
+      onKeyDown={(e) => {
+        if (e.key === 'Enter') (e.target as HTMLInputElement).blur()
+      }}
+      onChange={(e) => {
+        setDraft(e.target.value)
+        onChange(e.target.value)
+      }}
+    />
   )
 }
 
 function LeafRow({
   leaf,
+  dirty,
   onChange,
+  onReset,
 }: {
   leaf: TokenLeaf
+  dirty: boolean
   onChange: (value: TokenValue) => void
+  onReset: () => void
 }) {
   const label = leaf.path.join('.')
-  if (typeof leaf.value === 'boolean')
-    return (
-      <div style={S.row}>
-        <span style={S.label} title={label}>
-          {label}
-        </span>
-        <input
-          type="checkbox"
-          checked={leaf.value}
-          onChange={(e) => onChange(e.target.checked)}
-        />
-      </div>
+  // Dirty rows are visibly marked (what Save will write) and individually
+  // undoable — a stray slider drag can't ride into a save unnoticed.
+  const labelStyle = dirty ? { ...S.label, color: '#8fa8ff' } : S.label
+  const control =
+    typeof leaf.value === 'boolean' ? (
+      <input type="checkbox" checked={leaf.value} onChange={(e) => onChange(e.target.checked)} />
+    ) : typeof leaf.value === 'number' ? (
+      <NumberControl value={leaf.value} onChange={onChange} />
+    ) : (
+      <TextControl value={leaf.value} onChange={onChange} />
     )
-  if (typeof leaf.value === 'number')
-    return <NumberRow label={label} value={leaf.value} onChange={onChange} />
-  return <TextRow label={label} value={leaf.value} onChange={onChange} />
+  return (
+    <div style={S.row}>
+      <span style={labelStyle} title={label}>
+        {dirty ? '● ' : ''}
+        {label}
+      </span>
+      {control}
+      <button
+        style={{ ...S.rowReset, visibility: dirty ? 'visible' : 'hidden' }}
+        title="reset this token"
+        onClick={onReset}
+      >
+        ↺
+      </button>
+    </div>
+  )
 }
 
 function Overlay() {
   const handle = useHandle()
   const [open, setOpen] = useState(false)
   const [loop, setLoop] = useState(false)
+  const [filter, setFilter] = useState('')
   const [status, setStatus] = useState('')
   const [forcedBp, setForcedBp] = useState<string | null>(null)
   const [forcedReduced, setForcedReduced] = useState(false)
@@ -358,32 +382,64 @@ function Overlay() {
               from your intro/useMotion code.
             </div>
           )}
+          {files.length > 0 && (
+            <input
+              style={S.filter}
+              type="text"
+              placeholder="filter tokens…"
+              value={filter}
+              onChange={(e) => setFilter(e.target.value)}
+            />
+          )}
           {files.map(({ file }) => {
             const leaves = handle.tokens.leaves(file)
-            const dirty = handle.tokens.dirty(file).length
+            const dirtySet = new Set(handle.tokens.dirty(file).map((l) => l.path.join('.')))
+            const query = filter.trim().toLowerCase()
+            // Dirty rows stay visible even when the filter excludes them — what
+            // Save will write must never be off-screen.
+            const shown = query
+              ? leaves.filter(
+                  (l) =>
+                    l.path.join('.').toLowerCase().includes(query) ||
+                    dirtySet.has(l.path.join('.')),
+                )
+              : leaves
+            if (query && !shown.length) return null
             return (
               <div key={file}>
                 <div style={S.file}>
                   {file}
-                  {dirty ? ` · ${dirty} unsaved` : ''}
+                  {dirtySet.size ? ` · ${dirtySet.size} unsaved` : ''}
                 </div>
-                {leaves.map((leaf) => (
-                  <LeafRow
-                    key={leaf.path.join('.')}
-                    leaf={leaf}
-                    onChange={(value) => {
-                      handle.tokens.set(file, leaf.path, value)
-                      queueReplay()
-                    }}
-                  />
-                ))}
+                {shown.map((leaf) => {
+                  const key = leaf.path.join('.')
+                  return (
+                    <LeafRow
+                      key={key}
+                      leaf={leaf}
+                      dirty={dirtySet.has(key)}
+                      onChange={(value) => {
+                        handle.tokens.set(file, leaf.path, value)
+                        queueReplay()
+                      }}
+                      onReset={() => {
+                        handle.tokens.resetLeaf(file, leaf.path)
+                        queueReplay()
+                      }}
+                    />
+                  )
+                })}
                 <div style={{ ...S.controls, marginTop: 4 }}>
-                  <button style={S.button} disabled={!dirty} onClick={() => void save(file)}>
-                    save{dirty ? ` (${dirty})` : ''}
+                  <button
+                    style={S.button}
+                    disabled={!dirtySet.size}
+                    onClick={() => void save(file)}
+                  >
+                    save{dirtySet.size ? ` (${dirtySet.size})` : ''}
                   </button>
                   <button
                     style={S.button}
-                    disabled={!dirty}
+                    disabled={!dirtySet.size}
                     onClick={() => {
                       handle.tokens.reset(file)
                       queueReplay()

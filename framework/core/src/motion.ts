@@ -165,6 +165,17 @@ export const motionRegistry = {
     assignInPlace(entry.tokens, clone(entry.original))
     emit()
   },
+  /** Reset ONE leaf to the file's last-known value (undo a stray drag). */
+  resetLeaf(file: string, path: string[]): void {
+    const entry = registry.get(file)
+    if (!entry || !path.length) return
+    const original = getAt(entry.original, path)
+    if (original === undefined) return
+    const parent = getAt(entry.tokens, path.slice(0, -1))
+    if (!parent || typeof parent !== 'object') return
+    ;(parent as Record<string, unknown>)[path[path.length - 1]] = original
+    emit()
+  },
   /** After a successful save, the live state becomes the new baseline. */
   markSaved(file: string): void {
     const entry = registry.get(file)
