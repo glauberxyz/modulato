@@ -306,11 +306,35 @@ function groupLeaves(leaves: TokenLeaf[]): Array<{ group: string; leaves: TokenL
   return groups
 }
 
+// A route id as it's written in a transition filename: `/` → `-`, brackets
+// dropped (work/[slug] → work-slug) — matches @modulato/vite's convention.
+function slugRoute(id: string): string {
+  return id.replace(/\//g, '-').replace(/[[\]]/g, '')
+}
+
+/** Is a motion file relevant to the current route? Shell is always; a page
+ * file matches its own route; a transition file matches when the current
+ * route is one of its `<from>__<to>` sides (default = the fallback, always).
+ * Derived purely from the path — no core changes needed. */
+function relevantToRoute(file: string, route: string | null): boolean {
+  if (file === '/motion.ts') return true
+  const page = file.match(/^\/pages\/(.+)\/motion\.ts$/)
+  if (page) return route != null && page[1] === route
+  const transition = file.match(/^\/transitions\/(.+)\.motion\.ts$/)
+  if (transition) {
+    const name = transition[1]
+    if (name === 'default') return true
+    return route != null && name.split('__').includes(slugRoute(route))
+  }
+  return false
+}
+
 function Overlay() {
   const handle = useHandle()
   const [open, setOpen] = useState(false)
   const [loop, setLoop] = useState(false)
   const [filter, setFilter] = useState('')
+  const [showAll, setShowAll] = useState(false)
   const [status, setStatus] = useState('')
   const [forcedBp, setForcedBp] = useState<string | null>(null)
   const [forcedReduced, setForcedReduced] = useState(false)
@@ -345,7 +369,14 @@ function Overlay() {
   }, [loop, handle])
 
   if (!handle) return null
-  const files = handle.tokens.list()
+  const allFiles = handle.tokens.list()
+  // Scope to the current view: shell + this page + transitions touching this
+  // route. A dirty file always shows (a pending save must never be hidden),
+  // and "show all" reveals the rest without navigating there.
+  const inScope = (file: string) =>
+    relevantToRoute(file, handle.route) || handle.tokens.dirty(file).length > 0
+  const files = showAll ? allFiles : allFiles.filter((f) => inScope(f.file))
+  const hiddenCount = allFiles.length - allFiles.filter((f) => inScope(f.file)).length
 
   const save = async (file: string) => {
     const changes = handle.tokens.dirty(file)
@@ -459,14 +490,22 @@ function Overlay() {
           <Separator className="my-3" />
 
           {/* ── tokens ──────────────────────────────────────────────── */}
-          <SectionLabel>tokens</SectionLabel>
-          {!files.length && (
+          <div className="mb-1.5 flex items-center justify-between">
+            <SectionLabel>tokens</SectionLabel>
+            {(hiddenCount > 0 || showAll) && (
+              <label className="flex cursor-pointer items-center gap-1.5 text-[10px] text-muted-foreground normal-case">
+                <Checkbox checked={showAll} onCheckedChange={(c: boolean) => setShowAll(c === true)} />
+                {showAll ? `all files` : `show all (+${hiddenCount})`}
+              </label>
+            )}
+          </div>
+          {!allFiles.length && (
             <div className="text-muted-foreground">
               no motion tokens registered — create a motion.ts next to a page and read it
               from your intro/useMotion code.
             </div>
           )}
-          {files.length > 0 && (
+          {allFiles.length > 0 && (
             <div className="relative">
               <Input
                 className="h-7 pr-7 text-xs"
