@@ -18,3 +18,9 @@ host site (no Tailwind at runtime, host styles can't bleed in or out).
 
 - Breakpoint pills use icons (phone / tablet / desktop, inlined lucide shapes)
   with the name as tooltip + aria-label; unknown breakpoint names keep text.
+
+- Fix: ease dropdowns are now flavor-aware. Transition motion files hold CSS/WAAPI
+  easings (`cubic-bezier(…)`) — offering GSAP names there broke the transition when
+  selected (invalid easing → element.animate throws). CSS-flavored fields now get the
+  named CSS eases plus the standard curve set as valid cubic-beziers (labeled
+  sine/power/expo/circ/back × in/out/inOut); GSAP fields keep the name catalog.

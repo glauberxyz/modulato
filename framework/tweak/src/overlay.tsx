@@ -47,17 +47,61 @@ function sliderRange(initial: number) {
   return { min, max, step }
 }
 
-// The GSAP ease catalog. Every well-known curve is selectable; a value outside
-// the catalog (a project-registered CustomEase) is kept as its own option so
-// nothing breaks. Next step (designed, not built): custom curves declared in
-// modulato.config — tailwind.config-style extend — surfaced here by name.
+// Ease catalogs. Modulato animates through TWO backends and their easing
+// vocabularies don't mix: GSAP motions take ease NAMES ('expo.out'), while
+// transitions run on WAAPI/CSS, which takes CSS easings ('ease-out',
+// 'cubic-bezier(…)') — feeding a GSAP name to element.animate() throws and the
+// transition never plays. The control detects the flavor from the field's
+// value and offers the matching catalog; for CSS it lists the standard curves
+// AS valid cubic-beziers, labeled with their familiar names. A value outside
+// either catalog (project CustomEase) is kept as its own option. Next step
+// (designed, not built): custom curves declared in modulato.config —
+// tailwind.config-style extend — surfaced here by name.
 const EASE_FAMILIES = ['power1', 'power2', 'power3', 'power4', 'sine', 'expo', 'circ', 'back', 'elastic', 'bounce']
-const EASES = ['none', ...EASE_FAMILIES.flatMap((f) => [`${f}.in`, `${f}.out`, `${f}.inOut`])]
+const GSAP_EASES = ['none', ...EASE_FAMILIES.flatMap((f) => [`${f}.in`, `${f}.out`, `${f}.inOut`])]
+
+// The easings.net curve set as cubic-beziers (elastic/bounce need springs —
+// not expressible as a single cubic-bezier, so they're absent in CSS mode).
+const CSS_EASES: Array<{ label: string; value: string }> = [
+  { label: 'linear', value: 'linear' },
+  { label: 'ease', value: 'ease' },
+  { label: 'ease-in', value: 'ease-in' },
+  { label: 'ease-out', value: 'ease-out' },
+  { label: 'ease-in-out', value: 'ease-in-out' },
+  { label: 'sine.in', value: 'cubic-bezier(0.12, 0, 0.39, 0)' },
+  { label: 'sine.out', value: 'cubic-bezier(0.61, 1, 0.88, 1)' },
+  { label: 'sine.inOut', value: 'cubic-bezier(0.37, 0, 0.63, 1)' },
+  { label: 'power1.in', value: 'cubic-bezier(0.11, 0, 0.5, 0)' },
+  { label: 'power1.out', value: 'cubic-bezier(0.5, 1, 0.89, 1)' },
+  { label: 'power1.inOut', value: 'cubic-bezier(0.45, 0, 0.55, 1)' },
+  { label: 'power2.in', value: 'cubic-bezier(0.32, 0, 0.67, 0)' },
+  { label: 'power2.out', value: 'cubic-bezier(0.33, 1, 0.68, 1)' },
+  { label: 'power2.inOut', value: 'cubic-bezier(0.65, 0, 0.35, 1)' },
+  { label: 'power3.in', value: 'cubic-bezier(0.5, 0, 0.75, 0)' },
+  { label: 'power3.out', value: 'cubic-bezier(0.25, 1, 0.5, 1)' },
+  { label: 'power3.inOut', value: 'cubic-bezier(0.76, 0, 0.24, 1)' },
+  { label: 'power4.in', value: 'cubic-bezier(0.64, 0, 0.78, 0)' },
+  { label: 'power4.out', value: 'cubic-bezier(0.22, 1, 0.36, 1)' },
+  { label: 'power4.inOut', value: 'cubic-bezier(0.83, 0, 0.17, 1)' },
+  { label: 'expo.in', value: 'cubic-bezier(0.7, 0, 0.84, 0)' },
+  { label: 'expo.out', value: 'cubic-bezier(0.16, 1, 0.3, 1)' },
+  { label: 'expo.inOut', value: 'cubic-bezier(0.87, 0, 0.13, 1)' },
+  { label: 'circ.in', value: 'cubic-bezier(0.55, 0, 1, 0.45)' },
+  { label: 'circ.out', value: 'cubic-bezier(0, 0.55, 0.45, 1)' },
+  { label: 'circ.inOut', value: 'cubic-bezier(0.85, 0, 0.15, 1)' },
+  { label: 'back.in', value: 'cubic-bezier(0.36, 0, 0.66, -0.56)' },
+  { label: 'back.out', value: 'cubic-bezier(0.34, 1.56, 0.64, 1)' },
+  { label: 'back.inOut', value: 'cubic-bezier(0.68, -0.6, 0.32, 1.6)' },
+]
+
+function isCssEase(value: string): boolean {
+  return /^(linear|ease|ease-in|ease-out|ease-in-out)$|cubic-bezier\(|steps\(/.test(value.trim())
+}
 
 function isEaseLeaf(leaf: TokenLeaf): boolean {
   if (typeof leaf.value !== 'string') return false
   const key = leaf.path[leaf.path.length - 1]?.toLowerCase() ?? ''
-  return key.includes('ease') || EASES.includes(leaf.value)
+  return key.includes('ease') || GSAP_EASES.includes(leaf.value) || isCssEase(leaf.value)
 }
 
 // Inlined lucide icons for the breakpoint pills (Smartphone / Tablet /
@@ -116,12 +160,18 @@ const selectClass =
   'h-7 rounded-md border border-input bg-input/30 px-2 text-xs text-foreground outline-none focus-visible:ring-2 focus-visible:ring-ring/50 cursor-pointer'
 
 function EaseControl({ value, onChange }: { value: string; onChange: (v: string) => void }) {
-  const options = EASES.includes(value) ? EASES : [value, ...EASES]
+  // The flavor is frozen at mount — picking a preset must not flip the list
+  // out from under the open select.
+  const [mode] = useState<'css' | 'gsap'>(() => (isCssEase(value) ? 'css' : 'gsap'))
+  const catalog = mode === 'css' ? CSS_EASES : GSAP_EASES.map((e) => ({ label: e, value: e }))
+  const options = catalog.some((o) => o.value === value)
+    ? catalog
+    : [{ label: value, value }, ...catalog]
   return (
     <select className={selectClass} value={value} onChange={(e) => onChange(e.target.value)}>
-      {options.map((ease) => (
-        <option key={ease} value={ease}>
-          {ease}
+      {options.map((o) => (
+        <option key={o.value} value={o.value}>
+          {o.label}
         </option>
       ))}
     </select>
