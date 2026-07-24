@@ -8,7 +8,9 @@ import {
   useState,
 } from 'react'
 import type Lenis from 'lenis'
+import { DEV } from './dev'
 import { applyEnhancers, type EnhancerDef } from './enhance'
+import { getMotionSpeed } from './motion'
 import { ticker } from './ticker'
 import type { Entry, RouteInfo } from './types'
 
@@ -65,11 +67,23 @@ function emitScroll(e: ScrollEvent) {
  * Per-frame callback on the framework's single RAF ticker, auto-removed on
  * unmount. Works anywhere — pages or persistent shell components (custom
  * canvases, WebGL scenes). `delta` is ms since the previous frame.
+ *
+ * Callbacks run on the motion clock: in dev, Tweak Mode slow-mo scales
+ * `delta`, and `time` advances by the scaled deltas so time-based loops slow
+ * the same as delta-based ones. Lenis stays on the raw ticker — slow-mo is
+ * for animation, not input smoothing.
  */
 export function useTicker(callback: (time: number, delta: number) => void): void {
   const cbRef = useRef(callback)
   cbRef.current = callback
-  useEffect(() => ticker.add((time, delta) => cbRef.current(time, delta)), [])
+  useEffect(() => {
+    let clock: number | null = null
+    return ticker.add((time, delta) => {
+      const scaled = DEV ? delta * getMotionSpeed() : delta
+      clock = clock === null ? time : clock + scaled
+      cbRef.current(clock, scaled)
+    })
+  }, [])
 }
 
 /**

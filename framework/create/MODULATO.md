@@ -191,7 +191,7 @@ const activeId = (nav.to ?? route).id   // switches the moment navigation starts
 | `useNavigation()` | anywhere | `{ phase, from, to }` — `to` is set from navigation start |
 | `usePage()` | inside a page | `{ route, phase: 'entering'\|'active'\|'leaving', element, lenis }` |
 | `useScroll(cb)` | anywhere | smooth-scroll frames `{ scroll, limit, velocity, progress }`. Inside a page: that page's scroll. In the shell: the ACTIVE page's scroll, surviving navigations |
-| `useTicker(cb)` | anywhere | per-frame `(time, delta)` on the single RAF ticker, auto-cleaned |
+| `useTicker(cb)` | anywhere | per-frame `(time, delta)` on the single RAF ticker, auto-cleaned. Runs on the motion clock: dev slow-mo scales `delta`, and `time` advances by the scaled deltas |
 | `useViewport()` | anywhere | reactive `{ width, height, dpr, breakpoint, reducedMotion, isPhone, isTablet, isDesktop }` |
 | `useFormAction(ref)` | inside a page | progressive server-action form wiring (§10) |
 | `useMotion(fn)` | inside a page — from **@modulato/gsap** | page-scoped `gsap.context()`: selectors scoped to the page, everything auto-reverted on unmount, re-run on breakpoint change and Tweak replays |
@@ -200,8 +200,8 @@ Components: `<PageOutlet/>`, `<Shared id>` (mark FLIP elements — id must be
 unique per page), `<Img src alt [ratio] [eager]/>` (lazy, async-decoded,
 aspect-ratio reserved, fade-in, plain `<img>` without JS).
 
-Non-hook: `ticker.add(cb)` / `ticker.remove(cb)` — same loop as `useTicker`,
-for code outside React.
+Non-hook: `ticker.add(cb)` / `ticker.remove(cb)` — the same RAF loop, raw:
+no slow-mo scaling (Lenis rides this one), for code outside React.
 
 ```tsx
 // The idiomatic page animation — @modulato/gsap
@@ -297,7 +297,8 @@ export default motion({
   so replays and breakpoint changes always see fresh values.
 - **Tweak Mode** (dev, with `@modulato/tweak` installed): the ✦ motion
   overlay lists every token module — edit live, replay intro/shell/motions,
-  loop, 0.1×–1× slow-mo, preview any breakpoint + reduced. **Save** writes
+  loop, 0.1×–1× slow-mo (GSAP, WAAPI, and `useTicker` loops all follow),
+  preview any breakpoint + reduced. **Save** writes
   values back into `motion.ts` with an AST-preserving edit (comments and
   formatting survive).
 - Non-token animation code still works — it just doesn't appear in the
