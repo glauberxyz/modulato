@@ -289,7 +289,7 @@ function NumberControl({
         onValueChange={(v: number | readonly number[]) => onChange(Array.isArray(v) ? v[0] : (v as number))}
       />
       <Input
-        className="h-9 w-16 shrink-0 rounded-full border-input bg-background px-1 text-center text-xs"
+        className="h-9 w-16 shrink-0 rounded-full border-border bg-background px-1 text-center text-xs"
         type="text"
         inputMode="decimal"
         value={draft ?? fmt(value)}
@@ -368,7 +368,7 @@ function LeafRow({
   const isEase = typeof leaf.value === 'string' && isEaseLeaf(leaf)
   return (
     <div className={rowClass} title={leaf.path.join('.')}>
-      <div className="relative flex h-9 min-w-0 flex-1 items-center rounded-full border border-input bg-background">
+      <div className="relative flex h-9 min-w-0 flex-1 items-center rounded-full border border-border bg-background">
         <span className="pointer-events-none absolute left-3.5 z-10 text-xs text-muted-foreground">
           {name}
         </span>
@@ -798,7 +798,7 @@ function Overlay() {
             {allFiles.length > 0 && (
               <div className="relative mt-2.5">
                 <Input
-                  className="h-9 rounded-full border-input bg-background px-8 text-center text-xs"
+                  className="h-9 rounded-full border-border bg-background px-8 text-center text-xs"
                   type="text"
                   value={filter}
                   onFocus={() => setFilterFocus(true)}
