@@ -11,9 +11,8 @@ import type { TokenLeaf, TokenValue } from 'modulato'
 import { Button } from './ui/button'
 import { Input } from './ui/input'
 import { Slider } from './ui/slider'
-import { Checkbox } from './ui/checkbox'
+import { Switch } from './ui/switch'
 import { Separator } from './ui/separator'
-import { Badge } from './ui/badge'
 import { cn } from './ui/utils'
 import css from './overlay.css?inline'
 // Inter variable (latin subset, OFL — see inter-license.txt), vendored from
@@ -108,9 +107,8 @@ function isEaseLeaf(leaf: TokenLeaf): boolean {
   return key.includes('ease') || GSAP_EASES.includes(leaf.value) || isCssEase(leaf.value)
 }
 
-// Inlined lucide icons for the breakpoint pills (Smartphone / Tablet /
-// Monitor) — same no-dep policy as CheckIcon. Names are site-defined, so the
-// mapping is fuzzy and unknown names fall back to their text label.
+// Inlined lucide icons — same no-dep policy as before (an icon library isn't
+// worth a dependency for a dev overlay).
 function iconProps(props: React.SVGProps<SVGSVGElement>): React.SVGProps<SVGSVGElement> {
   return {
     xmlns: 'http://www.w3.org/2000/svg',
@@ -151,6 +149,52 @@ function MonitorIcon(props: React.SVGProps<SVGSVGElement>) {
     </svg>
   )
 }
+// lucide circle-dot-dashed — the reduced-motion glyph.
+function ReducedIcon(props: React.SVGProps<SVGSVGElement>) {
+  return (
+    <svg {...iconProps(props)}>
+      <path d="M10.1 2.18a9.93 9.93 0 0 1 3.8 0" />
+      <path d="M17.6 3.71a9.95 9.95 0 0 1 2.69 2.7" />
+      <path d="M21.82 10.1a9.93 9.93 0 0 1 0 3.8" />
+      <path d="M20.29 17.6a9.95 9.95 0 0 1-2.7 2.69" />
+      <path d="M13.9 21.82a9.94 9.94 0 0 1-3.8 0" />
+      <path d="M6.4 20.29a9.95 9.95 0 0 1-2.69-2.7" />
+      <path d="M2.18 13.9a9.93 9.93 0 0 1 0-3.8" />
+      <path d="M3.71 6.4a9.95 9.95 0 0 1 2.7-2.69" />
+      <circle cx="12" cy="12" r="1" />
+    </svg>
+  )
+}
+function PlayIcon(props: React.SVGProps<SVGSVGElement>) {
+  return (
+    <svg {...iconProps({ fill: 'currentColor', stroke: 'none', ...props })}>
+      <path d="m6 3 14 9-14 9z" />
+    </svg>
+  )
+}
+function SearchIcon(props: React.SVGProps<SVGSVGElement>) {
+  return (
+    <svg {...iconProps(props)}>
+      <circle cx="11" cy="11" r="8" />
+      <path d="m21 21-4.3-4.3" />
+    </svg>
+  )
+}
+function CopyIcon(props: React.SVGProps<SVGSVGElement>) {
+  return (
+    <svg {...iconProps(props)}>
+      <rect width="14" height="14" x="8" y="8" rx="2" ry="2" />
+      <path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2" />
+    </svg>
+  )
+}
+function ChevronDownIcon(props: React.SVGProps<SVGSVGElement>) {
+  return (
+    <svg {...iconProps(props)}>
+      <path d="m6 9 6 6 6-6" />
+    </svg>
+  )
+}
 
 function breakpointIcon(name: string): ReactNode | null {
   const n = name.toLowerCase()
@@ -159,9 +203,6 @@ function breakpointIcon(name: string): ReactNode | null {
   if (n.includes('desktop') || n.includes('wide') || n.includes('laptop')) return <MonitorIcon />
   return null
 }
-
-const selectClass =
-  'h-7 rounded-md border border-input bg-input/30 px-2 text-xs text-foreground outline-none focus-visible:ring-2 focus-visible:ring-ring/50 cursor-pointer'
 
 function EaseControl({ value, onChange }: { value: string; onChange: (v: string) => void }) {
   // The flavor is frozen at mount — picking a preset must not flip the list
@@ -172,7 +213,11 @@ function EaseControl({ value, onChange }: { value: string; onChange: (v: string)
     ? catalog
     : [{ label: value, value }, ...catalog]
   return (
-    <select className={selectClass} value={value} onChange={(e) => onChange(e.target.value)}>
+    <select
+      className="size-full cursor-pointer appearance-none rounded-full bg-transparent pr-8 pl-16 text-right text-xs text-foreground outline-none focus-visible:ring-2 focus-visible:ring-ring/50"
+      value={value}
+      onChange={(e) => onChange(e.target.value)}
+    >
       {options.map((o) => (
         <option key={o.value} value={o.value}>
           {o.label}
@@ -182,7 +227,15 @@ function EaseControl({ value, onChange }: { value: string; onChange: (v: string)
   )
 }
 
-function NumberControl({ value, onChange }: { value: number; onChange: (v: number) => void }) {
+function NumberControl({
+  label,
+  value,
+  onChange,
+}: {
+  label: string
+  value: number
+  onChange: (v: number) => void
+}) {
   // Bounds are frozen at mount so the scale never shifts mid-drag.
   const [range] = useState(() => sliderRange(value))
   // Draft while the box is focused — external updates (reset, breakpoint
@@ -191,7 +244,8 @@ function NumberControl({ value, onChange }: { value: number; onChange: (v: numbe
   return (
     <>
       <Slider
-        className="w-24 shrink-0 data-horizontal:w-24"
+        className="min-w-0 flex-1"
+        label={label}
         min={Math.min(range.min, value)}
         max={Math.max(range.max, value)}
         step={range.step}
@@ -199,7 +253,7 @@ function NumberControl({ value, onChange }: { value: number; onChange: (v: numbe
         onValueChange={(v: number | readonly number[]) => onChange(Array.isArray(v) ? v[0] : (v as number))}
       />
       <Input
-        className="h-7 w-14 px-1.5 text-right text-xs"
+        className="h-9 w-16 shrink-0 rounded-full border-input px-1 text-center text-xs"
         type="text"
         inputMode="decimal"
         value={draft ?? fmt(value)}
@@ -221,8 +275,8 @@ function NumberControl({ value, onChange }: { value: number; onChange: (v: numbe
 function TextControl({ value, onChange }: { value: string; onChange: (v: string) => void }) {
   const [draft, setDraft] = useState<string | null>(null)
   return (
-    <Input
-      className="h-7 w-32 px-1.5 text-xs"
+    <input
+      className="h-full min-w-0 flex-1 bg-transparent pr-3.5 text-right text-xs text-foreground outline-none"
       type="text"
       value={draft ?? value}
       onFocus={() => setDraft(value)}
@@ -250,63 +304,96 @@ function LeafRow({
   onReset: () => void
 }) {
   const name = leaf.path[leaf.path.length - 1]
-  const control =
-    typeof leaf.value === 'boolean' ? (
-      <Checkbox checked={leaf.value} onCheckedChange={(c: boolean) => onChange(c === true)} />
-    ) : typeof leaf.value === 'number' ? (
-      <NumberControl value={leaf.value} onChange={onChange} />
-    ) : isEaseLeaf(leaf) ? (
-      <EaseControl value={leaf.value} onChange={onChange} />
-    ) : (
-      <TextControl value={leaf.value} onChange={onChange} />
+  // The dot marks a tweaked row AND resets it — a stray drag is visible and
+  // individually undoable, so it can't ride into a save unnoticed.
+  const dot = (
+    <button
+      className={cn(
+        'size-2 shrink-0 rounded-full bg-foreground',
+        dirty ? 'visible cursor-pointer' : 'invisible',
+      )}
+      title="tweaked — click to reset to the saved value"
+      aria-label={`reset ${name}`}
+      tabIndex={dirty ? 0 : -1}
+      onClick={onReset}
+    />
+  )
+  if (typeof leaf.value === 'number') {
+    return (
+      <div className="flex items-center gap-1.5 py-[3px]" title={leaf.path.join('.')}>
+        <NumberControl label={name} value={leaf.value} onChange={onChange} />
+        {dot}
+      </div>
     )
-  return (
-    <div className="flex items-center gap-2 py-0.5">
-      <span
-        className={cn(
-          'min-w-0 flex-1 truncate text-xs',
-          dirty ? 'font-medium text-primary' : 'text-muted-foreground',
-        )}
-        title={leaf.path.join('.')}
-      >
-        {name}
-      </span>
-      {control}
-      {/* Dirty rows are marked and individually undoable — a stray drag can't
-          ride into a save unnoticed. */}
-      <button
-        className={cn(
-          'w-4 shrink-0 cursor-pointer text-primary hover:text-foreground',
-          dirty ? 'visible' : 'invisible',
-        )}
-        title="reset this token"
-        onClick={onReset}
-      >
-        ↺
-      </button>
-    </div>
-  )
-}
-
-function SectionLabel({ children }: { children: ReactNode }) {
-  return (
-    <div className="mb-1.5 text-[10px] font-medium tracking-widest text-muted-foreground uppercase">
-      {children}
-    </div>
-  )
-}
-
-/** Group leaves by parent path (`shell.menu.phone.yPercent` → group
- * "shell › menu › phone", row "yPercent") — the hierarchy reads once per
- * group instead of repeating on every row. */
-function groupLeaves(leaves: TokenLeaf[]): Array<{ group: string; leaves: TokenLeaf[] }> {
-  const groups: Array<{ group: string; leaves: TokenLeaf[] }> = []
-  for (const leaf of leaves) {
-    const group = leaf.path.slice(0, -1).join(' › ')
-    const last = groups[groups.length - 1]
-    if (last && last.group === group) last.leaves.push(leaf)
-    else groups.push({ group, leaves: [leaf] })
   }
+  const isEase = typeof leaf.value === 'string' && isEaseLeaf(leaf)
+  return (
+    <div className="flex items-center gap-1.5 py-[3px]" title={leaf.path.join('.')}>
+      <div className="relative flex h-9 min-w-0 flex-1 items-center rounded-full border border-input">
+        <span className="pointer-events-none absolute left-3.5 z-10 text-xs text-muted-foreground">
+          {name}
+        </span>
+        {typeof leaf.value === 'boolean' ? (
+          <span className="flex flex-1 justify-end pr-2">
+            <Switch checked={leaf.value} onCheckedChange={(c: boolean) => onChange(c === true)} />
+          </span>
+        ) : isEase ? (
+          <>
+            <EaseControl value={leaf.value as string} onChange={onChange} />
+            <ChevronDownIcon className="pointer-events-none absolute right-3 text-muted-foreground" />
+          </>
+        ) : (
+          <TextControl value={leaf.value as string} onChange={onChange} />
+        )}
+      </div>
+      {dot}
+    </div>
+  )
+}
+
+function SectionTitle({ children }: { children: ReactNode }) {
+  return <div className="text-sm font-medium">{children}</div>
+}
+
+interface TokenBlock {
+  key: string // 'base', a breakpoint name, or 'reduced'
+  leaves: TokenLeaf[]
+}
+
+interface TokenGroup {
+  path: string[] // parent path with the override-block key stripped
+  blocks: TokenBlock[]
+}
+
+/** Group leaves by parent path, folding breakpoint/`reduced` override blocks
+ * into their base group as tabs: `shell.menu.phone.yPercent` lands in group
+ * `shell › menu` under the `phone` tab. Only blocks that exist in the file
+ * become tabs — the overlay edits values, it doesn't invent structure. */
+function groupLeaves(leaves: TokenLeaf[], overrideKeys: Set<string>, order: string[]): TokenGroup[] {
+  const groups: TokenGroup[] = []
+  const byPath = new Map<string, TokenGroup>()
+  for (const leaf of leaves) {
+    const parent = leaf.path.slice(0, -1)
+    const last = parent[parent.length - 1]
+    const isOverride = last !== undefined && overrideKeys.has(last)
+    const path = isOverride ? parent.slice(0, -1) : parent
+    const blockKey = isOverride ? last : 'base'
+    const id = path.join('.')
+    let group = byPath.get(id)
+    if (!group) {
+      group = { path, blocks: [] }
+      byPath.set(id, group)
+      groups.push(group)
+    }
+    let block = group.blocks.find((b) => b.key === blockKey)
+    if (!block) {
+      block = { key: blockKey, leaves: [] }
+      group.blocks.push(block)
+    }
+    block.leaves.push(leaf)
+  }
+  for (const group of groups)
+    group.blocks.sort((a, b) => order.indexOf(a.key) - order.indexOf(b.key))
   return groups
 }
 
@@ -331,6 +418,108 @@ function relevantToRoute(file: string, route: string | null): boolean {
     return route != null && name.split('__').includes(slugRoute(route))
   }
   return false
+}
+
+function blockIcon(key: string): ReactNode {
+  if (key === 'base') return <MonitorIcon />
+  if (key === 'reduced') return <ReducedIcon />
+  return breakpointIcon(key) ?? <span className="px-0.5 text-[10px]">{key}</span>
+}
+
+function blockTitle(key: string): string {
+  if (key === 'base') return 'base values (desktop)'
+  if (key === 'reduced') return 'reduced-motion overrides'
+  return `${key} overrides`
+}
+
+/** One token group: a two-tone path header, icon tabs for the base/breakpoint/
+ * reduced blocks that exist in the file, and the active block's rows below. */
+function GroupSection({
+  group,
+  dirtySet,
+  query,
+  onChange,
+  onReset,
+}: {
+  group: TokenGroup
+  dirtySet: Set<string>
+  query: string
+  onChange: (leaf: TokenLeaf, value: TokenValue) => void
+  onReset: (leaf: TokenLeaf) => void
+}) {
+  const [active, setActive] = useState('base')
+  // Dirty rows stay visible even when the filter excludes them — what Save
+  // will write must never be off-screen.
+  const rowsOf = (block: TokenBlock) =>
+    query
+      ? block.leaves.filter(
+          (l) =>
+            l.path.join('.').toLowerCase().includes(query) ||
+            dirtySet.has(l.path.join('.')),
+        )
+      : block.leaves
+  const withRows = group.blocks
+    .map((b) => ({ ...b, rows: rowsOf(b) }))
+    .filter((b) => b.rows.length > 0)
+  if (!withRows.length) return null
+  const displayed = withRows.find((b) => b.key === active) ?? withRows[0]
+  const leafSeg = group.path[group.path.length - 1]
+  return (
+    <div className="mt-2.5">
+      <div className="mb-1 flex items-center justify-between gap-2">
+        <span className="flex min-w-0 items-center gap-1 truncate text-xs text-muted-foreground">
+          {group.path.slice(0, -1).map((seg, i) => (
+            <span key={i} className="flex items-center gap-1">
+              {seg} <span className="text-muted-foreground/60">›</span>
+            </span>
+          ))}
+          <span className="font-medium text-foreground">{leafSeg ?? 'root'}</span>
+        </span>
+        {withRows.length > 1 && (
+          <span className="flex shrink-0 items-center gap-0.5">
+            {withRows.map((b) => {
+              const isActive = displayed.key === b.key
+              const blockDirty = b.leaves.some((l) => dirtySet.has(l.path.join('.')))
+              return (
+                <button
+                  key={b.key}
+                  className={cn(
+                    'relative flex size-6 cursor-pointer items-center justify-center rounded-full',
+                    isActive
+                      ? 'text-foreground'
+                      : 'text-muted-foreground/50 hover:text-muted-foreground',
+                  )}
+                  title={blockTitle(b.key)}
+                  aria-label={blockTitle(b.key)}
+                  aria-pressed={isActive}
+                  onClick={() => setActive(b.key)}
+                >
+                  {blockIcon(b.key)}
+                  {/* A dirty block is flagged on its tab — pending edits behind
+                      a non-active tab must never be invisible. */}
+                  {blockDirty && !isActive && (
+                    <span className="absolute top-0.5 right-0.5 size-1.5 rounded-full bg-foreground" />
+                  )}
+                </button>
+              )
+            })}
+          </span>
+        )}
+      </div>
+      {displayed.rows.map((leaf) => {
+        const key = leaf.path.join('.')
+        return (
+          <LeafRow
+            key={key}
+            leaf={leaf}
+            dirty={dirtySet.has(key)}
+            onChange={(value) => onChange(leaf, value)}
+            onReset={() => onReset(leaf)}
+          />
+        )
+      })}
+    </div>
+  )
 }
 
 function Overlay() {
@@ -393,6 +582,10 @@ function Overlay() {
   const files = showAll ? allFiles : allFiles.filter((f) => inScope(f.file))
   const hiddenCount = allFiles.length - allFiles.filter((f) => inScope(f.file)).length
 
+  const bpNames = handle.viewport.names()
+  const overrideKeys = new Set([...bpNames, 'reduced'])
+  const blockOrder = ['base', ...bpNames, 'reduced']
+
   const save = async (file: string) => {
     const changes = handle.tokens.dirty(file)
     if (!changes.length) return
@@ -416,206 +609,246 @@ function Overlay() {
   return (
     <>
       <Button
+        variant="outline"
         size="sm"
-        className="fixed right-3 bottom-3 z-50 rounded-full font-mono text-xs shadow-lg"
+        className="fixed right-3 bottom-3 z-50 rounded-full bg-background text-xs shadow-lg"
         onClick={() => setOpen((o) => !o)}
       >
-        {open ? '× motion' : '✦ motion'}
+        {open ? '× Tweak' : '✦ Tweak'}
       </Button>
       {open && (
         // data-lenis-prevent: the page's Lenis must not intercept wheel/touch
         // over the panel, or its own scrollbar never moves.
         <div
-          className="fixed right-3 bottom-14 z-50 max-h-[75vh] w-[380px] overflow-y-auto overscroll-contain rounded-xl border bg-background p-4 text-xs shadow-2xl"
+          className="fixed right-3 bottom-14 z-50 flex max-h-[75vh] w-[380px] flex-col overflow-y-auto overscroll-contain rounded-2xl border bg-background text-xs shadow-2xl"
           data-version={version}
           data-lenis-prevent=""
         >
           {/* ── replay: what to play ─────────────────────────────────── */}
-          <SectionLabel>replay</SectionLabel>
-          <div className="flex flex-wrap items-center gap-1.5">
-            <Button variant="secondary" size="sm" className="h-7 px-2.5 text-xs" onClick={() => void handle.replayIntro()}>
-              intro
-            </Button>
-            <Button variant="secondary" size="sm" className="h-7 px-2.5 text-xs" onClick={() => void handle.replayShellIntro()}>
-              shell
-            </Button>
-            <Button variant="secondary" size="sm" className="h-7 px-2.5 text-xs" onClick={() => handle.replayMotions()}>
-              motions
-            </Button>
-            <label className="ml-1 flex cursor-pointer items-center gap-1.5 text-muted-foreground">
-              <Checkbox checked={loop} onCheckedChange={(c: boolean) => setLoop(c === true)} />
-              loop
-            </label>
+          <div className="p-4 pb-3.5">
+            <div className="mb-2.5 flex items-center justify-between">
+              <SectionTitle>Replay</SectionTitle>
+              <label className="flex cursor-pointer items-center gap-2 text-xs text-muted-foreground">
+                <Switch checked={loop} onCheckedChange={(c: boolean) => setLoop(c === true)} />
+                Loop
+              </label>
+            </div>
+            <div className="flex flex-wrap gap-1.5">
+              <Button size="sm" className="h-8 rounded-full px-3.5 text-xs" onClick={() => void handle.replayIntro()}>
+                <PlayIcon className="size-2.5" /> Intro
+              </Button>
+              <Button size="sm" className="h-8 rounded-full px-3.5 text-xs" onClick={() => void handle.replayShellIntro()}>
+                <PlayIcon className="size-2.5" /> Shell
+              </Button>
+              <Button size="sm" className="h-8 rounded-full px-3.5 text-xs" onClick={() => handle.replayMotions()}>
+                <PlayIcon className="size-2.5" /> Motions
+              </Button>
+            </div>
           </div>
 
-          <Separator className="my-3" />
+          <Separator />
 
           {/* ── preview context: replays run AS this breakpoint/speed ──── */}
-          <SectionLabel>preview as</SectionLabel>
-          <div className="flex flex-wrap items-center gap-1.5">
-            {[null, ...handle.viewport.names()].map((name) => {
-              const icon = name ? breakpointIcon(name) : null
-              return (
-                <Button
-                  key={name ?? 'auto'}
-                  variant={forcedBp === name ? 'default' : 'outline'}
-                  size="sm"
-                  className={icon ? 'h-7 w-7 px-0 text-xs' : 'h-7 px-2.5 text-xs'}
-                  title={name ?? 'auto (follow the real viewport)'}
-                  aria-label={name ?? 'auto'}
+          <div className="p-4 pt-3.5 pb-3.5">
+            <div className="flex items-center justify-between gap-2">
+              <SectionTitle>Preview as</SectionTitle>
+              <div className="flex shrink-0 items-center gap-0.5">
+                <button
+                  className={cn(
+                    'h-6 cursor-pointer rounded-full px-1.5 text-xs',
+                    forcedBp === null
+                      ? 'font-medium text-foreground'
+                      : 'text-muted-foreground/60 hover:text-muted-foreground',
+                  )}
+                  title="auto (follow the real viewport)"
                   onClick={() => {
-                    setForcedBp(name)
-                    handle.viewport.force(name)
+                    setForcedBp(null)
+                    handle.viewport.force(null)
                     queueReplay()
                   }}
                 >
-                  {icon ?? (name ?? 'auto')}
-                </Button>
-              )
-            })}
-            <label className="flex cursor-pointer items-center gap-1.5 text-muted-foreground">
-              <Checkbox
-                checked={forcedReduced}
-                onCheckedChange={(c: boolean) => {
-                  setForcedReduced(c === true)
-                  handle.viewport.forceReduced(c === true ? true : null)
-                  queueReplay()
-                }}
-              />
-              reduced
-            </label>
-          </div>
-          <div className="mt-1.5 flex flex-wrap items-center gap-1.5">
-            {[1, 0.5, 0.25, 0.1].map((s) => (
-              <Button
-                key={s}
-                variant={speed === s ? 'default' : 'outline'}
-                size="sm"
-                className="h-7 px-2.5 text-xs"
-                onClick={() => handle.setSpeed(s)}
-              >
-                {s}×
-              </Button>
-            ))}
-          </div>
-
-          <Separator className="my-3" />
-
-          {/* ── tokens ──────────────────────────────────────────────── */}
-          <div className="mb-1.5 flex items-center justify-between">
-            <SectionLabel>tokens</SectionLabel>
-            {(hiddenCount > 0 || showAll) && (
-              <label className="flex cursor-pointer items-center gap-1.5 text-[10px] text-muted-foreground normal-case">
-                <Checkbox checked={showAll} onCheckedChange={(c: boolean) => setShowAll(c === true)} />
-                {showAll ? `all files` : `show all (+${hiddenCount})`}
-              </label>
-            )}
-          </div>
-          {!allFiles.length && (
-            <div className="text-muted-foreground">
-              no motion tokens registered — create a motion.ts next to a page and read it
-              from your intro/useMotion code.
-            </div>
-          )}
-          {allFiles.length > 0 && (
-            <div className="relative">
-              <Input
-                className="h-7 pr-7 text-xs"
-                type="text"
-                placeholder="filter tokens…"
-                value={filter}
-                onChange={(e) => setFilter(e.target.value)}
-              />
-              {filter && (
-                <button
-                  className="absolute top-1/2 right-2 -translate-y-1/2 cursor-pointer text-muted-foreground hover:text-foreground"
-                  title="clear filter"
-                  onClick={() => setFilter('')}
-                >
-                  ×
+                  Auto
                 </button>
-              )}
-            </div>
-          )}
-          {files.map(({ file }) => {
-            const leaves = handle.tokens.leaves(file)
-            const dirtySet = new Set(handle.tokens.dirty(file).map((l) => l.path.join('.')))
-            const query = filter.trim().toLowerCase()
-            // Dirty rows stay visible even when the filter excludes them — what
-            // Save will write must never be off-screen.
-            const shown = query
-              ? leaves.filter(
-                  (l) =>
-                    l.path.join('.').toLowerCase().includes(query) ||
-                    dirtySet.has(l.path.join('.')),
-                )
-              : leaves
-            if (query && !shown.length) return null
-            return (
-              <div key={file} className="mt-3">
-                <div className="mb-1 flex items-center gap-2">
-                  <span className="font-mono font-medium text-foreground">{file}</span>
-                  {dirtySet.size > 0 && (
-                    <Badge variant="secondary" className="h-4 px-1.5 text-[10px]">
-                      {dirtySet.size} unsaved
-                    </Badge>
-                  )}
-                </div>
-                {groupLeaves(shown).map(({ group, leaves: groupLeaves }) => (
-                  <div key={group || '(root)'} className="mb-1.5">
-                    {group && (
-                      <div className="mt-1.5 mb-0.5 text-[10px] font-medium text-muted-foreground/70">
-                        {group}
-                      </div>
+                {bpNames.map((name) => (
+                  <button
+                    key={name}
+                    className={cn(
+                      'flex size-6 cursor-pointer items-center justify-center rounded-full',
+                      forcedBp === name
+                        ? 'text-foreground'
+                        : 'text-muted-foreground/60 hover:text-muted-foreground',
                     )}
-                    <div className={group ? 'pl-2' : ''}>
-                      {groupLeaves.map((leaf) => {
-                        const key = leaf.path.join('.')
-                        return (
-                          <LeafRow
-                            key={key}
-                            leaf={leaf}
-                            dirty={dirtySet.has(key)}
-                            onChange={(value) => {
-                              handle.tokens.set(file, leaf.path, value)
-                              queueReplay()
-                            }}
-                            onReset={() => {
-                              handle.tokens.resetLeaf(file, leaf.path)
-                              queueReplay()
-                            }}
-                          />
-                        )
-                      })}
-                    </div>
-                  </div>
-                ))}
-                <div className="mt-1.5 flex gap-1.5">
-                  <Button
-                    size="sm"
-                    className="h-7 px-2.5 text-xs"
-                    disabled={!dirtySet.size}
-                    onClick={() => void save(file)}
-                  >
-                    save{dirtySet.size ? ` (${dirtySet.size})` : ''}
-                  </Button>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    className="h-7 px-2.5 text-xs"
-                    disabled={!dirtySet.size}
+                    title={name}
+                    aria-label={name}
+                    aria-pressed={forcedBp === name}
                     onClick={() => {
-                      handle.tokens.reset(file)
+                      setForcedBp(name)
+                      handle.viewport.force(name)
                       queueReplay()
                     }}
                   >
-                    reset
-                  </Button>
-                </div>
+                    {breakpointIcon(name) ?? <span className="px-1 text-xs">{name}</span>}
+                  </button>
+                ))}
+                <button
+                  className={cn(
+                    'flex size-6 cursor-pointer items-center justify-center rounded-full',
+                    forcedReduced
+                      ? 'text-foreground'
+                      : 'text-muted-foreground/60 hover:text-muted-foreground',
+                  )}
+                  title="prefers-reduced-motion"
+                  aria-label="prefers-reduced-motion"
+                  aria-pressed={forcedReduced}
+                  onClick={() => {
+                    const next = !forcedReduced
+                    setForcedReduced(next)
+                    handle.viewport.forceReduced(next ? true : null)
+                    queueReplay()
+                  }}
+                >
+                  <ReducedIcon />
+                </button>
               </div>
-            )
-          })}
-          {status && <div className="mt-2 text-primary">{status}</div>}
+            </div>
+            <div className="mt-2.5 flex h-9 rounded-full bg-secondary">
+              {[0.1, 0.25, 0.5, 1].map((s) => (
+                <button
+                  key={s}
+                  className={cn(
+                    'h-full flex-1 cursor-pointer rounded-full text-xs transition-colors',
+                    speed === s
+                      ? 'bg-primary font-medium text-primary-foreground'
+                      : 'text-muted-foreground hover:text-foreground',
+                  )}
+                  onClick={() => handle.setSpeed(s)}
+                >
+                  {fmt(s)}x
+                </button>
+              ))}
+            </div>
+          </div>
+
+          <Separator />
+
+          {/* ── tokens ──────────────────────────────────────────────── */}
+          <div className="p-4 pt-3.5 pb-3">
+            <div className="flex items-center justify-between">
+              <SectionTitle>Tokens</SectionTitle>
+              {(hiddenCount > 0 || showAll) && (
+                <button
+                  className="cursor-pointer text-xs text-muted-foreground hover:text-foreground"
+                  onClick={() => setShowAll(!showAll)}
+                >
+                  {showAll ? 'Current view' : `Show all (+${hiddenCount})`}
+                </button>
+              )}
+            </div>
+            {allFiles.length > 0 && (
+              <div className="relative mt-2.5">
+                <Input
+                  className="h-9 rounded-full border-input px-8 text-center text-xs"
+                  type="text"
+                  placeholder="Filter tokens"
+                  value={filter}
+                  onChange={(e) => setFilter(e.target.value)}
+                />
+                {filter ? (
+                  <button
+                    className="absolute top-1/2 right-3 -translate-y-1/2 cursor-pointer text-muted-foreground hover:text-foreground"
+                    title="clear filter"
+                    onClick={() => setFilter('')}
+                  >
+                    ×
+                  </button>
+                ) : (
+                  <SearchIcon className="pointer-events-none absolute top-1/2 right-3 -translate-y-1/2 text-muted-foreground" />
+                )}
+              </div>
+            )}
+          </div>
+
+          {/* Cards inside a card: each motion file is a white rounded card on
+              the panel's gray well. */}
+          <div className="flex grow flex-col gap-2 bg-muted p-2">
+            {!allFiles.length && (
+              <div className="rounded-xl bg-background p-3.5 text-muted-foreground">
+                no motion tokens registered — create a motion.ts next to a page and
+                read it from your intro/useMotion code.
+              </div>
+            )}
+            {files.map(({ file }) => {
+              const leaves = handle.tokens.leaves(file)
+              const dirtySet = new Set(handle.tokens.dirty(file).map((l) => l.path.join('.')))
+              const query = filter.trim().toLowerCase()
+              const groups = groupLeaves(leaves, overrideKeys, blockOrder)
+              const groupVisible = (g: TokenGroup) =>
+                g.blocks.some((b) =>
+                  b.leaves.some(
+                    (l) =>
+                      !query ||
+                      l.path.join('.').toLowerCase().includes(query) ||
+                      dirtySet.has(l.path.join('.')),
+                  ),
+                )
+              const shownGroups = groups.filter(groupVisible)
+              if (query && !shownGroups.length) return null
+              return (
+                <div key={file} className="rounded-xl bg-background p-3.5">
+                  <div className="flex min-w-0 items-center gap-1.5">
+                    <button
+                      className="shrink-0 cursor-pointer text-foreground/60 hover:text-foreground"
+                      title="copy file path"
+                      aria-label={`copy ${file}`}
+                      onClick={() => void navigator.clipboard?.writeText(file)}
+                    >
+                      <CopyIcon />
+                    </button>
+                    <span className="truncate text-[13px] font-semibold">{file}</span>
+                  </div>
+                  {shownGroups.map((group) => (
+                    <GroupSection
+                      key={group.path.join('.') || '(root)'}
+                      group={group}
+                      dirtySet={dirtySet}
+                      query={query}
+                      onChange={(leaf, value) => {
+                        handle.tokens.set(file, leaf.path, value)
+                        queueReplay()
+                      }}
+                      onReset={(leaf) => {
+                        handle.tokens.resetLeaf(file, leaf.path)
+                        queueReplay()
+                      }}
+                    />
+                  ))}
+                  <div className="mt-3 flex gap-1.5">
+                    <Button
+                      size="sm"
+                      className="h-8 flex-1 rounded-full text-xs"
+                      disabled={!dirtySet.size}
+                      onClick={() => void save(file)}
+                    >
+                      Save{dirtySet.size ? ` (${dirtySet.size})` : ''}
+                    </Button>
+                    <Button
+                      variant="secondary"
+                      size="sm"
+                      className="h-8 flex-1 rounded-full text-xs"
+                      disabled={!dirtySet.size}
+                      onClick={() => {
+                        handle.tokens.reset(file)
+                        queueReplay()
+                      }}
+                    >
+                      Reset
+                    </Button>
+                  </div>
+                </div>
+              )
+            })}
+            {status && <div className="px-2 pb-1 text-[11px] text-muted-foreground">{status}</div>}
+          </div>
         </div>
       )}
     </>
@@ -645,7 +878,7 @@ export function mount(): void {
   style.textContent = css
   shadow.appendChild(style)
   const root = document.createElement('div')
-  root.className = 'dark font-sans text-foreground'
+  root.className = 'font-sans text-foreground'
   shadow.appendChild(root)
   void import('react-dom/client').then(({ createRoot }) => {
     createRoot(root).render(<Overlay />)

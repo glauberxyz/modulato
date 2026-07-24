@@ -2,31 +2,37 @@
 '@modulato/tweak': minor
 ---
 
-Redesigned overlay UI on shadcn (base-luma preset), mounted in a Shadow DOM
-with precompiled CSS — the polished look with zero styling requirements on the
-host site (no Tailwind at runtime, host styles can't bleed in or out).
+Redesigned overlay UI on shadcn primitives in a Shadow DOM with precompiled
+CSS — a polished look with zero styling requirements on the host site (no
+Tailwind at runtime, host styles can't bleed in or out). The theme is
+deliberately brand-agnostic: white + shades of gray + black, light-only, all
+Inter (bundled), pill-shaped controls — the overlay lives inside other
+people's designs, so it carries none of its own.
 
-- Named sections: **replay** (intro / shell / motions + loop), **preview as**
-  (breakpoint + reduced + speed — one logical chain: what plays, as which
-  breakpoint, at what speed), **tokens**.
-- Tokens grouped by parent path (`shell › menu › phone` reads once as a header;
-  rows show just the leaf name) instead of repeating dotted paths per row.
-- Ease fields are now a dropdown of the full GSAP catalog (none + power1–4 /
-  sine / expo / circ / back / elastic / bounce × in/out/inOut); an unknown
-  value (project CustomEase) is preserved as its own option.
-- Filter box got a clear button; dirty rows keep their ● accent + per-row ↺.
+- Named sections: **Replay** (Intro / Shell / Motions play buttons + a Loop
+  switch), **Preview as** (Auto/breakpoint/reduced icons in the header, a
+  segmented 0.1x–1x speed control), **Tokens**.
+- Tokens group by parent path under a two-tone header (`shell › menu`), and
+  breakpoint/`reduced` override blocks fold into per-group **icon tabs**
+  (desktop = base values, phone/tablet, circle-dot-dashed = reduced) instead
+  of stacking as separate groups. A non-active tab with unsaved edits carries
+  a dot — pending changes are never invisible.
+- Condensed rows: a number is a filled-track slider with its label inside plus
+  a fixed-width value box; eases, strings, and booleans are label-inside
+  pills. A tweaked row shows a dot on the right that doubles as its per-row
+  reset, so a stray drag is visible and individually undoable.
+- Ease fields are a dropdown of the full GSAP catalog, and flavor-aware:
+  transition motion files hold CSS/WAAPI easings (offering GSAP names there
+  broke the transition — invalid easing → element.animate throws), so
+  CSS-flavored fields get the easings.net curve set as labeled cubic-beziers
+  while GSAP fields keep the name catalog. Unknown values (project
+  CustomEase) are preserved as their own option.
+- Each motion file is a white rounded card on the panel's gray well, with
+  per-file Save (N) / Reset and a copy-path button. The filter box (search
+  icon, dirty rows exempt) narrows every card; the token list stays scoped to
+  the current view with "Show all (+N)"; the launcher pill is now "✦ Tweak".
 
-- Breakpoint pills use icons (phone / tablet / desktop, inlined lucide shapes)
-  with the name as tooltip + aria-label; unknown breakpoint names keep text.
-
-- Fix: ease dropdowns are now flavor-aware. Transition motion files hold CSS/WAAPI
-  easings (`cubic-bezier(…)`) — offering GSAP names there broke the transition when
-  selected (invalid easing → element.animate throws). CSS-flavored fields now get the
-  named CSS eases plus the standard curve set as valid cubic-beziers (labeled
-  sine/power/expo/circ/back × in/out/inOut); GSAP fields keep the name catalog.
-
-- The overlay renders entirely in Inter (sans, headings, and the former mono
-  spots). The variable latin subset ships with the package (~48KB woff2, OFL,
-  dev-only) under the private family name 'Inter Tweak', injected into the
-  document head (shadow-tree font faces don't load in Chromium) — guaranteed
-  Inter without ever shadowing a host site's own Inter faces.
+The overlay bundles Inter (variable latin subset, ~48KB woff2, OFL, dev-only)
+under the private family name 'Inter Tweak', injected into the document head
+(shadow-tree font faces don't load in Chromium) — guaranteed Inter without
+ever shadowing a host site's own Inter faces.
