@@ -106,3 +106,11 @@
     @apply font-sans;
     }
 }
+
+/* Loop progress ring (Replay buttons): fills over one measured loop cycle —
+   duration set inline per cycle by the overlay. */
+@keyframes tweak-ring {
+  to {
+    stroke-dashoffset: 0;
+  }
+}

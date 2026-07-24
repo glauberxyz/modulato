@@ -171,6 +171,40 @@ function PlayIcon(props: React.SVGProps<SVGSVGElement>) {
     </svg>
   )
 }
+
+const RING_R = 10
+const RING_C = 2 * Math.PI * RING_R
+
+/** Loop progress ring: replaces the play glyph while Loop is on. `ms` is the
+ * measured duration of the previous cycle (intro + gap) — the ring fills over
+ * exactly that span (`key` restarts the CSS animation each cycle). Until the
+ * first cycle has been measured it spins indeterminately. Hairline by design:
+ * strokeWidth 2 in a 24-unit viewBox renders ~1px at this size. */
+function LoopRingIcon({ ms, n }: { ms: number | null; n: number }) {
+  return (
+    <svg
+      key={n}
+      xmlns="http://www.w3.org/2000/svg"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth={2}
+      className={cn('size-3', ms === null && 'animate-spin')}
+    >
+      <circle cx="12" cy="12" r={RING_R} opacity="0.3" />
+      <circle
+        cx="12"
+        cy="12"
+        r={RING_R}
+        strokeDasharray={RING_C}
+        strokeDashoffset={ms === null ? RING_C * 0.75 : RING_C}
+        strokeLinecap="round"
+        transform="rotate(-90 12 12)"
+        style={ms === null ? undefined : { animation: `tweak-ring ${Math.round(ms)}ms linear forwards` }}
+      />
+    </svg>
+  )
+}
 function SearchIcon(props: React.SVGProps<SVGSVGElement>) {
   return (
     <svg {...iconProps(props)}>
@@ -565,17 +599,27 @@ function Overlay() {
     replayTimer.current = setTimeout(() => handle?.replayMotions(), 150)
   }, [handle])
 
-  // Loop mode: replay the current page's intro back-to-back.
+  // Loop mode: replay the current page's intro back-to-back. Each cycle's
+  // wall time is measured and drives the NEXT cycle's progress ring — intro
+  // durations are deterministic, so from the second cycle on the ring tracks
+  // the real intro+gap span (including slow-mo, which stretches wall time).
+  const [cycle, setCycle] = useState<{ ms: number | null; n: number }>({ ms: null, n: 0 })
   useEffect(() => {
     if (!loop || !handle) return undefined
     let alive = true
-    const cycle = async () => {
+    const run = async () => {
+      let prev: number | null = null
+      let n = 0
       while (alive && loopRef.current) {
+        n += 1
+        setCycle({ ms: prev, n })
+        const t0 = performance.now()
         await handle.replayIntro()
         await new Promise((r) => setTimeout(r, 500))
+        prev = performance.now() - t0
       }
     }
-    void cycle()
+    void run()
     return () => {
       alive = false
     }
@@ -643,8 +687,10 @@ function Overlay() {
               </label>
             </div>
             <div className="flex gap-1.5">
+              {/* Loop replays the page intro only — the ring marks just the
+                  button that is actually looping. */}
               <Button size="sm" className="h-8 flex-1 rounded-full text-xs" onClick={() => void handle.replayIntro()}>
-                <PlayIcon className="size-2.5" /> Intro
+                {loop ? <LoopRingIcon ms={cycle.ms} n={cycle.n} /> : <PlayIcon className="size-2.5" />} Intro
               </Button>
               <Button size="sm" className="h-8 flex-1 rounded-full text-xs" onClick={() => void handle.replayShellIntro()}>
                 <PlayIcon className="size-2.5" /> Shell

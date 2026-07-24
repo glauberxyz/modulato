@@ -31,6 +31,11 @@ people's designs, so it carries none of its own.
   per-file Save (N) / Reset and a copy-path button. The filter box (search
   icon, dirty rows exempt) narrows every card; the token list stays scoped to
   the current view with "Show all (+N)"; the launcher pill is now "✦ Tweak".
+- With Loop on, the Intro button's play glyph (the one actually looping)
+  becomes a hairline progress ring that fills in sync with each loop cycle:
+  the cycle's wall time is measured and drives the next ring (intro durations
+  are deterministic), so it tracks the real intro+gap span at any playback
+  speed. The first cycle spins indeterminately.
 
 The overlay bundles Inter (variable latin subset, ~48KB woff2, OFL, dev-only)
 under the private family name 'Inter Tweak', injected into the document head
