@@ -629,7 +629,7 @@ function Overlay() {
         // data-lenis-prevent: the page's Lenis must not intercept wheel/touch
         // over the panel, or its own scrollbar never moves.
         <div
-          className="fixed right-3 bottom-14 z-50 flex max-h-[75vh] w-[380px] flex-col gap-2 overflow-y-auto overscroll-contain rounded-2xl border bg-muted p-2 text-xs shadow-[0_24px_64px_-12px_rgba(0,0,0,0.3)]"
+          className="fixed right-3 bottom-14 z-50 flex max-h-[75vh] w-[320px] flex-col gap-2 overflow-y-auto overscroll-contain rounded-2xl border bg-muted p-2 text-xs shadow-[0_24px_64px_-12px_rgba(0,0,0,0.3)]"
           data-version={version}
           data-lenis-prevent=""
         >
