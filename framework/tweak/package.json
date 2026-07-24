@@ -19,7 +19,7 @@
     "node": ">=20"
   },
   "scripts": {
-    "build:css": "tailwindcss -i src/theme.css -o src/overlay.css --minify"
+    "build:css": "tailwindcss -i src/theme.css -o src/overlay.css --minify && node scripts/ungate-properties.mjs"
   },
   "dependencies": {
     "@base-ui/react": "^1.0.0",

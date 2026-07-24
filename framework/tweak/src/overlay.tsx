@@ -12,7 +12,6 @@ import { Button } from './ui/button'
 import { Input } from './ui/input'
 import { Slider } from './ui/slider'
 import { Switch } from './ui/switch'
-import { Separator } from './ui/separator'
 import { cn } from './ui/utils'
 import css from './overlay.css?inline'
 // Inter variable (latin subset, OFL — see inter-license.txt), vendored from
@@ -180,11 +179,14 @@ function SearchIcon(props: React.SVGProps<SVGSVGElement>) {
     </svg>
   )
 }
-function CopyIcon(props: React.SVGProps<SVGSVGElement>) {
+// lucide file-stack — the motion-file glyph (14x14 via iconProps defaults).
+function FileStackIcon(props: React.SVGProps<SVGSVGElement>) {
   return (
     <svg {...iconProps(props)}>
-      <rect width="14" height="14" x="8" y="8" rx="2" ry="2" />
-      <path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2" />
+      <path d="M21 7h-3a2 2 0 0 1-2-2V2" />
+      <path d="M21 6v6.5c0 .8-.7 1.5-1.5 1.5h-7c-.8 0-1.5-.7-1.5-1.5v-9c0-.8.7-1.5 1.5-1.5H17Z" />
+      <path d="M7 8v8.8c0 .3.2.6.4.8.2.2.5.4.8.4H15" />
+      <path d="M3 12v8.8c0 .3.2.6.4.8.2.2.5.4.8.4H11" />
     </svg>
   )
 }
@@ -253,7 +255,7 @@ function NumberControl({
         onValueChange={(v: number | readonly number[]) => onChange(Array.isArray(v) ? v[0] : (v as number))}
       />
       <Input
-        className="h-9 w-16 shrink-0 rounded-full border-input px-1 text-center text-xs"
+        className="h-9 w-16 shrink-0 rounded-full border-input bg-background px-1 text-center text-xs"
         type="text"
         inputMode="decimal"
         value={draft ?? fmt(value)}
@@ -305,11 +307,13 @@ function LeafRow({
 }) {
   const name = leaf.path[leaf.path.length - 1]
   // The dot marks a tweaked row AND resets it — a stray drag is visible and
-  // individually undoable, so it can't ride into a save unnoticed.
+  // individually undoable, so it can't ride into a save unnoticed. It sits as
+  // a corner badge on the control (white ring lifts it off the border) so
+  // rows reach the card edge and align with the group's tab icons.
   const dot = (
     <button
       className={cn(
-        'size-2 shrink-0 rounded-full bg-foreground',
+        'absolute top-0 right-0 size-2.5 rounded-full bg-foreground ring-2 ring-background',
         dirty ? 'visible cursor-pointer' : 'invisible',
       )}
       title="tweaked — click to reset to the saved value"
@@ -318,9 +322,10 @@ function LeafRow({
       onClick={onReset}
     />
   )
+  const rowClass = 'relative flex items-center gap-1.5 py-1'
   if (typeof leaf.value === 'number') {
     return (
-      <div className="flex items-center gap-1.5 py-[3px]" title={leaf.path.join('.')}>
+      <div className={rowClass} title={leaf.path.join('.')}>
         <NumberControl label={name} value={leaf.value} onChange={onChange} />
         {dot}
       </div>
@@ -328,8 +333,8 @@ function LeafRow({
   }
   const isEase = typeof leaf.value === 'string' && isEaseLeaf(leaf)
   return (
-    <div className="flex items-center gap-1.5 py-[3px]" title={leaf.path.join('.')}>
-      <div className="relative flex h-9 min-w-0 flex-1 items-center rounded-full border border-input">
+    <div className={rowClass} title={leaf.path.join('.')}>
+      <div className="relative flex h-9 min-w-0 flex-1 items-center rounded-full border border-input bg-background">
         <span className="pointer-events-none absolute left-3.5 z-10 text-xs text-muted-foreground">
           {name}
         </span>
@@ -465,7 +470,10 @@ function GroupSection({
   const displayed = withRows.find((b) => b.key === active) ?? withRows[0]
   const leafSeg = group.path[group.path.length - 1]
   return (
-    <div className="mt-2.5">
+    // Groups separate with a light hairline that bleeds to the card edges
+    // (negative margins undo the card padding); the card's last group closes
+    // clean (the wrapper in the file card makes :last-child reliable).
+    <div className="-mx-3.5 mt-2.5 border-b border-border/60 px-3.5 pb-2.5 last:border-b-0 last:pb-0">
       <div className="mb-1 flex items-center justify-between gap-2">
         <span className="flex min-w-0 items-center gap-1 truncate text-xs text-muted-foreground">
           {group.path.slice(0, -1).map((seg, i) => (
@@ -527,6 +535,7 @@ function Overlay() {
   const [open, setOpen] = useState(false)
   const [loop, setLoop] = useState(false)
   const [filter, setFilter] = useState('')
+  const [filterFocus, setFilterFocus] = useState(false)
   const [showAll, setShowAll] = useState(false)
   const [status, setStatus] = useState('')
   const [forcedBp, setForcedBp] = useState<string | null>(null)
@@ -620,36 +629,34 @@ function Overlay() {
         // data-lenis-prevent: the page's Lenis must not intercept wheel/touch
         // over the panel, or its own scrollbar never moves.
         <div
-          className="fixed right-3 bottom-14 z-50 flex max-h-[75vh] w-[380px] flex-col overflow-y-auto overscroll-contain rounded-2xl border bg-background text-xs shadow-2xl"
+          className="fixed right-3 bottom-14 z-50 flex max-h-[75vh] w-[380px] flex-col gap-2 overflow-y-auto overscroll-contain rounded-2xl border bg-muted p-2 text-xs shadow-[0_24px_64px_-12px_rgba(0,0,0,0.3)]"
           data-version={version}
           data-lenis-prevent=""
         >
           {/* ── replay: what to play ─────────────────────────────────── */}
-          <div className="p-4 pb-3.5">
+          <div className="rounded-xl bg-background p-3.5">
             <div className="mb-2.5 flex items-center justify-between">
               <SectionTitle>Replay</SectionTitle>
               <label className="flex cursor-pointer items-center gap-2 text-xs text-muted-foreground">
-                <Switch checked={loop} onCheckedChange={(c: boolean) => setLoop(c === true)} />
+                <Switch size="sm" checked={loop} onCheckedChange={(c: boolean) => setLoop(c === true)} />
                 Loop
               </label>
             </div>
-            <div className="flex flex-wrap gap-1.5">
-              <Button size="sm" className="h-8 rounded-full px-3.5 text-xs" onClick={() => void handle.replayIntro()}>
+            <div className="flex gap-1.5">
+              <Button size="sm" className="h-8 flex-1 rounded-full text-xs" onClick={() => void handle.replayIntro()}>
                 <PlayIcon className="size-2.5" /> Intro
               </Button>
-              <Button size="sm" className="h-8 rounded-full px-3.5 text-xs" onClick={() => void handle.replayShellIntro()}>
+              <Button size="sm" className="h-8 flex-1 rounded-full text-xs" onClick={() => void handle.replayShellIntro()}>
                 <PlayIcon className="size-2.5" /> Shell
               </Button>
-              <Button size="sm" className="h-8 rounded-full px-3.5 text-xs" onClick={() => handle.replayMotions()}>
+              <Button size="sm" className="h-8 flex-1 rounded-full text-xs" onClick={() => handle.replayMotions()}>
                 <PlayIcon className="size-2.5" /> Motions
               </Button>
             </div>
           </div>
 
-          <Separator />
-
           {/* ── preview context: replays run AS this breakpoint/speed ──── */}
-          <div className="p-4 pt-3.5 pb-3.5">
+          <div className="rounded-xl bg-background p-3.5">
             <div className="flex items-center justify-between gap-2">
               <SectionTitle>Preview as</SectionTitle>
               <div className="flex shrink-0 items-center gap-0.5">
@@ -729,10 +736,8 @@ function Overlay() {
             </div>
           </div>
 
-          <Separator />
-
           {/* ── tokens ──────────────────────────────────────────────── */}
-          <div className="p-4 pt-3.5 pb-3">
+          <div className="rounded-xl bg-background p-3.5">
             <div className="flex items-center justify-between">
               <SectionTitle>Tokens</SectionTitle>
               {(hiddenCount > 0 || showAll) && (
@@ -747,13 +752,22 @@ function Overlay() {
             {allFiles.length > 0 && (
               <div className="relative mt-2.5">
                 <Input
-                  className="h-9 rounded-full border-input px-8 text-center text-xs"
+                  className="h-9 rounded-full border-input bg-background px-8 text-center text-xs"
                   type="text"
-                  placeholder="Filter tokens"
                   value={filter}
+                  onFocus={() => setFilterFocus(true)}
+                  onBlur={() => setFilterFocus(false)}
                   onChange={(e) => setFilter(e.target.value)}
                 />
-                {filter ? (
+                {/* The placeholder is a centered text+icon cluster, so the
+                    magnifier travels with the label instead of hugging the
+                    field's edge. */}
+                {!filter && !filterFocus && (
+                  <span className="pointer-events-none absolute inset-0 flex items-center justify-center gap-1.5 text-xs text-muted-foreground">
+                    Filter tokens <SearchIcon />
+                  </span>
+                )}
+                {filter && (
                   <button
                     className="absolute top-1/2 right-3 -translate-y-1/2 cursor-pointer text-muted-foreground hover:text-foreground"
                     title="clear filter"
@@ -761,23 +775,18 @@ function Overlay() {
                   >
                     ×
                   </button>
-                ) : (
-                  <SearchIcon className="pointer-events-none absolute top-1/2 right-3 -translate-y-1/2 text-muted-foreground" />
                 )}
               </div>
             )}
           </div>
 
-          {/* Cards inside a card: each motion file is a white rounded card on
-              the panel's gray well. */}
-          <div className="flex grow flex-col gap-2 bg-muted p-2">
-            {!allFiles.length && (
-              <div className="rounded-xl bg-background p-3.5 text-muted-foreground">
-                no motion tokens registered — create a motion.ts next to a page and
-                read it from your intro/useMotion code.
-              </div>
-            )}
-            {files.map(({ file }) => {
+          {!allFiles.length && (
+            <div className="rounded-xl bg-background p-3.5 text-muted-foreground">
+              no motion tokens registered — create a motion.ts next to a page and
+              read it from your intro/useMotion code.
+            </div>
+          )}
+          {files.map(({ file }) => {
               const leaves = handle.tokens.leaves(file)
               const dirtySet = new Set(handle.tokens.dirty(file).map((l) => l.path.join('.')))
               const query = filter.trim().toLowerCase()
@@ -802,26 +811,28 @@ function Overlay() {
                       aria-label={`copy ${file}`}
                       onClick={() => void navigator.clipboard?.writeText(file)}
                     >
-                      <CopyIcon />
+                      <FileStackIcon />
                     </button>
                     <span className="truncate text-[13px] font-semibold">{file}</span>
                   </div>
-                  {shownGroups.map((group) => (
-                    <GroupSection
-                      key={group.path.join('.') || '(root)'}
-                      group={group}
-                      dirtySet={dirtySet}
-                      query={query}
-                      onChange={(leaf, value) => {
-                        handle.tokens.set(file, leaf.path, value)
-                        queueReplay()
-                      }}
-                      onReset={(leaf) => {
-                        handle.tokens.resetLeaf(file, leaf.path)
-                        queueReplay()
-                      }}
-                    />
-                  ))}
+                  <div>
+                    {shownGroups.map((group) => (
+                      <GroupSection
+                        key={group.path.join('.') || '(root)'}
+                        group={group}
+                        dirtySet={dirtySet}
+                        query={query}
+                        onChange={(leaf, value) => {
+                          handle.tokens.set(file, leaf.path, value)
+                          queueReplay()
+                        }}
+                        onReset={(leaf) => {
+                          handle.tokens.resetLeaf(file, leaf.path)
+                          queueReplay()
+                        }}
+                      />
+                    ))}
+                  </div>
                   <div className="mt-3 flex gap-1.5">
                     <Button
                       size="sm"
@@ -847,8 +858,7 @@ function Overlay() {
                 </div>
               )
             })}
-            {status && <div className="px-2 pb-1 text-[11px] text-muted-foreground">{status}</div>}
-          </div>
+          {status && <div className="px-2 pb-1 text-[11px] text-muted-foreground">{status}</div>}
         </div>
       )}
     </>
