@@ -295,12 +295,15 @@ export default motion({
 - Read tokens through **`resolveTokens(tokens)`** at animation-run time — it
   deep-merges the active breakpoint's block over the base (then `reduced`),
   so replays and breakpoint changes always see fresh values.
-- **Tweak Mode** (dev, with `@modulato/tweak` installed): the ✦ motion
-  overlay lists every token module — edit live, replay intro/shell/motions,
-  loop, 0.1×–1× slow-mo (GSAP, WAAPI, and `useTicker` loops all follow),
-  preview any breakpoint + reduced. **Save** writes
-  values back into `motion.ts` with an AST-preserving edit (comments and
-  formatting survive).
+- **Tweak Mode** (dev, with `@modulato/tweak` installed): the ✦ Tweak
+  overlay shows the token files for the current view (shell + this page +
+  transitions touching this route; "Show all" reveals the rest) — edit live,
+  replay Intro/Shell/Motions, loop, 0.1x–1x slow-mo (GSAP, WAAPI, and
+  `useTicker` loops all follow), preview any breakpoint + reduced motion.
+  Breakpoint/`reduced` override blocks appear as icon tabs on each token
+  group; a tweaked row is dotted (click the dot to undo just that edit).
+  **Save** writes only the changed values back into `motion.ts` with an
+  AST-preserving edit (comments and formatting survive).
 - Non-token animation code still works — it just doesn't appear in the
   overlay. Convention nudges toward tokens.
 - Breakpoints are defined ONCE in `modulato.config.ts` (literal strings —
