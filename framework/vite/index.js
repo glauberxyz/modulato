@@ -66,6 +66,20 @@ export default function modulato(options = {}) {
             // that the dep scanner misses — pre-bundle to avoid a mid-session
             // "new dependencies discovered" reload.
             ...['gsap', 'gsap/SplitText', 'lenis'].filter(resolvable),
+            // The Tweak overlay is served from source (excluded below), so
+            // the scanner never sees its transitive deps: @base-ui/react
+            // reaches use-sync-external-store's CJS shims, whose conditional
+            // `module.exports = require(…)` hides the named exports unless
+            // the optimizer pre-bundles them with interop. Without these the
+            // overlay module throws on import ("does not provide an export
+            // named 'useSyncExternalStore'") and the ✦ Tweak button never
+            // mounts in consuming apps.
+            ...(options.tweak !== false
+              ? [
+                  'use-sync-external-store/shim',
+                  'use-sync-external-store/shim/with-selector',
+                ].filter(resolvable)
+              : []),
           ],
           exclude: ['modulato', '@modulato/server', '@modulato/gsap', '@modulato/tweak'],
         },
