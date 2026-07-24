@@ -1,6 +1,6 @@
 {
   "name": "@modulato/tweak",
-  "version": "0.1.2",
+  "version": "0.2.0",
   "description": "Tweak Mode for Modulato: dev overlay for motion tokens with save-back into source files.",
   "license": "MIT",
   "homepage": "https://github.com/glauberxyz/modulato#readme",
