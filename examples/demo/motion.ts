@@ -4,7 +4,7 @@ import { motion } from 'modulato'
 export default motion({
   shell: {
     menu: {
-      yPercent: -164,
+      yPercent: -174,
       duration: 1,
       ease: 'expo.out',
       phone: { yPercent: -160, duration: 0.8 },
@@ -21,9 +21,9 @@ export default motion({
   // The persistent canvas square (shell/Scene.tsx): idle spin in rad/s,
   // spin boost + scale-down while a page transition runs.
   scene: {
-    spin: 0.5,
-    boost: 6,
-    shrink: 0.6,
+    spin: 0.275,
+    boost: 3.11,
+    shrink: 1.14,
     phone: { spin: 0.35 },
     reduced: { spin: 0, boost: 1, shrink: 1 },
   },
