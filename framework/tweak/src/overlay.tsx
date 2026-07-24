@@ -689,13 +689,13 @@ function Overlay() {
             <div className="flex gap-1.5">
               {/* Loop replays the page intro only — the ring marks just the
                   button that is actually looping. */}
-              <Button size="sm" className="h-8 flex-1 rounded-full text-xs" onClick={() => void handle.replayIntro()}>
+              <Button size="sm" className="h-9 flex-1 rounded-full text-xs" onClick={() => void handle.replayIntro()}>
                 {loop ? <LoopRingIcon ms={cycle.ms} n={cycle.n} /> : <PlayIcon className="size-2.5" />} Intro
               </Button>
-              <Button size="sm" className="h-8 flex-1 rounded-full text-xs" onClick={() => void handle.replayShellIntro()}>
+              <Button size="sm" className="h-9 flex-1 rounded-full text-xs" onClick={() => void handle.replayShellIntro()}>
                 <PlayIcon className="size-2.5" /> Shell
               </Button>
-              <Button size="sm" className="h-8 flex-1 rounded-full text-xs" onClick={() => handle.replayMotions()}>
+              <Button size="sm" className="h-9 flex-1 rounded-full text-xs" onClick={() => handle.replayMotions()}>
                 <PlayIcon className="size-2.5" /> Motions
               </Button>
             </div>
@@ -882,7 +882,7 @@ function Overlay() {
                   <div className="mt-3 flex gap-1.5">
                     <Button
                       size="sm"
-                      className="h-8 flex-1 rounded-full text-xs"
+                      className="h-9 flex-1 rounded-full text-xs"
                       disabled={!dirtySet.size}
                       onClick={() => void save(file)}
                     >
@@ -891,7 +891,7 @@ function Overlay() {
                     <Button
                       variant="secondary"
                       size="sm"
-                      className="h-8 flex-1 rounded-full text-xs"
+                      className="h-9 flex-1 rounded-full text-xs"
                       disabled={!dirtySet.size}
                       onClick={() => {
                         handle.tokens.reset(file)
