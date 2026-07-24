@@ -935,6 +935,10 @@ export function mount(): void {
   shadow.appendChild(style)
   const root = document.createElement('div')
   root.className = 'font-sans text-foreground'
+  // font-size INHERITS across the shadow boundary from the host page — pin
+  // the base so em values and any unstyled text ignore the host's type
+  // scale (the compiled CSS is already rem-free for the same reason).
+  root.style.fontSize = '16px'
   shadow.appendChild(root)
   void import('react-dom/client').then(({ createRoot }) => {
     createRoot(root).render(<Overlay />)
