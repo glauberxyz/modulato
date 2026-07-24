@@ -16,6 +16,10 @@ import { Separator } from './ui/separator'
 import { Badge } from './ui/badge'
 import { cn } from './ui/utils'
 import css from './overlay.css?inline'
+// Inter variable (latin subset, OFL — see inter-license.txt), vendored from
+// @fontsource-variable/inter@5.3.0. Bundled so the overlay renders Inter even
+// on machines without it installed (or with only stray weights installed).
+import interUrl from './inter.woff2'
 
 function useHandle(): ModulatoDevHandle | null {
   const [handle, setHandle] = useState<ModulatoDevHandle | null>(
@@ -623,6 +627,15 @@ function Overlay() {
 export function mount(): void {
   if (typeof document === 'undefined') return
   if (document.getElementById('__modulato-tweak')) return
+  // The @font-face must live in the DOCUMENT: Chromium ignores font faces
+  // declared inside shadow trees. The family name is ours alone ('Inter
+  // Tweak') so a host site's own Inter faces are never shadowed or reordered.
+  if (!document.getElementById('__modulato-tweak-font')) {
+    const font = document.createElement('style')
+    font.id = '__modulato-tweak-font'
+    font.textContent = `@font-face { font-family: 'Inter Tweak'; font-style: normal; font-weight: 100 900; font-display: swap; src: url(${JSON.stringify(interUrl)}) format('woff2'); }`
+    document.head.appendChild(font)
+  }
   const host = document.createElement('div')
   host.id = '__modulato-tweak'
   host.setAttribute('data-lenis-prevent', '')

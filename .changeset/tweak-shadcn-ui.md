@@ -24,3 +24,9 @@ host site (no Tailwind at runtime, host styles can't bleed in or out).
   selected (invalid easing → element.animate throws). CSS-flavored fields now get the
   named CSS eases plus the standard curve set as valid cubic-beziers (labeled
   sine/power/expo/circ/back × in/out/inOut); GSAP fields keep the name catalog.
+
+- The overlay renders entirely in Inter (sans, headings, and the former mono
+  spots). The variable latin subset ships with the package (~48KB woff2, OFL,
+  dev-only) under the private family name 'Inter Tweak', injected into the
+  document head (shadow-tree font faces don't load in Chromium) — guaranteed
+  Inter without ever shadowing a host site's own Inter faces.
