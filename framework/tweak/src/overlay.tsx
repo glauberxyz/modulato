@@ -346,6 +346,17 @@ function Overlay() {
     () => handle?.tokens.version ?? 0,
   )
 
+  // Speed lives in the core and can change without a click here (MCP remote).
+  // Subscribe to the core's own event — the active pill must never depend on
+  // an incidental rerender to move.
+  const speed = useSyncExternalStore(
+    useCallback((cb: () => void) => {
+      window.addEventListener('modulato:speed', cb)
+      return () => window.removeEventListener('modulato:speed', cb)
+    }, []),
+    () => handle?.speed ?? 1,
+  )
+
   const replayTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
   const queueReplay = useCallback(() => {
     if (replayTimer.current) clearTimeout(replayTimer.current)
@@ -474,13 +485,10 @@ function Overlay() {
             {[1, 0.5, 0.25, 0.1].map((s) => (
               <Button
                 key={s}
-                variant={handle.speed === s ? 'default' : 'outline'}
+                variant={speed === s ? 'default' : 'outline'}
                 size="sm"
                 className="h-7 px-2.5 text-xs"
-                onClick={() => {
-                  handle.setSpeed(s)
-                  setStatus(s === 1 ? '' : `${s}× speed`)
-                }}
+                onClick={() => handle.setSpeed(s)}
               >
                 {s}×
               </Button>
