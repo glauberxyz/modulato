@@ -326,6 +326,68 @@ export default defineConfig({
 `desktop` is the implicit fallthrough. Breakpoint names become token override
 keys and `useViewport().breakpoint` values.
 
+### Custom easing curves
+
+**A custom ease goes in `modulato.config.ts` under `eases` — nowhere else.**
+Declare the curve once as a `cubic-bezier()` string; it becomes available to
+every `motion.ts` in the project and appears in the Tweak overlay's ease
+dropdown under your name.
+
+```ts
+// modulato.config.ts
+export default defineConfig({
+  eases: {
+    swoosh: 'cubic-bezier(0.62, 0.05, 0.01, 0.99)',
+    settle: 'cubic-bezier(0.34, 1.56, 0.64, 1)',   // y may overshoot
+  },
+})
+```
+
+Then use it in tokens — **the spelling depends on the backend that file
+drives**, because the two don't share an ease vocabulary:
+
+```ts
+// pages/home/motion.ts — GSAP (intros, useMotion): the NAME
+export default motion({
+  intro: { cards: { duration: 0.9, ease: 'swoosh' } },
+})
+
+// transitions/home__about.motion.ts — WAAPI: the CURVE
+export default motion({
+  slide: { duration: 1064, ease: 'cubic-bezier(0.62, 0.05, 0.01, 0.99)' },
+})
+```
+
+Why: `@modulato/gsap` registers each declared curve with GSAP's CustomEase, so
+GSAP resolves `'swoosh'` by name — but transitions run through
+`element.animate()`, which **throws** on anything that isn't a CSS easing.
+Picking "swoosh" in the Tweak overlay writes the right spelling for the file
+you're editing, so you never have to remember which is which.
+
+Note the asymmetry: a GSAP token references the curve by name and follows it
+automatically, while a transition token holds a **copy** of the numbers. Retune
+a curve in the config and GSAP tokens update themselves; transition tokens keep
+the old value until you re-pick the ease (the overlay stops labeling a drifted
+value with your name — that's the tell).
+
+Rules — run `npx modulato check` to enforce them (a plain `modulato build` does
+NOT run check):
+
+- Values must be literal `cubic-bezier(x1, y1, x2, y2)` strings — they're
+  statically extracted for the client, and a single cubic is the one curve
+  both backends express exactly. Grab one from cubic-bezier.com.
+- `x1`/`x2` must be within 0–1 (CSS rejects otherwise); `y` may overshoot for
+  anticipation/overshoot curves.
+- Names must not shadow a GSAP built-in — `power0`–`power4`, `quad`, `cubic`,
+  `quart`, `quint`, `strong`, `sine`, `expo`, `circ`, `back`, `elastic`,
+  `bounce`, `steps`, `rough`, `slow`, `none`, `linear`, with or without
+  `.in`/`.out`/`.inOut`, in any casing — registering one would replace GSAP's
+  own for the whole page. Avoid CSS easing keywords (`ease-out`) as names too:
+  the overlay reads those as CSS-flavored values.
+- Springy curves (elastic/bounce) are **not** expressible as a single cubic:
+  use GSAP's built-in `elastic.out`/`bounce.out` names in GSAP tokens, and
+  keep transitions on a cubic.
+
 ## 8. Behaviors (enhancers)
 
 For HTML you don't control — CMS rich text, markdown output. Files in
@@ -575,7 +637,7 @@ modulato check [--json]               validate contracts — run after every edi
 
 `modulato check` catches: orphaned page companions, missing default exports,
 malformed/dangling transition pairs, a shell without `<PageOutlet/>`,
-misplaced intro.ts.
+misplaced intro.ts, invalid `eases` declarations (§7).
 
 ## 13. MCP (agents)
 

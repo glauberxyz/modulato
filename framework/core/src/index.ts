@@ -3,6 +3,8 @@ export { ModulatoRoot } from './root'
 export { Shared } from './shared'
 export { Img } from './img'
 export { defineConfig } from './config'
+export { easeRegistry, parseDeclaredEase } from './eases'
+export type { DeclaredEase } from './eases'
 export { action, useFormAction } from './action'
 export type { Action, ActionContext, FormAction, FormActionPhase } from './action'
 export {

@@ -34,6 +34,22 @@ export interface ModulatoConfig {
    * phone ≤767px, tablet 768–1279px.
    */
   breakpoints?: Record<string, string>
+  /**
+   * Named easing curves, declared once and usable in every motion.ts — by
+   * NAME in GSAP tokens (`ease: 'swoosh'`) and as the curve itself in
+   * transition tokens (WAAPI only speaks CSS). Both spellings appear in the
+   * Tweak overlay's ease dropdown labeled with your name.
+   *
+   *   eases: { swoosh: 'cubic-bezier(0.16, 1, 0.3, 1)' }
+   *
+   * Values MUST be literal `cubic-bezier(x1, y1, x2, y2)` strings — the
+   * client extracts them from this file statically, and a single cubic is
+   * the one shape both animation backends express exactly. x1/x2 must be
+   * within 0–1; y may overshoot. Names must not collide with GSAP's built-in
+   * eases (power1–4/sine/expo/circ/back/elastic/bounce/none, `.in`/`.out`/
+   * `.inOut`); `modulato check` enforces both rules.
+   */
+  eases?: Record<string, string>
   /** Site-wide <head> tags (favicon, manifest, fonts, default OG, analytics). */
   head?: HeadConfig
   /**

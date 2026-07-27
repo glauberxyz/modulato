@@ -1,6 +1,7 @@
 import { hydrateRoot } from 'react-dom/client'
 import type { ComponentType } from 'react'
 import { DEV } from './dev'
+import { easeRegistry, initEases } from './eases'
 import type { BehaviorsManifest, EnhancerDef } from './enhance'
 import { defaultIntro, resolveIntro, type IntroRunContext, type IntrosManifest } from './intro'
 import {
@@ -27,6 +28,8 @@ export interface ModulatoDevHandle {
   replayMotions: () => void
   replayIntro: () => Promise<void>
   replayShellIntro: () => Promise<void>
+  /** Curves declared in modulato.config.ts (Tweak's ease dropdown reads these). */
+  eases: typeof easeRegistry
   viewport: {
     readonly breakpoint: string
     readonly reducedMotion: boolean
@@ -56,6 +59,7 @@ export async function boot({
   behaviors,
   content = {},
   breakpoints,
+  eases,
 }: {
   routes: RouteDef[]
   App: ComponentType
@@ -64,8 +68,10 @@ export async function boot({
   behaviors?: BehaviorsManifest
   content?: Record<string, unknown>
   breakpoints?: Record<string, string> | null
+  eases?: Record<string, string> | null
 }): Promise<void> {
   initViewport(breakpoints)
+  initEases(eases)
 
   const container = document.getElementById('__modulato')
   if (!container) {
@@ -130,6 +136,7 @@ export async function boot({
         return currentPage()?.dataset.page ?? null
       },
       tokens: motionRegistry,
+      eases: easeRegistry,
       get speed() {
         return getMotionSpeed()
       },

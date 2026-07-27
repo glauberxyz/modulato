@@ -4,6 +4,179 @@ import { scanRoutes, scanTransitions, slugRouteId } from './scan.mjs'
 
 const COMPANIONS = ['styles.scss', 'config.ts', 'intro.ts', 'motion.ts', 'server.ts']
 
+// GSAP's built-in ease vocabulary — a declared ease may not shadow one of
+// these, since registering the name would clobber GSAP's own for the page.
+// Includes the legacy aliases (quad/cubic/quart/quint/strong/power0) that
+// still resolve in gsap 3.x, and matching is case-insensitive: the
+// capitalized forms ('Expo') resolve to OBJECTS in gsap's ease map, so a
+// token using one makes GSAP call a non-function.
+const GSAP_BUILTIN_EASES = new Set(
+  [
+    'none',
+    'linear',
+    ...[
+      'power0', 'power1', 'power2', 'power3', 'power4',
+      'quad', 'cubic', 'quart', 'quint', 'strong',
+      'sine', 'expo', 'circ', 'back', 'elastic', 'bounce',
+      'steps', 'rough', 'slow',
+    ].flatMap((family) => [family, `${family}.in`, `${family}.out`, `${family}.inOut`]),
+  ].map((name) => name.toLowerCase()),
+)
+
+const CUBIC_BEZIER =
+  /^cubic-bezier\(\s*(-?(?:\d+\.?\d*|\.\d+))\s*,\s*(-?(?:\d+\.?\d*|\.\d+))\s*,\s*(-?(?:\d+\.?\d*|\.\d+))\s*,\s*(-?(?:\d+\.?\d*|\.\d+))\s*\)$/
+
+/** Blank out // and /* *\/ comments, keeping offsets so brace matching and
+ * string scanning below never trip over commented-out config. */
+function stripComments(source) {
+  let out = ''
+  let i = 0
+  while (i < source.length) {
+    const ch = source[i]
+    const next = source[i + 1]
+    if (ch === '/' && next === '/') {
+      while (i < source.length && source[i] !== '\n') i += 1
+    } else if (ch === '/' && next === '*') {
+      i += 2
+      while (i < source.length && !(source[i] === '*' && source[i + 1] === '/')) i += 1
+      i += 2
+    } else if (ch === "'" || ch === '"' || ch === '`') {
+      const quote = ch
+      out += ch
+      i += 1
+      while (i < source.length && source[i] !== quote) {
+        if (source[i] === '\\') {
+          out += source[i] + (source[i + 1] ?? '')
+          i += 2
+          continue
+        }
+        out += source[i]
+        i += 1
+      }
+      out += quote
+      i += 1
+    } else {
+      out += ch
+      i += 1
+    }
+  }
+  return out
+}
+
+/** The `{...}` body following `key:`, found by brace matching (a regex can't
+ * tell which `}` closes the block). Returns null when the key is absent. */
+function objectBody(source, key) {
+  const at = source.search(new RegExp(`\\b${key}\\s*:\\s*\\{`))
+  if (at === -1) return null
+  const open = source.indexOf('{', at)
+  let depth = 0
+  for (let i = open; i < source.length; i += 1) {
+    if (source[i] === '{') depth += 1
+    else if (source[i] === '}') {
+      depth -= 1
+      if (depth === 0) return source.slice(open + 1, i)
+    }
+  }
+  return null
+}
+
+/** Split an object body on its TOP-LEVEL commas. */
+function splitEntries(body) {
+  const entries = []
+  let depth = 0
+  let current = ''
+  let quote = null
+  for (let i = 0; i < body.length; i += 1) {
+    const ch = body[i]
+    if (quote) {
+      current += ch
+      if (ch === '\\') {
+        current += body[i + 1] ?? ''
+        i += 1
+      } else if (ch === quote) quote = null
+      continue
+    }
+    if (ch === "'" || ch === '"' || ch === '`') {
+      quote = ch
+      current += ch
+      continue
+    }
+    if ('{[('.includes(ch)) depth += 1
+    else if ('}])'.includes(ch)) depth -= 1
+    if (ch === ',' && depth === 0) {
+      entries.push(current)
+      current = ''
+      continue
+    }
+    current += ch
+  }
+  if (current.trim()) entries.push(current)
+  return entries
+}
+
+/**
+ * Validate `eases` in modulato.config.ts. Both animation backends fail badly
+ * on a bad curve and in OPPOSITE ways — GSAP silently falls back to quad.out,
+ * WAAPI throws at animate() — so the mistakes are caught here instead.
+ * Read from the source text (comments stripped, braces matched): the config
+ * runs in Node and may hold secrets, so it is never imported.
+ */
+function checkEases(root, error) {
+  const file = path.resolve(root, 'modulato.config.ts')
+  if (!fs.existsSync(file)) return
+  const body = objectBody(stripComments(fs.readFileSync(file, 'utf8')), 'eases')
+  if (body === null) return
+  for (const entry of splitEntries(body)) {
+    if (!entry.trim()) continue
+    const parsed = entry.match(/^\s*(?:(['"])([^'"]+)\1|([\w$]+))\s*:\s*([\s\S]+)$/)
+    if (!parsed) {
+      // A spread (...BRAND_EASES) or shorthand — invisible to the static
+      // extractor, so the curves would never reach the client.
+      error(
+        'modulato.config.ts',
+        `eases entry ${JSON.stringify(entry.trim())} is not a "name: 'cubic-bezier(…)'" pair — the client extracts these statically, so spreads and shorthand never reach it. Write each curve out literally.`,
+      )
+      continue
+    }
+    const name = parsed[2] ?? parsed[3]
+    const raw = parsed[4].trim()
+    if (GSAP_BUILTIN_EASES.has(name.toLowerCase())) {
+      error(
+        'modulato.config.ts',
+        `ease "${name}" shadows a built-in GSAP ease — registering it would replace GSAP's own for the whole page. Rename it (e.g. "brand${name[0].toUpperCase()}${name.slice(1)}").`,
+      )
+      continue
+    }
+    if (!/^(['"]).*\1$/s.test(raw)) {
+      error(
+        'modulato.config.ts',
+        `ease "${name}" must be a literal quoted string — got ${JSON.stringify(raw)}. Template literals, constants and imported values are invisible to the static extractor, so the curve would silently never reach the browser.`,
+      )
+      continue
+    }
+    const value = raw.slice(1, -1)
+    const points = CUBIC_BEZIER.exec(value.trim())
+    if (!points) {
+      error(
+        'modulato.config.ts',
+        `ease "${name}" must be a cubic-bezier(x1, y1, x2, y2) string — got ${JSON.stringify(value)}. A single cubic is the one curve GSAP and CSS transitions both express exactly; grab one from cubic-bezier.com.`,
+      )
+      continue
+    }
+    const [x1, x2] = [points[1], points[3]].map(Number)
+    if (Number.isNaN(x1) || Number.isNaN(x2))
+      error(
+        'modulato.config.ts',
+        `ease "${name}" has a malformed number in ${JSON.stringify(value)} — check for a stray "." or duplicate decimal point.`,
+      )
+    else if (x1 < 0 || x1 > 1 || x2 < 0 || x2 > 1)
+      error(
+        'modulato.config.ts',
+        `ease "${name}" has an x control point outside 0–1 (${x1}, ${x2}) — CSS rejects it and element.animate() throws. Only the y values may overshoot.`,
+      )
+  }
+}
+
 /**
  * Validate the project's contracts. Every message says how to fix the
  * problem — errors teach, they don't just point.
@@ -115,6 +288,8 @@ export function check(root) {
       'pages/intro.ts',
       'intro.ts directly inside pages/ is never loaded — the shell intro lives at the project root (./intro.ts), page intros inside their page folder.',
     )
+
+  checkEases(root, error)
 
   return { ok: errors.length === 0, errors, warnings }
 }

@@ -1,10 +1,35 @@
 import gsap from 'gsap'
+import { CustomEase } from 'gsap/CustomEase'
 import { useEffect, useRef, useState } from 'react'
-import { getMotionSpeed, usePage, useViewport } from 'modulato'
+import { easeRegistry, getMotionSpeed, usePage, useViewport } from 'modulato'
 
 const DEV: boolean =
   typeof import.meta !== 'undefined' &&
   Boolean((import.meta as { env?: { DEV?: boolean } }).env?.DEV)
+
+// Curves declared in modulato.config.ts become real GSAP eases, so a token
+// can say `ease: 'swoosh'` and a tween just works. This must land before any
+// intro/useMotion resolves a string ease — an unknown ease name silently
+// falls back to quad.out instead of erroring, which reads as "my custom ease
+// does nothing". Subscribing (rather than reading list() once) makes the
+// registration independent of whether this module is evaluated before or
+// after boot(). A name that collides with a built-in is SKIPPED: creating
+// 'power2.out' would clobber GSAP's own for the whole page.
+gsap.registerPlugin(CustomEase)
+const registered = new Set<string>()
+easeRegistry.subscribe((eases) => {
+  for (const ease of eases) {
+    if (registered.has(ease.name)) continue
+    if (gsap.parseEase(ease.name)) {
+      console.warn(
+        `[modulato] ease "${ease.name}" collides with a built-in GSAP ease — rename it in modulato.config.ts`,
+      )
+      continue
+    }
+    CustomEase.create(ease.name, ease.points.join(','))
+    registered.add(ease.name)
+  }
+})
 
 // Tweak Mode slow-mo: the core dispatches `modulato:speed`, GSAP follows.
 // Also sync on load — this module may be code-split in after a speed change.

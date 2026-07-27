@@ -10,6 +10,12 @@ export default defineConfig({
     phone: '(max-width: 767px)',
     tablet: '(min-width: 768px) and (max-width: 1279px)',
   },
+  // Named curves usable in every motion.ts — by name in GSAP tokens, as the
+  // cubic-bezier in transition tokens (WAAPI only speaks CSS). Both spellings
+  // show up in the Tweak overlay's ease dropdown labeled "swoosh".
+  eases: {
+    swoosh: 'cubic-bezier(0.62, 0.05, 0.01, 0.99)',
+  },
   // Site-wide <head> — favicon, theme-color, default OG, all SSR'd.
   head: {
     link: [

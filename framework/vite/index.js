@@ -22,6 +22,7 @@ const VIRTUAL = {
   content: 'virtual:modulato/content',
   actions: 'virtual:modulato/actions',
   breakpoints: 'virtual:modulato/breakpoints',
+  eases: 'virtual:modulato/eases',
   app: 'virtual:modulato/app',
   clientEntry: 'virtual:modulato/client-entry',
   serverEntry: 'virtual:modulato/server-entry',
@@ -54,7 +55,11 @@ export default function modulato(options = {}) {
     config(_userConfig, env) {
       const base = {
         appType: 'custom',
-        resolve: { dedupe: ['react', 'react-dom'] },
+        // gsap is deduped too: its ease registry, plugin list and
+        // globalTimeline are module-level singletons, so a second copy means
+        // config-declared eases (registered by @modulato/gsap) and Tweak's
+        // slow-mo silently miss the tweens an app creates with its own import.
+        resolve: { dedupe: ['react', 'react-dom', 'gsap'] },
         ssr: { noExternal: ['modulato', '@modulato/server', '@modulato/gsap'] },
         optimizeDeps: {
           include: [
@@ -65,7 +70,7 @@ export default function modulato(options = {}) {
             // Reached via dynamic imports (intro files, the core's lazy Lenis)
             // that the dep scanner misses — pre-bundle to avoid a mid-session
             // "new dependencies discovered" reload.
-            ...['gsap', 'gsap/SplitText', 'lenis'].filter(resolvable),
+            ...['gsap', 'gsap/SplitText', 'gsap/CustomEase', 'lenis'].filter(resolvable),
             // The Tweak overlay is served from source (excluded below), so
             // the scanner never sees its transitive deps: @base-ui/react
             // reaches use-sync-external-store's CJS shims, whose conditional
@@ -144,8 +149,12 @@ export default function modulato(options = {}) {
       }
       if (id === VIRTUAL.actions) return generateActions(pagesDir)
       if (id === VIRTUAL.breakpoints)
-        return extractBreakpoints(root, this).then(
+        return extractConfigStringMap(root, this, 'breakpoints').then(
           (bp) => `export default ${JSON.stringify(bp)}\n`,
+        )
+      if (id === VIRTUAL.eases)
+        return extractConfigStringMap(root, this, 'eases').then(
+          (eases) => `export default ${JSON.stringify(eases)}\n`,
         )
       if (id === VIRTUAL.app)
         return [
@@ -154,23 +163,42 @@ export default function modulato(options = {}) {
           `export default function App() { return createElement(PageOutlet) }`,
         ].join('\n')
       if (id === VIRTUAL.clientEntry) {
-        const lines = [
-          `import { boot } from 'modulato/client'`,
-          `import { routes } from '${VIRTUAL.manifest}'`,
-          `import * as transitions from '${VIRTUAL.transitions}'`,
-          `import * as intros from '${VIRTUAL.intros}'`,
-          `import * as behaviors from '${VIRTUAL.behaviors}'`,
-          `import content from '${VIRTUAL.content}'`,
-          `import breakpoints from '${VIRTUAL.breakpoints}'`,
-          `import App from '${VIRTUAL.app}'`,
-          `boot({ routes, App, transitions, intros, behaviors, content, breakpoints })`,
-        ]
-        // Tweak Mode overlay — dev only, and only when the site installed it.
-        if (isServe && options.tweak !== false && resolvable('@modulato/tweak/overlay'))
+        return extractConfigStringMap(root, this, 'eases').then((declaredEases) => {
+          const lines = [
+            `import { boot } from 'modulato/client'`,
+            `import { routes } from '${VIRTUAL.manifest}'`,
+            `import * as transitions from '${VIRTUAL.transitions}'`,
+            `import * as intros from '${VIRTUAL.intros}'`,
+            `import * as behaviors from '${VIRTUAL.behaviors}'`,
+            `import content from '${VIRTUAL.content}'`,
+            `import breakpoints from '${VIRTUAL.breakpoints}'`,
+            `import eases from '${VIRTUAL.eases}'`,
+            `import App from '${VIRTUAL.app}'`,
+          ]
+          // Config-declared eases only resolve in GSAP once @modulato/gsap has
+          // registered them, and that module is otherwise loaded lazily — by
+          // whichever page happens to import useMotion. An intro using raw
+          // `gsap` on a page that doesn't would silently get quad.out. Pull the
+          // registrar into the entry, but ONLY when curves are actually
+          // declared, so apps that don't use them keep gsap out of the bundle.
+          if (declaredEases && resolvable('@modulato/gsap'))
+            lines.push(`import '@modulato/gsap'`)
+          else if (declaredEases)
+            // Nothing else registers them: a GSAP token naming one would
+            // silently animate with quad.out.
+            console.warn(
+              `[modulato] modulato.config.ts declares eases (${Object.keys(declaredEases).join(', ')}) but @modulato/gsap is not installed — GSAP tokens can't use them by name. Install @modulato/gsap, or reference the cubic-bezier() value directly.`,
+            )
           lines.push(
-            `.then(() => import('@modulato/tweak/overlay')).then((m) => m.mount())`,
+            `boot({ routes, App, transitions, intros, behaviors, content, breakpoints, eases })`,
           )
-        return lines.join('\n')
+          // Tweak Mode overlay — dev only, and only when the site installed it.
+          if (isServe && options.tweak !== false && resolvable('@modulato/tweak/overlay'))
+            lines.push(
+              `.then(() => import('@modulato/tweak/overlay')).then((m) => m.mount())`,
+            )
+          return lines.join('\n')
+        })
       }
       if (id === VIRTUAL.serverEntry) {
         const flags = `intro: ${options.intro !== false}, shellIntro: ${options.intro !== false && fs.existsSync(path.resolve(root, 'intro.ts'))}`
@@ -301,13 +329,17 @@ export default function modulato(options = {}) {
       server.watcher.on('unlink', onFileChange)
 
       // Re-running `modulato content` rewrites the snapshot in place, and
-      // config edits change the breakpoints the client derives from it.
+      // config edits change the breakpoints/eases the client derives from it.
       server.watcher.add(path.resolve(root, CONTENT_SNAPSHOT))
       server.watcher.on('change', (file) => {
         if (file === path.resolve(root, CONTENT_SNAPSHOT)) onFileChange(file)
         if (file === path.resolve(root, 'modulato.config.ts')) {
-          const mod = server.moduleGraph.getModuleById(VIRTUAL.breakpoints)
-          if (mod) server.moduleGraph.invalidateModule(mod)
+          // clientEntry too: whether it imports the ease registrar depends on
+          // the config declaring any.
+          for (const virtual of [VIRTUAL.breakpoints, VIRTUAL.eases, VIRTUAL.clientEntry]) {
+            const mod = server.moduleGraph.getModuleById(virtual)
+            if (mod) server.moduleGraph.invalidateModule(mod)
+          }
           server.ws.send({ type: 'full-reload' })
         }
       })
@@ -698,13 +730,14 @@ function emitVercelOutput(root) {
 }
 
 /**
- * Statically extract `breakpoints` from modulato.config.ts — the config
- * executes in Node for `modulato content`, but the CLIENT only needs this
- * one literal object, so it's read from the AST (TS stripped by esbuild
- * first) without importing node-only adapter code into the bundle.
+ * Statically extract one literal string map (`breakpoints`, `eases`) from
+ * modulato.config.ts — the config executes in Node for `modulato content`,
+ * but the CLIENT only needs these plain literal objects, so they're read
+ * from the AST (TS stripped by esbuild first) without importing node-only
+ * adapter code into the bundle.
  * Returns null (framework defaults) when absent or not a plain literal.
  */
-async function extractBreakpoints(root, ctx) {
+async function extractConfigStringMap(root, ctx, key) {
   const file = path.join(root, 'modulato.config.ts')
   if (!fs.existsSync(file)) return null
   try {
@@ -725,20 +758,20 @@ async function extractBreakpoints(root, ctx) {
             : null
     }
     const prop = config?.properties.find(
-      (p) => p.type === 'Property' && (p.key.name ?? p.key.value) === 'breakpoints',
+      (p) => p.type === 'Property' && (p.key.name ?? p.key.value) === key,
     )
     if (!prop || prop.value.type !== 'ObjectExpression') return null
-    const breakpoints = {}
+    const map = {}
     for (const entry of prop.value.properties) {
       if (entry.type !== 'Property') continue
-      const key = entry.key.name ?? entry.key.value
-      if (typeof key !== 'string' || entry.value.type !== 'Literal') continue
+      const name = entry.key.name ?? entry.key.value
+      if (typeof name !== 'string' || entry.value.type !== 'Literal') continue
       if (typeof entry.value.value !== 'string') continue
-      breakpoints[key] = entry.value.value
+      map[name] = entry.value.value
     }
-    return Object.keys(breakpoints).length ? breakpoints : null
+    return Object.keys(map).length ? map : null
   } catch (error) {
-    console.warn(`[modulato] could not read breakpoints from modulato.config.ts: ${error.message}`)
+    console.warn(`[modulato] could not read ${key} from modulato.config.ts: ${error.message}`)
     return null
   }
 }

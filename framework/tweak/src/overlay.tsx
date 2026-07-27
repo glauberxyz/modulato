@@ -7,7 +7,7 @@ import {
   type ReactNode,
 } from 'react'
 import type { ModulatoDevHandle } from 'modulato/client'
-import type { TokenLeaf, TokenValue } from 'modulato'
+import type { DeclaredEase, TokenLeaf, TokenValue } from 'modulato'
 import { Button } from './ui/button'
 import { Input } from './ui/input'
 import { Slider } from './ui/slider'
@@ -56,9 +56,10 @@ function sliderRange(initial: number) {
 // transition never plays. The control detects the flavor from the field's
 // value and offers the matching catalog; for CSS it lists the standard curves
 // AS valid cubic-beziers, labeled with their familiar names. A value outside
-// either catalog (project CustomEase) is kept as its own option. Next step
-// (designed, not built): custom curves declared in modulato.config —
-// tailwind.config-style extend — surfaced here by name.
+// either catalog (project CustomEase) is kept as its own option. Curves
+// declared in modulato.config lead BOTH catalogs under their config name —
+// picking one writes the name into a GSAP field and the cubic-bezier into a
+// transition field, so every file keeps a value its own backend speaks.
 const EASE_FAMILIES = ['power1', 'power2', 'power3', 'power4', 'sine', 'expo', 'circ', 'back', 'elastic', 'bounce']
 const GSAP_EASES = ['none', ...EASE_FAMILIES.flatMap((f) => [`${f}.in`, `${f}.out`, `${f}.inOut`])]
 
@@ -100,10 +101,15 @@ function isCssEase(value: string): boolean {
   return /^(linear|ease|ease-in|ease-out|ease-in-out)$|cubic-bezier\(|steps\(/.test(value.trim())
 }
 
-function isEaseLeaf(leaf: TokenLeaf): boolean {
+function isEaseLeaf(leaf: TokenLeaf, declared: DeclaredEase[]): boolean {
   if (typeof leaf.value !== 'string') return false
   const key = leaf.path[leaf.path.length - 1]?.toLowerCase() ?? ''
-  return key.includes('ease') || GSAP_EASES.includes(leaf.value) || isCssEase(leaf.value)
+  return (
+    key.includes('ease') ||
+    GSAP_EASES.includes(leaf.value) ||
+    isCssEase(leaf.value) ||
+    declared.some((e) => e.name === leaf.value)
+  )
 }
 
 // Inlined lucide icons — same no-dep policy as before (an icon library isn't
@@ -240,11 +246,32 @@ function breakpointIcon(name: string): ReactNode | null {
   return null
 }
 
-function EaseControl({ value, onChange }: { value: string; onChange: (v: string) => void }) {
+function EaseControl({
+  value,
+  declared,
+  onChange,
+}: {
+  value: string
+  declared: DeclaredEase[]
+  onChange: (v: string) => void
+}) {
   // The flavor is frozen at mount — picking a preset must not flip the list
-  // out from under the open select.
+  // out from under the open select. A declared name is GSAP-flavored (that's
+  // the spelling GSAP resolves); the same curve reaches a CSS field as its
+  // cubic-bezier, so the two spellings never cross backends.
   const [mode] = useState<'css' | 'gsap'>(() => (isCssEase(value) ? 'css' : 'gsap'))
-  const catalog = mode === 'css' ? CSS_EASES : GSAP_EASES.map((e) => ({ label: e, value: e }))
+  // Config-declared curves lead both catalogs, labeled with their config
+  // name — the CSS value differs, the name the author reads doesn't.
+  const declaredOptions = declared.map((e) => ({
+    label: e.name,
+    value: mode === 'css' ? e.css : e.name,
+  }))
+  const base = mode === 'css' ? CSS_EASES : GSAP_EASES.map((e) => ({ label: e, value: e }))
+  // A declared curve can be byte-identical to a preset (swoosh ==
+  // expo.out's bezier); keep the declared one — it carries the author's
+  // name — and drop the duplicate, which would collide as a React key.
+  const declaredValues = new Set(declaredOptions.map((o) => o.value))
+  const catalog = [...declaredOptions, ...base.filter((o) => !declaredValues.has(o.value))]
   const options = catalog.some((o) => o.value === value)
     ? catalog
     : [{ label: value, value }, ...catalog]
@@ -331,11 +358,13 @@ function TextControl({ value, onChange }: { value: string; onChange: (v: string)
 function LeafRow({
   leaf,
   dirty,
+  declared,
   onChange,
   onReset,
 }: {
   leaf: TokenLeaf
   dirty: boolean
+  declared: DeclaredEase[]
   onChange: (value: TokenValue) => void
   onReset: () => void
 }) {
@@ -365,7 +394,7 @@ function LeafRow({
       </div>
     )
   }
-  const isEase = typeof leaf.value === 'string' && isEaseLeaf(leaf)
+  const isEase = typeof leaf.value === 'string' && isEaseLeaf(leaf, declared)
   return (
     <div className={rowClass} title={leaf.path.join('.')}>
       <div className="relative flex h-9 min-w-0 flex-1 items-center rounded-full border border-border bg-background">
@@ -378,7 +407,7 @@ function LeafRow({
           </span>
         ) : isEase ? (
           <>
-            <EaseControl value={leaf.value as string} onChange={onChange} />
+            <EaseControl value={leaf.value as string} declared={declared} onChange={onChange} />
             <ChevronDownIcon className="pointer-events-none absolute right-3 text-muted-foreground" />
           </>
         ) : (
@@ -477,12 +506,14 @@ function GroupSection({
   group,
   dirtySet,
   query,
+  declared,
   onChange,
   onReset,
 }: {
   group: TokenGroup
   dirtySet: Set<string>
   query: string
+  declared: DeclaredEase[]
   onChange: (leaf: TokenLeaf, value: TokenValue) => void
   onReset: (leaf: TokenLeaf) => void
 }) {
@@ -555,6 +586,7 @@ function GroupSection({
             key={key}
             leaf={leaf}
             dirty={dirtySet.has(key)}
+            declared={declared}
             onChange={(value) => onChange(leaf, value)}
             onReset={() => onReset(leaf)}
           />
@@ -636,6 +668,8 @@ function Overlay() {
   const hiddenCount = allFiles.length - allFiles.filter((f) => inScope(f.file)).length
 
   const bpNames = handle.viewport.names()
+  // Guarded: an older `modulato` next to a newer overlay has no ease channel.
+  const declaredEases = handle.eases?.list() ?? []
   const overrideKeys = new Set([...bpNames, 'reduced'])
   const blockOrder = ['base', ...bpNames, 'reduced']
 
@@ -868,6 +902,7 @@ function Overlay() {
                         group={group}
                         dirtySet={dirtySet}
                         query={query}
+                        declared={declaredEases}
                         onChange={(leaf, value) => {
                           handle.tokens.set(file, leaf.path, value)
                           queueReplay()

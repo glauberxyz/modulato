@@ -28,7 +28,8 @@ export default motion({
       y: 64,
       duration: 0.9,
       stagger: 0.08,
-      ease: 'expo.out',
+      // A curve declared in modulato.config.ts — GSAP resolves it by name.
+      ease: 'swoosh',
       phone: { y: 28, duration: 0.7, stagger: 0.05, at: 0.35 },
       reduced: { y: 0, duration: 0, stagger: 0, at: 0 },
     },

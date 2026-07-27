@@ -24,6 +24,10 @@ non-interactive and JSON-friendly — prefer it over doing things by hand:
 - Animation numbers belong in `motion.ts` token modules (`motion({...})`),
   not hardcoded in animation code — that's what makes them tweakable live
   (dev overlay ✦ motion) and editable via `set_motion_tokens` (MCP).
+- A **custom easing curve** is declared ONCE in `modulato.config.ts` under
+  `eases` (a `cubic-bezier()` string), then used in tokens by name in GSAP
+  files (`ease: 'swoosh'`) and as the cubic-bezier in transition files (WAAPI
+  only speaks CSS). Never register a CustomEase by hand.
 - The persistent shell (menu, marker) lives in `app.tsx` outside
   `<PageOutlet/>`; it reacts to `useRoute()` / `useNavigation()`.
 

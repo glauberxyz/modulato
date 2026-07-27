@@ -18,6 +18,12 @@ registration); animation numbers live in `motion.ts` token modules;
 transitions are `transitions/<from>__<to>.ts`; the persistent shell lives in
 `app.tsx` outside `<PageOutlet/>`.
 
+Custom easing curves are declared ONCE in `modulato.config.ts` under `eases`
+(`swoosh: 'cubic-bezier(0.62, 0.05, 0.01, 0.99)'`) — never register a GSAP
+CustomEase by hand. Use them in tokens by name in GSAP files (`ease:
+'swoosh'`) and as the cubic-bezier in transition files (WAAPI only speaks
+CSS); the Tweak overlay writes the right spelling for you.
+
 Design tokens mirror motion tokens: colors/fonts are CSS variables in
 `styles/tokens.scss` (new color = add a variable there FIRST), and every
 text style is a mixin in `styles/typography.scss` (pages `@use` and
