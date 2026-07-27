@@ -178,6 +178,9 @@ function PlayIcon(props: React.SVGProps<SVGSVGElement>) {
   )
 }
 
+/** What Loop replays — the Replay button most recently pressed. */
+type LoopTarget = 'intro' | 'shell' | 'motions'
+
 const RING_R = 10
 const RING_C = 2 * Math.PI * RING_R
 
@@ -631,10 +634,14 @@ function Overlay() {
     replayTimer.current = setTimeout(() => handle?.replayMotions(), 150)
   }, [handle])
 
-  // Loop mode: replay the current page's intro back-to-back. Each cycle's
-  // wall time is measured and drives the NEXT cycle's progress ring — intro
-  // durations are deterministic, so from the second cycle on the ring tracks
-  // the real intro+gap span (including slow-mo, which stretches wall time).
+  // Loop mode: replay one target back-to-back. Which target is whichever
+  // Replay button you press while Loop is on — pressing Shell with Loop on
+  // means "loop the shell intro", not "play it once under a looping page
+  // intro" (that read as the button being dead). Each cycle's wall time is
+  // measured and drives the NEXT cycle's progress ring: durations are
+  // deterministic, so from the second cycle on the ring tracks the real
+  // span (including slow-mo, which stretches wall time).
+  const [loopTarget, setLoopTarget] = useState<LoopTarget>('intro')
   const [cycle, setCycle] = useState<{ ms: number | null; n: number }>({ ms: null, n: 0 })
   useEffect(() => {
     if (!loop || !handle) return undefined
@@ -646,7 +653,13 @@ function Overlay() {
         n += 1
         setCycle({ ms: prev, n })
         const t0 = performance.now()
-        await handle.replayIntro()
+        if (loopTarget === 'shell') await handle.replayShellIntro()
+        else if (loopTarget === 'motions') {
+          // replayMotions() just re-creates the contexts and returns; the
+          // animations it starts own their own timing, so pace the cycle.
+          handle.replayMotions()
+          await new Promise((r) => setTimeout(r, 1000))
+        } else await handle.replayIntro()
         await new Promise((r) => setTimeout(r, 500))
         prev = performance.now() - t0
       }
@@ -655,7 +668,13 @@ function Overlay() {
     return () => {
       alive = false
     }
-  }, [loop, handle])
+  }, [loop, handle, loopTarget])
+
+  // With Loop on a press re-aims the loop; with it off it fires once.
+  const onReplay = (target: LoopTarget, run: () => void | Promise<void>) => () => {
+    if (loop) setLoopTarget(target)
+    else void run()
+  }
 
   if (!handle) return null
   const allFiles = handle.tokens.list()
@@ -721,17 +740,29 @@ function Overlay() {
               </label>
             </div>
             <div className="flex gap-1.5">
-              {/* Loop replays the page intro only — the ring marks just the
-                  button that is actually looping. */}
-              <Button size="sm" className="h-9 flex-1 rounded-full text-xs" onClick={() => void handle.replayIntro()}>
-                {loop ? <LoopRingIcon ms={cycle.ms} n={cycle.n} /> : <PlayIcon className="size-2.5" />} Intro
-              </Button>
-              <Button size="sm" className="h-9 flex-1 rounded-full text-xs" onClick={() => void handle.replayShellIntro()}>
-                <PlayIcon className="size-2.5" /> Shell
-              </Button>
-              <Button size="sm" className="h-9 flex-1 rounded-full text-xs" onClick={() => handle.replayMotions()}>
-                <PlayIcon className="size-2.5" /> Motions
-              </Button>
+              {/* The ring marks the button the loop is currently aimed at. */}
+              {(
+                [
+                  ['intro', 'Intro', () => handle.replayIntro()],
+                  ['shell', 'Shell', () => handle.replayShellIntro()],
+                  ['motions', 'Motions', () => handle.replayMotions()],
+                ] as Array<[LoopTarget, string, () => void | Promise<void>]>
+              ).map(([target, label, run]) => (
+                <Button
+                  key={target}
+                  size="sm"
+                  className="h-9 flex-1 rounded-full text-xs"
+                  title={loop ? `loop ${label.toLowerCase()}` : `replay ${label.toLowerCase()}`}
+                  onClick={onReplay(target, run)}
+                >
+                  {loop && loopTarget === target ? (
+                    <LoopRingIcon ms={cycle.ms} n={cycle.n} />
+                  ) : (
+                    <PlayIcon className="size-2.5" />
+                  )}{' '}
+                  {label}
+                </Button>
+              ))}
             </div>
           </div>
 
