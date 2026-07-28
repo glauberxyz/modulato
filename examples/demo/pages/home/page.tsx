@@ -62,7 +62,8 @@ export default function Home({ chapters }: { chapters: Chapter[] }) {
         </p>
         <p className="col-right home__colophon">
           Every number on this site is a motion token: editable live in the dev
-          overlay, or by an agent over MCP.
+          overlay, or by an agent over MCP. The type and colour it is built
+          from are set out in the <a href="/styles">specimen</a>.
         </p>
       </footer>
     </main>

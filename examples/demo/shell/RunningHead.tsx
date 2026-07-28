@@ -8,6 +8,7 @@ const TITLES: Record<string, string> = {
   angles: 'III · Four Screens, One Sheet',
   gpu: 'IV · The Press on the GPU',
   darkroom: 'Darkroom',
+  styles: 'Type & Colour',
 }
 
 /**
