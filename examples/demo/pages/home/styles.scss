@@ -21,8 +21,7 @@
 }
 
 .home__claim {
-  @include type.title;
-  font-size: clamp(40px, 7.4vw, 104px);
+  @include type.display;
   margin: 0;
   // Each line is wrapped by the intro for the stagger.
   .line {

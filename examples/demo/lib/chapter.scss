@@ -18,14 +18,13 @@
 }
 
 .chapter__title {
-  @include type.title;
-  font-size: clamp(44px, 9vw, 132px);
+  @include type.display;
   margin: 0;
 }
 
 .chapter__lede {
-  @include type.body;
-  max-width: 34ch;
+  @include type.body-large;
+  max-width: 30ch;
   margin-top: 4vh;
 }
 

@@ -66,8 +66,8 @@
 }
 
 .plate__note {
-  @include type.body;
-  max-width: 54ch;
+  @include type.body-large;
+  max-width: 44ch;
 }
 
 .plate__zoom {

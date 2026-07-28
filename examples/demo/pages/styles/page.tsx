@@ -12,8 +12,8 @@ const TYPE_ROLES = [
   {
     key: 'display',
     name: 'Title — display',
-    use: 'Chapter openers and the index claim. Not a fourth size: the Title style, scaled fluidly with the viewport.',
-    scale: 'clamp(44px, 9vw, 132px)',
+    use: 'Chapter openers and the index claim. The Title style, scaled fluidly with the viewport rather than set at a size of its own.',
+    scale: 'clamp(44px, 9vw, 90px)',
     sample: 'Four Screens',
   },
   {
@@ -23,9 +23,16 @@ const TYPE_ROLES = [
     sample: 'The Binary Press',
   },
   {
+    key: 'body-large',
+    name: 'Body — large',
+    use: 'Ledes and opening paragraphs: the step between a title and running prose. Tighter leading, since the lines are longer.',
+    sample:
+      'The trick is not tonal. It is spatial: break the image into dots of varying size.',
+  },
+  {
     key: 'body',
     name: 'Body',
-    use: 'All prose. Measure does the work that a second size would.',
+    use: 'All running prose. Measure does the work that a second size would.',
     sample:
       'A printing press is a binary device. It carries one film of ink at one density.',
   },
@@ -107,7 +114,7 @@ export default function Styles() {
         </div>
         <h1 className="styles__title col-full">Type &amp; Colour</h1>
         <p className="styles__lede col-stack-b">
-          Three type styles and two surfaces. Everything on this site is built
+          Four type styles and two surfaces. Everything on this site is built
           from what is on this page — the values below are read from the live
           stylesheet, so they cannot drift from what you are looking at.
         </p>
@@ -117,9 +124,10 @@ export default function Styles() {
       <section className="grid styles__section">
         <h2 className="col-aside styles__h">Typography</h2>
         <p className="col-text styles__note">
-          Reading comfort comes from measure and leading, never from another
-          size. Franklin Gothic sets the titles and the small copy; Adobe
-          Garamond sets every line of prose.
+          Franklin Gothic sets the titles and the small copy; Adobe Garamond
+          sets every line of prose. Display is the Title style scaled with the
+          viewport, not a size of its own — so the system is really two faces,
+          four steps.
         </p>
       </section>
 

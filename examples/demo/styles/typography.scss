@@ -1,6 +1,5 @@
-// Three type styles. That is the whole system — reading comfort comes from
-// measure and leading, never from another size. Pages @use this file and
-// @include; they never declare font properties directly.
+// The type system. Pages @use this file and @include; they never declare
+// font properties directly, so changing type here changes it everywhere.
 
 // Franklin Gothic, heavy. Chapter titles, numerals, pull quotes.
 @mixin title {
@@ -12,6 +11,14 @@
   text-wrap: balance;
 }
 
+// The Title style at display scale — chapter openers and the index claim.
+// Not a separate style: same face and weight, sized fluidly. Declared once
+// here so the ceiling is a single edit.
+@mixin display {
+  @include title;
+  font-size: clamp(44px, 9vw, 90px);
+}
+
 // Adobe Garamond. All prose.
 @mixin body {
   font-family: var(--font-serif);
@@ -19,6 +26,14 @@
   font-size: 24px;
   line-height: 1.32;
   letter-spacing: -0.01em;
+}
+
+// Garamond, larger. Ledes and opening paragraphs — the step between a title
+// and running prose. Tighter leading than body, since the lines are longer.
+@mixin body-large {
+  @include body;
+  font-size: 30px;
+  line-height: 1.2;
 }
 
 // Franklin Gothic, regular. Captions, figure refs, running heads, metadata,
