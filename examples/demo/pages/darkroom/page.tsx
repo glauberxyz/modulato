@@ -39,8 +39,6 @@ export default function Darkroom() {
 
   return (
     <main className="dark-room is-dark" data-page="darkroom">
-      <HalftoneScene uniforms={uniforms} scene={scene} className="dark-room__scene" />
-
       <div className="dark-room__panel" data-lenis-prevent="">
         <header className="dark-room__head">
           <span className="label">Darkroom</span>
@@ -115,6 +113,10 @@ export default function Darkroom() {
           numbers the dev overlay edits and an agent can set over MCP. The preset
           is in the URL, so this exact screen is a link.
         </p>
+      </div>
+
+      <div className="dark-room__stage">
+        <HalftoneScene uniforms={uniforms} scene={scene} className="dark-room__scene" />
       </div>
     </main>
   )
