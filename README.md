@@ -3,6 +3,11 @@
   <img src="./docs/brand/banner-light.png" alt="Modulato" width="100%">
 </picture>
 
+[![npm](https://img.shields.io/npm/v/modulato?style=flat-square&color=0a0a0a&labelColor=555)](https://www.npmjs.com/package/modulato)
+[![downloads](https://img.shields.io/npm/dm/modulato?style=flat-square&color=0a0a0a&labelColor=555)](https://www.npmjs.com/package/modulato)
+[![build](https://img.shields.io/github/actions/workflow/status/glauberxyz/modulato/publish.yml?branch=main&style=flat-square&color=0a0a0a&labelColor=555)](https://github.com/glauberxyz/modulato/actions/workflows/publish.yml)
+[![license](https://img.shields.io/npm/l/modulato?style=flat-square&color=0a0a0a&labelColor=555)](./LICENSE)
+
 A visual-design-first React framework for making websites, leveraging
 custom transitions and animations. Built for humans and LLMs alike.
 
@@ -28,16 +33,16 @@ Full reference: [docs/MODULATO.md](./docs/MODULATO.md) (ships inside every scaff
 
 ## Packages
 
-| Package | What |
-|---|---|
-| `modulato` | runtime (router, hooks, tokens) + the `modulato` CLI |
-| `@modulato/vite` | the build: routing manifest, SSR, prod builds, Vercel output |
-| `@modulato/server` | React SSR + server-action runner |
-| `@modulato/gsap` | `useMotion` — page-scoped GSAP with auto-revert |
-| `@modulato/tweak` | dev overlay + token writeback (Tweak Mode) |
-| `@modulato/content-local` | local JSON content adapter |
-| `@modulato/mcp` | MCP server for agents |
-| `create-modulato` | scaffolder |
+| Package | Version | What |
+|---|---|---|
+| `modulato` | [![npm](https://img.shields.io/npm/v/modulato?style=flat-square&color=0a0a0a&labelColor=555&label=)](https://www.npmjs.com/package/modulato) | runtime (router, hooks, tokens) + the `modulato` CLI |
+| `@modulato/vite` | [![npm](https://img.shields.io/npm/v/@modulato/vite?style=flat-square&color=0a0a0a&labelColor=555&label=)](https://www.npmjs.com/package/@modulato/vite) | the build: routing manifest, SSR, prod builds, Vercel output |
+| `@modulato/server` | [![npm](https://img.shields.io/npm/v/@modulato/server?style=flat-square&color=0a0a0a&labelColor=555&label=)](https://www.npmjs.com/package/@modulato/server) | React SSR + server-action runner |
+| `@modulato/gsap` | [![npm](https://img.shields.io/npm/v/@modulato/gsap?style=flat-square&color=0a0a0a&labelColor=555&label=)](https://www.npmjs.com/package/@modulato/gsap) | `useMotion` — page-scoped GSAP with auto-revert |
+| `@modulato/tweak` | [![npm](https://img.shields.io/npm/v/@modulato/tweak?style=flat-square&color=0a0a0a&labelColor=555&label=)](https://www.npmjs.com/package/@modulato/tweak) | dev overlay + token writeback (Tweak Mode) |
+| `@modulato/content-local` | [![npm](https://img.shields.io/npm/v/@modulato/content-local?style=flat-square&color=0a0a0a&labelColor=555&label=)](https://www.npmjs.com/package/@modulato/content-local) | local JSON content adapter |
+| `@modulato/mcp` | [![npm](https://img.shields.io/npm/v/@modulato/mcp?style=flat-square&color=0a0a0a&labelColor=555&label=)](https://www.npmjs.com/package/@modulato/mcp) | MCP server for agents |
+| `create-modulato` | [![npm](https://img.shields.io/npm/v/create-modulato?style=flat-square&color=0a0a0a&labelColor=555&label=)](https://www.npmjs.com/package/create-modulato) | scaffolder |
 
 ## Development
 
