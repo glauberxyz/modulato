@@ -1,6 +1,6 @@
 {
   "name": "@modulato/gsap",
-  "version": "0.1.2",
+  "version": "0.2.0",
   "description": "GSAP glue for Modulato: page-scoped motion hooks with auto-revert.",
   "license": "MIT",
   "homepage": "https://github.com/glauberxyz/modulato#readme",
