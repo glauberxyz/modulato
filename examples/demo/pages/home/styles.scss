@@ -1,54 +1,190 @@
+@use '../../styles/typography' as type;
+
 .home {
-  padding: 10rem 6vw 6rem;
+  position: relative;
+  min-height: 100vh;
+  padding-bottom: 12vh;
+  overflow: clip;
+}
 
-  &__hero {
-    max-width: 60rem;
-  }
+.home__scene {
+  position: fixed;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  z-index: 0;
+  pointer-events: none;
+}
 
-  &__headline {
-    font-size: clamp(3rem, 9vw, 8rem);
-    line-height: 0.95;
-    letter-spacing: -0.03em;
-    margin: 0 0 2rem;
-  }
+// The screen is the subject, but the copy still has to read. A scrim sits
+// between the canvas and the text.
+.home::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  background: linear-gradient(
+    to bottom,
+    rgba(20, 17, 15, 0.25) 0%,
+    rgba(20, 17, 15, 0.55) 22%,
+    rgba(20, 17, 15, 0.93) 40%,
+    rgba(20, 17, 15, 1) 58%
+  );
+}
 
-  &__intro {
-    max-width: 34rem;
-    font-size: 1.125rem;
-    line-height: 1.6;
-    color: var(--muted);
-  }
+.home__hero,
+.home__index,
+.home__foot {
+  position: relative;
+  z-index: 1;
+}
 
-  &__grid {
-    margin-top: 5rem;
-    display: grid;
-    grid-template-columns: repeat(3, 1fr);
-    gap: 1.5rem;
+.home__hero {
+  padding-top: 26vh;
+  padding-bottom: 18vh;
+  align-items: end;
+}
 
-    @media (max-width: 767px) {
-      grid-template-columns: 1fr;
-    }
-  }
-
-  &__card {
+.home__claim {
+  @include type.title;
+  font-size: clamp(40px, 7.4vw, 104px);
+  margin: 0;
+  // Each line is wrapped by the intro for the stagger.
+  .line {
     display: block;
-    text-decoration: none;
-    color: inherit;
+    overflow: hidden;
+  }
+  .line span {
+    display: block;
+  }
+}
 
-    img {
-      width: 100%;
-      aspect-ratio: 3 / 2;
-      object-fit: cover;
-      border-radius: 0.5rem;
-      display: block;
-    }
+.home__lede p {
+  margin-bottom: 1em;
+  max-width: 46ch;
+}
 
-    span {
-      display: inline-block;
-      margin-top: 0.75rem;
-      font-size: 0.875rem;
-      text-transform: uppercase;
-      letter-spacing: 0.08em;
-    }
+.home__note {
+  @include type.small;
+  color: var(--muted);
+  max-width: 44ch;
+}
+
+// ── the contents list ────────────────────────────────────────────────
+.home__index {
+  row-gap: 0;
+}
+
+.home__indexhead {
+  display: flex;
+  justify-content: space-between;
+  padding-bottom: 12px;
+  border-bottom: 1px solid var(--rule);
+}
+
+.home__entry {
+  display: grid;
+  grid-template-columns: 3ch minmax(0, 5fr) minmax(0, 7fr) auto;
+  gap: var(--gutter);
+  align-items: baseline;
+  padding: 26px 0;
+  border-bottom: 1px solid var(--rule);
+  text-decoration: none;
+  position: relative;
+
+  &::after {
+    content: '';
+    position: absolute;
+    inset: 0 -12px;
+    background: var(--ink);
+    opacity: 0;
+    z-index: -1;
+    transition: opacity 0.35s ease;
+  }
+
+  &:hover .home__entrytitle {
+    transform: translateX(10px);
+  }
+  &:hover .home__dot {
+    transform: scale(2.4);
+  }
+}
+
+.home__numeral {
+  @include type.small;
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
+}
+
+.home__entrytitle {
+  @include type.title;
+  font-size: clamp(26px, 3.2vw, 40px);
+  transition: transform 0.45s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.home__abstract {
+  @include type.small;
+  color: var(--muted);
+  max-width: 46ch;
+}
+
+.home__dot {
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  background: currentColor;
+  justify-self: end;
+  align-self: center;
+  transition: transform 0.45s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+// The only colour on the index: one dot per chapter, in that chapter's
+// plate. Chapter III is where they get explained.
+.home__dot--c {
+  background: var(--plate-c);
+}
+.home__dot--m {
+  background: var(--plate-m);
+}
+.home__dot--y {
+  background: var(--plate-y);
+}
+.home__dot--k {
+  background: var(--dark-ink);
+}
+
+.home__entry--alt .home__entrytitle {
+  font-weight: 400;
+}
+
+.home__foot {
+  padding-top: 14vh;
+}
+
+.home__colophon {
+  @include type.small;
+  color: var(--muted);
+  max-width: 40ch;
+}
+
+@media (max-width: 767px) {
+  .home__hero {
+    padding-top: 22vh;
+  }
+  .home__entry {
+    grid-template-columns: 3ch 1fr auto;
+  }
+  .home__abstract {
+    grid-column: 2 / 3;
+    margin-top: 8px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .home__entrytitle,
+  .home__dot,
+  .home__entry::after {
+    transition: none;
   }
 }

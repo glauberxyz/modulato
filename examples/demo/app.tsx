@@ -1,15 +1,14 @@
 import { PageOutlet } from 'modulato'
-import { Menu } from './shell/Menu'
-import { Marker } from './shell/Marker'
-import { Scene } from './shell/Scene'
+import { RunningHead } from './shell/RunningHead'
+import { PlateMarker } from './shell/PlateMarker'
 import './styles/global.scss'
 
 export default function App() {
   return (
     <>
-      <Menu />
-      <Marker />
-      <Scene />
+      {/* The shell: mounted once, never unmounts, reacts to the route. */}
+      <RunningHead />
+      <PlateMarker />
       <PageOutlet />
     </>
   )

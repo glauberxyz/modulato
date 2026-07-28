@@ -6,51 +6,53 @@ import tokens from './motion'
 gsap.registerPlugin(SplitText)
 
 /**
- * First-load intro for /: masked line-by-line text reveal on the headline
- * (fonts are guaranteed loaded — the framework awaits document.fonts.ready
- * before any intro runs), then the intro copy and the card grid stagger in.
- * All numbers live in ./motion.ts — tweak them live in the dev overlay.
+ * First load: the claim sets line by line, like a page coming off the press.
+ * Numbers live in ./motion.ts — every one of them is tweakable live.
  */
 export default intro({
   async run({ element }) {
-    // Resolved at run time: the current breakpoint's (and reduced-motion)
-    // overrides are already merged in.
-    const { headline, copy, cards } = resolveTokens(tokens).intro
-    const headlineEl = element.querySelector<HTMLElement>('.home__headline')
+    const { claim, lede, entries } = resolveTokens(tokens).intro
+    const headline = element.querySelector<HTMLElement>('.home__claim')
     const tl = gsap.timeline()
 
-    let split: SplitText | null = null
-    if (headlineEl) {
-      split = new SplitText(headlineEl, { type: 'lines', mask: 'lines' })
+    if (headline) {
+      const split = new SplitText(headline, { type: 'lines', linesClass: 'line' })
+      // Each line gets an inner span so it can slide inside its own mask.
+      split.lines.forEach((line) => {
+        const inner = document.createElement('span')
+        inner.append(...line.childNodes)
+        line.append(inner)
+      })
       tl.from(
-        split.lines,
+        split.lines.map((l) => l.firstElementChild),
         {
-          yPercent: headline.yPercent,
-          duration: headline.duration,
-          stagger: headline.stagger,
-          ease: headline.ease,
+          yPercent: claim.yPercent,
+          duration: claim.duration,
+          stagger: claim.stagger,
+          ease: claim.ease,
         },
         0,
       )
     }
+
     tl.from(
-      element.querySelector('.home__intro'),
-      { y: copy.y, opacity: 0, duration: copy.duration, ease: copy.ease },
-      copy.at,
+      element.querySelectorAll('.home__lede p'),
+      { y: lede.y, opacity: 0, duration: lede.duration, ease: lede.ease, stagger: 0.08 },
+      lede.at,
     )
+
     tl.from(
-      element.querySelectorAll('.home__card'),
+      element.querySelectorAll('.home__entry, .home__indexhead'),
       {
-        y: cards.y,
+        y: entries.y,
         opacity: 0,
-        duration: cards.duration,
-        stagger: cards.stagger,
-        ease: cards.ease,
+        duration: entries.duration,
+        stagger: entries.stagger,
+        ease: entries.ease,
       },
-      cards.at,
+      entries.at,
     )
 
     await tl.then()
-    split?.revert()
   },
 })

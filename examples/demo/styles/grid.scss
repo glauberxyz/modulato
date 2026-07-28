@@ -1,0 +1,59 @@
+// The 12-column grid. Every block on the site is placed by column span —
+// the dynamism in the layouts comes from WHICH columns a block occupies,
+// not from varying type sizes.
+//
+//   <div class="grid">
+//     <figure class="col-wide">…</figure>     2 / 9
+//     <p class="col-text">…</p>               7 / 12
+//   </div>
+
+@mixin grid {
+  display: grid;
+  grid-template-columns: repeat(var(--cols), 1fr);
+  column-gap: var(--gutter);
+  padding-inline: var(--margin);
+}
+
+.grid {
+  @include grid;
+}
+
+// Named spans — the vocabulary from the content plan.
+.col-full {
+  grid-column: 1 / -1;
+}
+.col-wide {
+  grid-column: 2 / 9;
+}
+.col-text {
+  grid-column: 7 / 13;
+}
+.col-aside {
+  grid-column: 2 / 5;
+}
+.col-left {
+  grid-column: 1 / 7;
+}
+.col-right {
+  grid-column: 7 / 13;
+}
+// The offset stack — two blocks that overlap by a column.
+.col-stack-a {
+  grid-column: 3 / 9;
+}
+.col-stack-b {
+  grid-column: 6 / 12;
+}
+
+@media (max-width: 767px) {
+  .col-full,
+  .col-wide,
+  .col-text,
+  .col-aside,
+  .col-left,
+  .col-right,
+  .col-stack-a,
+  .col-stack-b {
+    grid-column: 1 / -1;
+  }
+}

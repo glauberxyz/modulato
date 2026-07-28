@@ -1,0 +1,39 @@
+// Three type styles. That is the whole system — reading comfort comes from
+// measure and leading, never from another size. Pages @use this file and
+// @include; they never declare font properties directly.
+
+// Franklin Gothic, heavy. Chapter titles, numerals, pull quotes.
+@mixin title {
+  font-family: var(--font-sans);
+  font-weight: 900;
+  font-size: 40px;
+  line-height: 0.95;
+  letter-spacing: -0.03em;
+  text-wrap: balance;
+}
+
+// Adobe Garamond. All prose.
+@mixin body {
+  font-family: var(--font-serif);
+  font-weight: 400;
+  font-size: 24px;
+  line-height: 1.32;
+  letter-spacing: -0.01em;
+}
+
+// Franklin Gothic, regular. Captions, figure refs, running heads, metadata,
+// footnotes, nav — the layer that does most of the editorial work.
+@mixin small {
+  font-family: var(--font-sans);
+  font-weight: 400;
+  font-size: 14px;
+  line-height: 1.25;
+  letter-spacing: 0;
+}
+
+// Small copy, tracked out — labels and running heads only.
+@mixin label {
+  @include small;
+  text-transform: uppercase;
+  letter-spacing: 0.14em;
+}

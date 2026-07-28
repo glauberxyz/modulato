@@ -4,13 +4,112 @@
 // at the declaration site, not on re-exports.)
 declare module 'modulato/config' {
   interface ModulatoContent {
-    projects: {
+    chapters: Array<{
+      slug: string
+      numeral: string
+      title: string
+      plate: string
+      abstract: string
+      lede: string
+      movements: Array<{
+        kind: string
+        heading: string
+        body: string[]
+      } | {
+        kind: string
+        figure: string
+        body: string[]
+      } | {
+        kind: string
+        heading: string
+        body: string[]
+        note: string
+      }>
+      sources: {
+        text: string
+        url: string
+      }[]
+    } | {
+      slug: string
+      numeral: string
+      title: string
+      plate: string
+      abstract: string
+      lede: string
+      movements: Array<{
+        kind: string
+        heading: string
+        body: string[]
+      } | {
+        kind: string
+        figure: string
+        body: string[]
+      } | {
+        kind: string
+        diagram: string
+        heading: string
+        body: string[]
+      }>
+      sources: {
+        text: string
+        url: string
+      }[]
+    } | {
+      slug: string
+      numeral: string
+      title: string
+      plate: string
+      abstract: string
+      lede: string
+      movements: Array<{
+        kind: string
+        heading: string
+        body: string[]
+      } | {
+        kind: string
+        diagram: string
+        heading: string
+        body: string[]
+      } | {
+        kind: string
+        figure: string
+        body: string[]
+      }>
+      sources: {
+        text: string
+        url: string
+      }[]
+    } | {
+      slug: string
+      numeral: string
+      title: string
+      plate: string
+      abstract: string
+      lede: string
+      movements: Array<{
+        kind: string
+        heading: string
+        body: string[]
+      } | {
+        kind: string
+        diagram: string
+        heading: string
+        body: string[]
+      }>
+      sources: {
+        text: string
+        url: string
+      }[]
+    }>
+    figures: {
       slug: string
       title: string
-      year: number
-      color: string
-      image: string
-      description: string
+      credit: string
+      year: string
+      license: string
+      source: string
+      chapter: string
+      note: string
     }[]
   }
 }

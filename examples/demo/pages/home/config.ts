@@ -1,15 +1,14 @@
 import type { LoadArgs } from 'modulato'
+import type { Content } from '../../lib/content'
 
 export function load({ content }: LoadArgs) {
-  return { featured: content.projects }
+  return { chapters: (content as unknown as Content).chapters }
 }
-
-// Scroll memory: returning to the grid via a link lands where you left it.
-export const scroll = { restore: true }
 
 export function meta() {
   return {
-    title: 'Modulato Demo — Motion is the message',
-    description: 'A three-page site proving Modulato: transitions, persistent elements, SSR.',
+    title: 'Halftone — how a printed photograph is made of dots',
+    description:
+      'A mini-site about the halftone process: where it came from, how the four screens work, and how it becomes a fragment shader. Built with Modulato.',
   }
 }

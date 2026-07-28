@@ -1,0 +1,175 @@
+@use '../styles/typography' as type;
+
+.chapter {
+  padding-bottom: 14vh;
+}
+
+.chapter__head {
+  padding-top: 22vh;
+  padding-bottom: 8vh;
+  row-gap: 18px;
+}
+
+.chapter__meta {
+  display: flex;
+  justify-content: space-between;
+  padding-bottom: 12px;
+  border-bottom: 1px solid var(--ink);
+}
+
+.chapter__title {
+  @include type.title;
+  font-size: clamp(44px, 9vw, 132px);
+  margin: 0;
+}
+
+.chapter__lede {
+  @include type.body;
+  max-width: 34ch;
+  margin-top: 4vh;
+}
+
+// ── movements ────────────────────────────────────────────────────────
+.movement {
+  padding-block: 6vh;
+  row-gap: 24px;
+  align-items: start;
+}
+
+.movement__h {
+  @include type.title;
+  font-size: clamp(24px, 2.4vw, 32px);
+  position: sticky;
+  top: 88px;
+
+  &--small {
+    @include type.label;
+    position: static;
+    color: var(--muted);
+    margin-bottom: 10px;
+  }
+}
+
+.movement__p {
+  @include type.body;
+  max-width: 62ch;
+
+  & + & {
+    margin-top: 0.85em;
+    text-indent: 1.6em;
+  }
+}
+
+.movement__note {
+  @include type.small;
+  color: var(--muted);
+  margin-top: 12px;
+  padding-top: 10px;
+  border-top: 1px solid var(--rule);
+}
+
+.chapter__aside {
+  border-top: 2px solid var(--ink);
+  padding-top: 14px;
+
+  .movement__p {
+    @include type.small;
+    max-width: 52ch;
+    text-indent: 0;
+  }
+}
+
+// ── figures ──────────────────────────────────────────────────────────
+.movement--figure figure {
+  margin: 0;
+}
+
+.movement__figlink {
+  display: block;
+  overflow: hidden;
+  background: var(--rule);
+
+  img {
+    width: 100%;
+    transition: scale 0.7s cubic-bezier(0.16, 1, 0.3, 1);
+  }
+
+  &:hover img {
+    scale: 1.03;
+  }
+}
+
+.movement__cap {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin-top: 10px;
+}
+
+// ── diagrams ─────────────────────────────────────────────────────────
+.movement--diagram {
+  padding-block: 9vh;
+}
+
+.movement__diagramcopy {
+  margin-top: 32px;
+  columns: 2;
+  column-gap: var(--gutter);
+
+  .movement__p {
+    @include type.small;
+    max-width: none;
+    text-indent: 0;
+    break-inside: avoid;
+
+    & + & {
+      margin-top: 0.9em;
+    }
+  }
+}
+
+// ── sources ──────────────────────────────────────────────────────────
+.chapter__foot {
+  padding-top: 8vh;
+  margin-top: 6vh;
+  border-top: 1px solid var(--rule);
+}
+
+.chapter__sources {
+  @include type.small;
+  list-style: decimal;
+  padding-left: 1.4em;
+  color: var(--muted);
+
+  li + li {
+    margin-top: 6px;
+  }
+  a {
+    text-decoration: none;
+    border-bottom: 1px solid var(--rule);
+  }
+  a:hover {
+    color: var(--ink);
+  }
+}
+
+@media (max-width: 1023px) {
+  .movement__diagramcopy {
+    columns: 1;
+  }
+}
+
+@media (max-width: 767px) {
+  .movement__h {
+    position: static;
+  }
+  .chapter__head {
+    padding-top: 18vh;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .movement__figlink img {
+    transition: none;
+  }
+}

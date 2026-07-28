@@ -1,0 +1,81 @@
+@use '../styles/typography' as type;
+
+.plate {
+  min-height: 100vh;
+  padding-bottom: 12vh;
+}
+
+.plate__stage {
+  height: 74vh;
+  padding: 14vh var(--margin) 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  img {
+    max-height: 100%;
+    width: auto;
+    max-width: 100%;
+    object-fit: contain;
+  }
+}
+
+.plate__sheet {
+  padding-top: 6vh;
+  align-items: start;
+}
+
+.plate__meta {
+  border-top: 2px solid var(--ink);
+  padding-top: 14px;
+}
+
+.plate__title {
+  @include type.title;
+  font-size: clamp(24px, 2.6vw, 34px);
+  margin: 10px 0 18px;
+}
+
+.plate__facts {
+  @include type.small;
+  display: grid;
+  grid-template-columns: 6ch 1fr;
+  gap: 4px 12px;
+  margin: 0 0 20px;
+  color: var(--muted);
+
+  dt {
+    color: var(--muted);
+  }
+  dd {
+    margin: 0;
+    color: var(--ink);
+  }
+}
+
+.plate__back,
+.plate__source {
+  @include type.small;
+  display: inline-block;
+  text-decoration: none;
+  border-bottom: 1px solid var(--rule);
+
+  &:hover {
+    border-color: var(--ink);
+  }
+}
+
+.plate__note {
+  @include type.body;
+  max-width: 54ch;
+}
+
+.plate__zoom {
+  margin: 20px 0;
+}
+
+@media (max-width: 767px) {
+  .plate__stage {
+    height: 58vh;
+  }
+}

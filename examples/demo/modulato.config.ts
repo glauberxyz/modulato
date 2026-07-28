@@ -10,21 +10,23 @@ export default defineConfig({
     phone: '(max-width: 767px)',
     tablet: '(min-width: 768px) and (max-width: 1279px)',
   },
-  // Named curves usable in every motion.ts — by name in GSAP tokens, as the
-  // cubic-bezier in transition tokens (WAAPI only speaks CSS). Both spellings
-  // show up in the Tweak overlay's ease dropdown labeled "swoosh".
+  // One house curve, declared once. GSAP tokens name it; transition tokens
+  // hold the cubic-bezier (WAAPI only speaks CSS). See MODULATO.md §7.
   eases: {
-    swoosh: 'cubic-bezier(0.62, 0.05, 0.01, 0.99)',
+    press: 'cubic-bezier(0.16, 1, 0.3, 1)',
+    roller: 'cubic-bezier(0.62, 0.05, 0.01, 0.99)',
   },
-  // Site-wide <head> — favicon, theme-color, default OG, all SSR'd.
   head: {
+    lang: 'en',
     link: [
       { rel: 'icon', href: '/favicon.svg', type: 'image/svg+xml' },
-      { rel: 'preconnect', href: 'https://picsum.photos' },
+      { rel: 'preconnect', href: 'https://use.typekit.net', crossorigin: true },
+      // Franklin Gothic URW + Adobe Garamond Pro
+      { rel: 'stylesheet', href: 'https://use.typekit.net/ujh5gkg.css' },
     ],
     meta: [
-      { name: 'theme-color', content: '#f4f1ea' },
-      { property: 'og:site_name', content: 'Modulato Demo' },
+      { name: 'theme-color', content: '#14110f' },
+      { property: 'og:site_name', content: 'Halftone' },
       { property: 'og:type', content: 'website' },
     ],
   },
