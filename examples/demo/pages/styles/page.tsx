@@ -10,9 +10,16 @@ interface TypeSpec {
 
 const TYPE_ROLES = [
   {
+    key: 'display',
+    name: 'Title — display',
+    use: 'Chapter openers and the index claim. Not a fourth size: the Title style, scaled fluidly with the viewport.',
+    scale: 'clamp(44px, 9vw, 132px)',
+    sample: 'Four Screens',
+  },
+  {
     key: 'title',
     name: 'Title',
-    use: 'Chapter titles, numerals, pull quotes.',
+    use: 'Section headings, numerals, pull quotes. The style at its base size.',
     sample: 'The Binary Press',
   },
   {
@@ -132,7 +139,19 @@ export default function Styles() {
               <dd>{type[role.key]?.leading ?? '—'}</dd>
               <dt>Tracking</dt>
               <dd>{type[role.key]?.tracking ?? '—'}</dd>
+              {'scale' in role && (
+                <>
+                  <dt>Scale</dt>
+                  <dd className="styles__clamp">{role.scale}</dd>
+                </>
+              )}
             </dl>
+            {'scale' in role && (
+              <p className="styles__caveat">
+                Size above is measured at this window width — resize and it
+                moves.
+              </p>
+            )}
           </div>
           <div className="col-right">
             <p className={`styles__sample styles__sample--${role.key}`} data-spec={role.key}>

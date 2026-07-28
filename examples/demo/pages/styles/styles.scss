@@ -84,6 +84,20 @@
   margin-bottom: 16px;
 }
 
+.styles__clamp {
+  font-size: 12px;
+  color: var(--muted);
+}
+
+.styles__caveat {
+  @include type.small;
+  color: var(--muted);
+  max-width: 28ch;
+  margin-top: 12px;
+  padding-top: 10px;
+  border-top: 1px solid var(--rule);
+}
+
 .styles__spec {
   @include type.small;
   display: grid;
@@ -103,6 +117,11 @@
 .styles__sample {
   margin: 0;
 
+  // The chapter-opener size — the Title style, scaled with the viewport.
+  &--display {
+    @include type.title;
+    font-size: clamp(44px, 9vw, 132px);
+  }
   &--title {
     @include type.title;
   }
