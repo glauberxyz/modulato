@@ -73,9 +73,30 @@ export function HalftoneImage({
     }
   }, [src])
 
+  // A still image with unchanged uniforms produces an identical frame, so
+  // redrawing it 60 times a second is pure heat. Draw only when something
+  // actually moved — the diagrams stay live while you drag a slider and go
+  // completely idle the rest of the time.
+  const lastKey = useRef('')
   useTicker((time) => {
-    if (uniforms.current) press.current?.render(time, uniforms.current)
+    const u = uniforms.current
+    if (!u || !press.current) return
+    const key = `${u.size}|${u.contrast}|${u.softness}|${u.gridNoise}|${u.grainOverlay}|${u.type}|${u.window}|${u.angles}|${u.plates}|${u.floodK}|${u.gains}`
+    if (key === lastKey.current) return
+    lastKey.current = key
+    press.current.render(time, u)
   })
+
+  // A resize invalidates the last frame — force the next tick to redraw.
+  useEffect(() => {
+    const el = canvasRef.current
+    if (!el) return undefined
+    const observer = new ResizeObserver(() => {
+      lastKey.current = ''
+    })
+    observer.observe(el)
+    return () => observer.disconnect()
+  }, [])
 
   return (
     <canvas

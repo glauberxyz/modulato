@@ -7,32 +7,6 @@
   overflow: clip;
 }
 
-.home__scene {
-  position: fixed;
-  inset: 0;
-  width: 100%;
-  height: 100%;
-  z-index: 0;
-  pointer-events: none;
-}
-
-// The screen is the subject, but the copy still has to read. A scrim sits
-// between the canvas and the text.
-.home::before {
-  content: '';
-  position: fixed;
-  inset: 0;
-  z-index: 0;
-  pointer-events: none;
-  background: linear-gradient(
-    to bottom,
-    rgba(20, 17, 15, 0.25) 0%,
-    rgba(20, 17, 15, 0.55) 22%,
-    rgba(20, 17, 15, 0.93) 40%,
-    rgba(20, 17, 15, 1) 58%
-  );
-}
-
 .home__hero,
 .home__index,
 .home__foot {

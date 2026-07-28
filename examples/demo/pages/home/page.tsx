@@ -1,47 +1,8 @@
-import { useRef } from 'react'
-import { resolveTokens, useScroll, useViewport } from 'modulato'
 import type { Chapter } from '../../lib/content'
-import { HalftoneScene } from '../../lib/HalftoneCanvas'
-import { DEFAULTS } from '../../lib/halftone'
-import type { HalftoneUniforms, SceneUniforms } from '../../lib/halftone'
-import tokens from './motion'
 
 export default function Home({ chapters }: { chapters: Chapter[] }) {
-  const { reducedMotion } = useViewport()
-  const t = resolveTokens(tokens)
-
-  // Uniforms live in refs: the ticker reads them every frame, scroll writes
-  // them, and React never re-renders for either.
-  const uniforms = useRef<HalftoneUniforms>({
-    ...DEFAULTS,
-    size: t.print.size,
-    paper: '#14110f',
-    inks: ['#3a4f56', '#4a3340', '#4a4433', '#f4f1ea'],
-    grainOverlay: t.print.grain,
-  })
-  const scene = useRef<SceneUniforms>({
-    speed: t.scene.speed,
-    radius: t.scene.radius,
-    height: t.scene.height,
-    count: t.scene.count,
-    camHeight: t.scene.camHeight,
-    camDist: t.scene.camDist,
-    band: t.scene.band,
-    cap: t.scene.cap,
-  })
-
-  // Scrolling coarsens the screen — the page performs its own subject
-  // before the first chapter explains it.
-  useScroll((e) => {
-    if (reducedMotion) return
-    const p = Math.min(1, e.progress * 1.6)
-    uniforms.current.size = t.print.size + p * t.print.coarsen
-  })
-
   return (
     <main className="home is-dark" data-page="home">
-      <HalftoneScene uniforms={uniforms} scene={scene} className="home__scene" />
-
       <section className="home__hero grid">
         <h1 className="home__claim col-left">
           There is no grey
