@@ -67,10 +67,10 @@
 .entry {
   display: block;
   text-decoration: none;
-  // Wider than its own text, with side padding — so the rule runs past
-  // where the type stops instead of ending flush with it, and the title
-  // has room to hold on one line at larger sizes.
-  padding: 5vh 56px;
+  // No side padding — the box is simply wider than the type it holds, so
+  // the rule clears the text on its own and the title has room to hold a
+  // single line.
+  padding: 5vh 0;
   width: 100%;
   max-width: 660px;
   border-bottom: 1px solid var(--rule);
