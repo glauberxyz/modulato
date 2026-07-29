@@ -13,6 +13,9 @@ export interface WordFlightTokens {
   clear: number
   /** When the chapter body fades up, as a fraction of the whole flight. */
   bodyAt: number
+  /** A beat before anything moves, with every clone sitting exactly over
+   *  the word it replaced. Lets the swap settle before the flight reads. */
+  hold: number
   ease: string
   /** The index abstract's exit: it does NOT morph into the chapter lede —
    *  different text — so it leaves per line and the lede takes the space. */
@@ -49,9 +52,9 @@ async function exitByLine(
  * with both rects already measured in final viewport coordinates.
  *
  * flipShared can't do this: it morphs the box (top/left/width/height), which
- * moves a word without resizing its type. Words need to SCALE, so each pair
- * flies as a fixed-position clone under a transform, with the scale taken
- * from the width ratio of the same string at both sizes.
+ * moves a word without resizing its type. Each pair flies as a fixed clone
+ * whose type metrics are animated from the source's to the target's, so it
+ * is pixel-identical to the real word at both ends of the flight.
  */
 export async function wordFlight(
   { from, to, trigger, shared }: TransitionRunContext,
@@ -78,44 +81,64 @@ export async function wordFlight(
   }
 
   const fly = (pair: SharedPair, delay: number) => {
+    const fromStyle = getComputedStyle(pair.from)
+    const toStyle = getComputedStyle(pair.to)
     const clone = pair.from.cloneNode(true) as HTMLElement
-    const style = getComputedStyle(pair.from)
-    // The clone leaves the page, so it needs its type carried explicitly —
-    // the class it keeps is scoped to the index's own stylesheet.
+
+    // The clone must be indistinguishable from the word it replaces at the
+    // START and from the word it becomes at the END. So it carries real
+    // type metrics on both sides and ANIMATES THEM — a transform scale
+    // renders the source size stretched, which lands at a slightly
+    // different weight and tracking than the real element and shows as a
+    // re-settle the moment the two swap.
     Object.assign(clone.style, {
       position: 'fixed',
-      top: `${pair.fromRect.top}px`,
-      left: `${pair.fromRect.left}px`,
+      display: 'block',
       margin: '0',
+      padding: '0',
       zIndex: '60',
       pointerEvents: 'none',
-      transformOrigin: 'top left',
-      font: style.font,
-      letterSpacing: style.letterSpacing,
-      lineHeight: style.lineHeight,
-      color: style.color,
       whiteSpace: 'nowrap',
+      fontFamily: fromStyle.fontFamily,
+      fontWeight: fromStyle.fontWeight,
+      fontStyle: fromStyle.fontStyle,
+      fontSize: fromStyle.fontSize,
+      lineHeight: fromStyle.lineHeight,
+      letterSpacing: fromStyle.letterSpacing,
+      color: fromStyle.color,
+      top: `${pair.fromRect.top}px`,
+      left: `${pair.fromRect.left}px`,
     })
     document.body.append(clone)
-    // Both originals hide synchronously, before this frame paints: the
-    // chapter's own words must never flash at their landing spot.
+    // Both originals hide synchronously, before this frame paints, so the
+    // swap to the clone is invisible.
     pair.from.style.visibility = 'hidden'
     pair.to.style.visibility = 'hidden'
-
-    const scale = pair.fromRect.width ? pair.toRect.width / pair.fromRect.width : 1
-    const dx = pair.toRect.left - pair.fromRect.left
-    const dy = pair.toRect.top - pair.fromRect.top
-    // The word leaves light-on-dark and lands dark-on-paper: without this it
-    // would arrive the colour of the page it is landing on and vanish.
-    const landing = getComputedStyle(pair.to).color
 
     return clone
       .animate(
         [
-          { transform: 'translate(0px, 0px) scale(1)', color: style.color },
-          { transform: `translate(${dx}px, ${dy}px) scale(${scale})`, color: landing },
+          {
+            top: `${pair.fromRect.top}px`,
+            left: `${pair.fromRect.left}px`,
+            fontSize: fromStyle.fontSize,
+            lineHeight: fromStyle.lineHeight,
+            letterSpacing: fromStyle.letterSpacing,
+            color: fromStyle.color,
+          },
+          {
+            top: `${pair.toRect.top}px`,
+            left: `${pair.toRect.left}px`,
+            fontSize: toStyle.fontSize,
+            lineHeight: toStyle.lineHeight,
+            letterSpacing: toStyle.letterSpacing,
+            color: toStyle.color,
+          },
         ],
-        { duration: t.duration, delay, easing: t.ease, fill: 'forwards' },
+        // The hold: every clone sits exactly over the word it replaced
+        // before anything moves. Nothing is visibly happening, which is
+        // the point — the swap has to be complete before the flight reads.
+        { duration: t.duration, delay: t.hold + delay, easing: t.ease, fill: 'forwards' },
       )
       .finished.catch(() => {})
       .then(() => {
@@ -135,6 +158,7 @@ export async function wordFlight(
     // Everything else on the index clears out of the way.
     from.element.animate([{ opacity: 1 }, { opacity: 0 }], {
       duration: t.clear,
+      delay: t.hold,
       easing: t.ease,
       fill: 'forwards',
     }).finished.catch(() => {}),
@@ -142,7 +166,7 @@ export async function wordFlight(
     // it has to, or they would land dark on a dark page.
     to.element.animate([{ opacity: 0 }, { opacity: 1 }], {
       duration: total * 0.5,
-      delay: total * t.bodyAt,
+      delay: t.hold + total * t.bodyAt,
       easing: t.ease,
       fill: 'forwards',
     }).finished.catch(() => {}),

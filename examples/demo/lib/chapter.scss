@@ -17,10 +17,13 @@
   margin: 0;
   max-width: 12ch;
 
-  // Words stack — this is where the index's inline words land.
-  .chapter__word {
-    display: block;
-  }
+  // Words stack — this is where the index's inline words land. A flex
+  // column, so each word's box hugs its OWN glyphs: as plain blocks they
+  // were all full-width, and the transition measured every word as the
+  // same 256px container instead of the letters it has to fly to.
+  display: flex;
+  flex-direction: column;
+  align-items: center;
 }
 
 .chapter__lede {
