@@ -1,6 +1,20 @@
 import { motion } from 'modulato'
 
-/** Shell motion tokens — tweakable live in the dev overlay (✦ Tweak). */
+/**
+ * Site-wide motion tokens — the shell, and every gesture shared by more than
+ * one route.
+ *
+ * A transition's numbers live next to the transition when they are that
+ * pair's own. These are not: the word flight is ONE gesture that four
+ * chapters perform, and it used to be copied into four identical
+ * `transitions/home__*.motion.ts` files — so tuning an act by a few
+ * milliseconds meant editing the same number four times, and the overlay
+ * showed you a different copy depending on which page you were standing on.
+ * The concept is shared, so the tokens are: one group, one row, one edit.
+ *
+ * `pages/*​/motion.ts` stays per-page, where the values genuinely differ —
+ * each chapter tunes its own reveals and figure parallax.
+ */
 export default motion({
   marker: {
     // Scroll-fill smoothing, in units/second toward the target.
@@ -11,6 +25,128 @@ export default motion({
   runhead: {
     duration: 0.5,
     ease: 'press',
+    reduced: { duration: 0 },
+  },
+
+  /**
+   * The word flight, in four acts — the pause between them is the point:
+   *
+   *   1 hold          nothing moves; the clones sit exactly over the words
+   *   2 clear + tint  the page fades out (which is what turns the surface
+   *                   over) and the title takes the arriving page's ink,
+   *                   where it stands
+   *   3 gap           breathing room: the words alone, recoloured
+   *   4 duration      only now do they fly
+   *
+   * Each direction gets its own acts, because they are not the same move.
+   * Going in, a card opens into a chapter and the chapter's lede has to wait
+   * for its own title. Coming back, a whole chapter has to be wound up to
+   * its head before anything can leave it — so the front of that one is
+   * longer.
+   */
+  flight: {
+    // ── index → chapter ────────────────────────────────────────────────
+    enter: {
+      hold: 201,
+      clear: 245,
+      tint: { duration: 380, ease: 'cubic-bezier(0.22, 1, 0.36, 1)' },
+      // The index abstract's exit — a different text from the chapter lede,
+      // so it leaves line by line rather than morphing. Goes out in act 2.
+      abstract: { y: -13, duration: 0.5, stagger: 0.163, ease: 'press' },
+      gap: 240,
+      duration: 1000,
+      stagger: 69,
+      ease: 'cubic-bezier(0.22, 1, 0.36, 1)',
+      // The chapter's lede is held back until its title has arrived — it
+      // reads as an answer to the title, so it must not precede it. `hold`
+      // counts from the LAST word landing, so one value holds correctly for
+      // a three-word chapter and a five-word one; negative brings it early.
+      lede: { hold: -180, y: 16, duration: 760, ease: 'cubic-bezier(0.22, 1, 0.36, 1)' },
+      // Only when the words to fly are off-screen: winding a scrolled page
+      // back until they are visible. Rare going in — it takes clicking an
+      // entry whose own title has already scrolled past the top edge.
+      rewind: { duration: 940, ease: 'cubic-bezier(0.22, 1, 0.36, 1)', seat: 0.658 },
+      phone: {
+        hold: 200,
+        clear: 380,
+        tint: { duration: 300 },
+        gap: 180,
+        duration: 850,
+        stagger: 120,
+        lede: { hold: -140, duration: 600 },
+        rewind: { duration: 480 },
+      },
+      reduced: {
+        hold: 0,
+        clear: 0,
+        tint: { duration: 0 },
+        gap: 0,
+        duration: 0,
+        stagger: 0,
+        abstract: { y: 0, duration: 0, stagger: 0 },
+        lede: { hold: 0, y: 0, duration: 0 },
+        rewind: { duration: 0 },
+      },
+    },
+
+    // ── chapter → index ────────────────────────────────────────────────
+    back: {
+      // Longer at the front than `enter`: the rewind almost always runs on
+      // the way back (you read the chapter, so you scrolled it), and the
+      // title has to arrive at the top and be SEEN there before it leaves.
+      hold: 320,
+      clear: 300,
+      tint: { duration: 420, ease: 'cubic-bezier(0.22, 1, 0.36, 1)' },
+      gap: 300,
+      duration: 1000,
+      stagger: 69,
+      ease: 'cubic-bezier(0.22, 1, 0.36, 1)',
+      rewind: { duration: 940, ease: 'cubic-bezier(0.22, 1, 0.36, 1)', seat: 0.658 },
+      phone: {
+        hold: 240,
+        clear: 380,
+        tint: { duration: 320 },
+        gap: 200,
+        duration: 850,
+        stagger: 120,
+        rewind: { duration: 480 },
+      },
+      reduced: {
+        hold: 0,
+        clear: 0,
+        tint: { duration: 0 },
+        gap: 0,
+        duration: 0,
+        stagger: 0,
+        rewind: { duration: 0 },
+      },
+    },
+  },
+
+  /** Chapter → chapter: a paper feed, sheet out and sheet in. */
+  feed: {
+    duration: 760,
+    skew: 1.6,
+    ease: 'cubic-bezier(0.16, 1, 0.3, 1)',
+    phone: { duration: 560, skew: 1 },
+    reduced: { duration: 0 },
+  },
+
+  /** Chapter → plate inspector: the figure FLIPs into the full-bleed plate. */
+  flip: {
+    duration: 820,
+    ease: 'cubic-bezier(0.62, 0.05, 0.01, 0.99)',
+    phone: { duration: 600 },
+    reduced: { duration: 0 },
+  },
+
+  /** The house fallback for any pair without a bespoke transition. */
+  bleed: {
+    duration: 620,
+    // A transition runs on WAAPI, which only speaks CSS — so the config's
+    // "press" curve appears here as its cubic-bezier.
+    ease: 'cubic-bezier(0.16, 1, 0.3, 1)',
+    phone: { duration: 460 },
     reduced: { duration: 0 },
   },
 })

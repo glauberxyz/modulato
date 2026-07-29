@@ -1,5 +1,5 @@
 import { transition, resolveTokens } from 'modulato'
-import tokens from './angles__gpu.motion'
+import tokens from '../motion'
 import { paperFeed } from '../lib/transitions'
 
 /** Chapter → chapter: the paper feed. */

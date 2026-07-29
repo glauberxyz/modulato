@@ -54,10 +54,14 @@ export interface MotionScope {
 // lenis.destroy() on unmount, so no manual teardown is needed.
 const scrollTriggerWired = new WeakSet<object>()
 
-function wireScrollTrigger(lenis: { on: (e: 'scroll', cb: () => void) => void }): void {
-  // `gsap.core.globals()` returns registered plugins (runtime API not in types).
+/** `gsap.core.globals()` returns registered plugins (runtime API, untyped). */
+function scrollTrigger(): { update: () => void; refresh: () => void } | undefined {
   const globals = (gsap.core as { globals?: () => Record<string, unknown> }).globals?.() ?? {}
-  const ST = globals.ScrollTrigger as { update: () => void } | undefined
+  return globals.ScrollTrigger as { update: () => void; refresh: () => void } | undefined
+}
+
+function wireScrollTrigger(lenis: { on: (e: 'scroll', cb: () => void) => void }): void {
+  const ST = scrollTrigger()
   if (!ST || scrollTriggerWired.has(lenis)) return
   scrollTriggerWired.add(lenis)
   lenis.on('scroll', () => ST.update())
@@ -80,7 +84,7 @@ export function useMotion(
   create: (scope: MotionScope) => void | (() => void),
   deps: unknown[] = [],
 ): void {
-  const { element, lenis } = usePage()
+  const { element, lenis, phase } = usePage()
   const createRef = useRef(create)
   createRef.current = create
 
@@ -120,4 +124,18 @@ export function useMotion(
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [element, replayTick, breakpoint, reducedMotion, ...deps])
+
+  // A page mounts DURING its own transition: the outgoing page is still in
+  // the document as an absolute overlay, this one may still be hidden, and
+  // the scroll position is not final. Every ScrollTrigger created above
+  // measured its start/end against THAT arrangement. Once the transition
+  // commits — outgoing gone, height real, scroll settled — those positions
+  // are stale, which shows up as sections that never reveal until you
+  // scroll, or that arrived already revealed. Declared after the create
+  // effect so it runs after it on the same commit.
+  useEffect(() => {
+    if (!element || phase !== 'active') return
+    scrollTrigger()?.refresh()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [element, phase, replayTick, breakpoint, reducedMotion, ...deps])
 }

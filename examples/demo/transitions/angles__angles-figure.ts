@@ -1,5 +1,5 @@
 import { transition, resolveTokens, flipShared } from 'modulato'
-import tokens from './angles__angles-figure.motion'
+import tokens from '../motion'
 
 /**
  * Chapter → plate inspector. The figure the reader clicked morphs into the

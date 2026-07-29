@@ -1,5 +1,5 @@
 import { transition, resolveTokens } from 'modulato'
-import tokens from './home__press.motion'
+import tokens from '../motion'
 import { wordFlight } from '../lib/transitions'
 
 /**

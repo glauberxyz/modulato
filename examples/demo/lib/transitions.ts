@@ -5,12 +5,13 @@ import type { SharedPair, TransitionRunContext } from 'modulato'
 gsap.registerPlugin(SplitText)
 
 /**
- * The flight runs in two acts, and the pause between them is the point:
+ * One direction of the flight, in four acts — the pause between them is the
+ * point:
  *
  *   ① hold      — nothing. Every clone sits exactly over the word it replaced.
- *   ② clear+tint— the index fades out, which is what turns the surface over,
- *                 and the clicked title takes the arriving page's ink IN
- *                 PLACE. Colour is the whole event; nothing moves.
+ *   ② clear+tint— the outgoing page fades out, which is what turns the surface
+ *                 over, and the title takes the arriving page's ink IN PLACE.
+ *                 Colour is the whole event; nothing moves.
  *   ③ gap       — breathing room. The words sit in their new colour on the
  *                 new surface, alone.
  *   ④ flight    — only now do they travel.
@@ -18,16 +19,16 @@ gsap.registerPlugin(SplitText)
  * Colour and movement used to happen together, which read as one hurried
  * gesture. Separated, each gets to be seen.
  */
-export interface WordFlightTokens {
+export interface FlightActs {
   /** How long one word takes to fly (act ④). */
   duration: number
   /** Gap between consecutive words setting off. Paced to be watchable. */
   stagger: number
-  /** Act ②: how long the rest of the index takes to clear — and, because the
-   *  incoming page sits UNDER it, how long the chapter takes to arrive. */
+  /** Act ②: how long the outgoing page takes to clear — and, because the
+   *  incoming page sits UNDER it, how long the new one takes to arrive. */
   clear: number
-  /** Act ②, on the clicked title only: the words cross-fade from the index's
-   *  ink to the chapter's, without moving, as the surface turns over. */
+  /** Act ②, on the flying title only: the words cross-fade from the outgoing
+   *  page's ink to the arriving one's, without moving. */
   tint: { duration: number; ease: string }
   /** Act ③: the beat between the colour landing and the flight setting off. */
   gap: number
@@ -39,9 +40,26 @@ export interface WordFlightTokens {
    *  viewport height. Only ever runs when they are above the fold. */
   rewind: { duration: number; ease: string; seat: number }
   ease: string
-  /** The index abstract's exit: it does NOT morph into the chapter lede —
-   *  different text — so it leaves per line and the lede takes the space. */
-  abstract: { y: number; duration: number; stagger: number; ease: string }
+}
+
+/**
+ * The two directions are not the same move, so they carry their own acts.
+ * `wordFlight` picks by route — the transitions are `symmetric: true`, which
+ * runs one definition both ways, not one set of numbers both ways.
+ */
+export interface WordFlightTokens {
+  /** Index → chapter. Two extras only this direction has. */
+  enter: FlightActs & {
+    /** The index abstract's exit: it does NOT morph into the chapter lede —
+     *  different text — so it leaves per line and the lede takes the space. */
+    abstract: { y: number; duration: number; stagger: number; ease: string }
+    /** The chapter's lede, held back until its title has landed. `hold` is
+     *  measured from the LAST word arriving, so one number is right for
+     *  chapters of three words and of five; negative brings it in early. */
+    lede: { hold: number; y: number; duration: number; ease: string }
+  }
+  /** Chapter → index. No abstract to send away, no lede to wait for. */
+  back: FlightActs
 }
 
 /**
@@ -50,7 +68,7 @@ export interface WordFlightTokens {
  */
 async function exitByLine(
   el: HTMLElement,
-  t: WordFlightTokens['abstract'],
+  t: WordFlightTokens['enter']['abstract'],
   delay: number,
 ): Promise<void> {
   if (!t.duration) {
@@ -122,7 +140,7 @@ function seatLanding(el: HTMLElement, words: SharedPair[], seat: number): number
 async function windBack(
   el: HTMLElement,
   words: SharedPair[],
-  t: WordFlightTokens['rewind'],
+  t: FlightActs['rewind'],
   base: number,
 ): Promise<void> {
   const top = Math.min(...words.map((p) => p.from.getBoundingClientRect().top))
@@ -155,9 +173,15 @@ async function windBack(
  * is pixel-identical to the real word at both ends of the flight.
  */
 export async function wordFlight(
-  { from, trigger, shared }: TransitionRunContext,
-  t: WordFlightTokens,
+  { from, to, trigger, shared }: TransitionRunContext,
+  tokens: WordFlightTokens,
 ) {
+  // `symmetric: true` runs ONE definition both ways — it does not mean one
+  // set of numbers both ways. Going in opens a card into a chapter; coming
+  // back has to wind a whole read chapter up to its head first.
+  const entering = to.route.id !== 'home'
+  const t = entering ? tokens.enter : tokens.back
+
   const words = shared
     .filter((p) => p.id.startsWith('w:'))
     .sort((a, b) => Number(a.id.split(':')[2]) - Number(b.id.split(':')[2]))
@@ -165,9 +189,19 @@ export async function wordFlight(
   // The abstract the reader clicked. It is NOT shared — the chapter shows
   // its lede there instead — so it leaves rather than travels. `trigger` is
   // the <a> that started the navigation, which is how we know which one.
-  const leaving =
-    (trigger as HTMLElement | null)?.querySelector<HTMLElement>('.entry__abstract') ??
-    from.element.querySelector<HTMLElement>('.entry__abstract')
+  const leaving = entering
+    ? ((trigger as HTMLElement | null)?.querySelector<HTMLElement>('.entry__abstract') ??
+      from.element.querySelector<HTMLElement>('.entry__abstract'))
+    : null
+
+  // The chapter's lede answers its title, so it must not arrive before it.
+  // Hidden HERE — synchronously, before the reveal frame paints, the same
+  // discipline as hiding the words themselves.
+  const lede =
+    entering && t.duration
+      ? to.element.querySelector<HTMLElement>('.chapter__lede')
+      : null
+  if (lede) lede.style.opacity = '0'
 
   if (!t.duration || !words.length) {
     // Reduced motion, or nothing matched: just swap. The OUTGOING page is
@@ -279,7 +313,36 @@ export async function wordFlight(
   const flights = words.map((pair, i) => fly(pair, i * t.stagger))
   // Act ②: the abstract goes out line by line with everything else on the
   // index — before the flight, not under it.
-  if (leaving) flights.push(exitByLine(leaving, t.abstract, t.hold))
+  if (leaving) flights.push(exitByLine(leaving, tokens.enter.abstract, t.hold))
+
+  // Act ⑤, only going in: the lede arrives once the title has. Measured from
+  // the LAST word landing, so a five-word chapter waits as long as it needs
+  // to and a three-word one does not sit there empty.
+  if (lede) {
+    const landed =
+      t.hold + t.tint.duration + t.gap + t.duration + (words.length - 1) * t.stagger
+    const l = tokens.enter.lede
+    flights.push(
+      lede
+        .animate(
+          [
+            { opacity: 0, transform: `translateY(${l.y}px)` },
+            { opacity: 1, transform: 'translateY(0px)' },
+          ],
+          {
+            duration: l.duration,
+            delay: Math.max(0, landed + l.hold),
+            easing: l.ease,
+            fill: 'both',
+          },
+        )
+        .finished.catch(() => {})
+        .then(() => {
+          // Hand it back to the stylesheet — the page outlives the transition.
+          lede.style.opacity = ''
+        }),
+    )
+  }
 
   await Promise.all([
     ...flights,
