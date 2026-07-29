@@ -19,11 +19,23 @@ export default intro({
     // (g, y, p) for the life of the page.
     let split: SplitText | null = null
 
-    tl.from(
-      element.querySelector('.home__smile'),
-      { scale: smile.scale, opacity: 0, duration: smile.duration, ease: smile.ease },
-      0,
-    )
+    const smileEl = element.querySelector<HTMLElement>('.home__smile')
+    if (smileEl) {
+      // Drops in from outside the viewport. The distance is MEASURED —
+      // its own bottom edge plus a clearance — so it starts genuinely
+      // off-screen at any window height rather than at a guessed offset.
+      const travel = smileEl.getBoundingClientRect().bottom + smile.clearance
+      tl.from(
+        smileEl,
+        {
+          y: -travel,
+          scale: smile.scale,
+          duration: smile.duration,
+          ease: smile.ease,
+        },
+        smile.at,
+      )
+    }
 
     if (headline) {
       // Words, not lines — and no masks, so nothing can clip a descender.
