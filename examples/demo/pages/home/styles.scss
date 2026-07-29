@@ -26,7 +26,9 @@
 .home__claim {
   @include type.display;
   margin: 0;
-  max-width: 16ch;
+  // Line breaks are authored in the markup; the measure only has to be
+  // wide enough not to introduce any of its own.
+  max-width: 22ch;
 
   .line {
     display: block;
@@ -40,7 +42,7 @@
 .home__lede {
   @include type.body-large;
   color: var(--muted);
-  max-width: 30ch;
+  max-width: 34ch;
   margin-top: 6vh;
 }
 

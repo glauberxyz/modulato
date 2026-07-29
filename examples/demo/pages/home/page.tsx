@@ -52,8 +52,13 @@ export default function Home({ chapters }: { chapters: Chapter[] }) {
         />
 
         <h1 className="home__claim">
-          There is no grey in
-          <br />a printed photograph.
+          There is no
+          <br />
+          grey in
+          <br />
+          a printed
+          <br />
+          photograph.
         </h1>
 
         <p className="home__lede">
