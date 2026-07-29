@@ -61,7 +61,7 @@ export default motion({
       // reads as an answer to the title, so it must not precede it. `hold`
       // counts from the LAST word landing, so one value holds correctly for
       // a three-word chapter and a five-word one; negative brings it early.
-      lede: { hold: -180, y: 16, duration: 760, ease: 'cubic-bezier(0.22, 1, 0.36, 1)' },
+      lede: { hold: -180, y: 16, duration: 760, stagger: 0, ease: 'cubic-bezier(0.22, 1, 0.36, 1)' },
       // Only when the words to fly are off-screen: winding a scrolled page
       // back until they are visible. Rare going in — it takes clicking an
       // entry whose own title has already scrolled past the top edge.
@@ -73,7 +73,7 @@ export default motion({
         gap: 180,
         duration: 850,
         stagger: 120,
-        lede: { hold: -140, duration: 600 },
+        lede: { hold: -140, duration: 600, stagger: 0 },
         rewind: { duration: 480 },
       },
       reduced: {
@@ -84,7 +84,7 @@ export default motion({
         duration: 0,
         stagger: 0,
         abstract: { y: 0, duration: 0, stagger: 0 },
-        lede: { hold: 0, y: 0, duration: 0 },
+        lede: { hold: 0, y: 0, duration: 0, stagger: 0 },
         rewind: { duration: 0 },
       },
     },
@@ -102,6 +102,10 @@ export default motion({
       stagger: 69,
       ease: 'cubic-bezier(0.22, 1, 0.36, 1)',
       rewind: { duration: 940, ease: 'cubic-bezier(0.22, 1, 0.36, 1)', seat: 0.658 },
+      // The index fills in behind the title once it has landed — the mirror
+      // of `enter.lede`. Without it the index arrives complete and the title
+      // flies across a page that is already full. Staggered down the page.
+      contents: { hold: -220, y: 18, duration: 720, stagger: 55, ease: 'cubic-bezier(0.22, 1, 0.36, 1)' },
       phone: {
         hold: 240,
         clear: 380,
@@ -110,6 +114,7 @@ export default motion({
         duration: 850,
         stagger: 120,
         rewind: { duration: 480 },
+        contents: { hold: -180, duration: 560, stagger: 40 },
       },
       reduced: {
         hold: 0,
@@ -119,6 +124,7 @@ export default motion({
         duration: 0,
         stagger: 0,
         rewind: { duration: 0 },
+        contents: { hold: 0, y: 0, duration: 0, stagger: 0 },
       },
     },
   },

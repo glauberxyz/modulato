@@ -43,23 +43,40 @@ export interface FlightActs {
 }
 
 /**
+ * Whatever the destination page holds back until the title has landed.
+ * `hold` is measured from the LAST word arriving, not from the start, so one
+ * number is right for a chapter of three words and one of five; negative
+ * brings it in early.
+ */
+export interface ArrivalTokens {
+  hold: number
+  y: number
+  duration: number
+  stagger: number
+  ease: string
+}
+
+/**
  * The two directions are not the same move, so they carry their own acts.
  * `wordFlight` picks by route — the transitions are `symmetric: true`, which
  * runs one definition both ways, not one set of numbers both ways.
  */
 export interface WordFlightTokens {
-  /** Index → chapter. Two extras only this direction has. */
+  /** Index → chapter. */
   enter: FlightActs & {
     /** The index abstract's exit: it does NOT morph into the chapter lede —
      *  different text — so it leaves per line and the lede takes the space. */
     abstract: { y: number; duration: number; stagger: number; ease: string }
-    /** The chapter's lede, held back until its title has landed. `hold` is
-     *  measured from the LAST word arriving, so one number is right for
-     *  chapters of three words and of five; negative brings it in early. */
-    lede: { hold: number; y: number; duration: number; ease: string }
+    /** The chapter's lede — it answers the title, so it waits for it. */
+    lede: ArrivalTokens
   }
-  /** Chapter → index. No abstract to send away, no lede to wait for. */
-  back: FlightActs
+  /** Chapter → index. */
+  back: FlightActs & {
+    /** The index's own furniture — hero, the other entries, the foot. The
+     *  mirror of `enter.lede`: without it the index arrives complete and an
+     *  oversized title flies across a page that is already full. */
+    contents: ArrivalTokens
+  }
 }
 
 /**
@@ -85,6 +102,41 @@ async function exitByLine(
     stagger: t.stagger,
     ease: t.ease,
   })
+}
+
+/**
+ * Hold something on the ARRIVING page back, and let it in once the title has
+ * landed. Hidden synchronously by the caller — before the reveal frame
+ * paints — and animated in here.
+ */
+function arriveAfter(
+  els: HTMLElement[],
+  t: ArrivalTokens,
+  landed: number,
+): Promise<void> {
+  if (!els.length) return Promise.resolve()
+  return Promise.all(
+    els.map((el, i) =>
+      el
+        .animate(
+          [
+            { opacity: 0, transform: `translateY(${t.y}px)` },
+            { opacity: 1, transform: 'translateY(0px)' },
+          ],
+          {
+            duration: t.duration,
+            delay: Math.max(0, landed + t.hold + i * t.stagger),
+            easing: t.ease,
+            fill: 'both',
+          },
+        )
+        .finished.catch(() => {})
+        // Hand it back to the stylesheet — the page outlives the transition.
+        .then(() => {
+          el.style.opacity = ''
+        }),
+    ),
+  ).then(() => {})
 }
 
 /**
@@ -194,14 +246,46 @@ export async function wordFlight(
       from.element.querySelector<HTMLElement>('.entry__abstract'))
     : null
 
-  // The chapter's lede answers its title, so it must not arrive before it.
-  // Hidden HERE — synchronously, before the reveal frame paints, the same
-  // discipline as hiding the words themselves.
-  const lede =
-    entering && t.duration
-      ? to.element.querySelector<HTMLElement>('.chapter__lede')
-      : null
-  if (lede) lede.style.opacity = '0'
+  // What the arriving page holds back until the title has landed. Going in
+  // that is the chapter's lede, which answers the title and must not precede
+  // it. Coming back it is the whole index EXCEPT the title being flown to —
+  // otherwise the index arrives complete, with four entries, their abstracts
+  // and the foot, and an oversized title flies across a page already full.
+  //
+  // The landing entry's own title is deliberately NOT held: its words are
+  // revealed one at a time as their clones land, and a word revealed inside
+  // a still-transparent parent would appear faint and then brighten.
+  const landingEntry = words[0]?.to.closest<HTMLElement>('.entry') ?? null
+  const held: HTMLElement[] = []
+  if (t.duration) {
+    if (entering) {
+      const lede = to.element.querySelector<HTMLElement>('.chapter__lede')
+      if (lede) held.push(lede)
+    } else {
+      held.push(
+        ...to.element.querySelectorAll<HTMLElement>(
+          '.home__hero, .home__contents, .home__foot',
+        ),
+        ...[...to.element.querySelectorAll<HTMLElement>('.entry')].filter(
+          (e) => e !== landingEntry,
+        ),
+        ...(landingEntry
+          ? landingEntry.querySelectorAll<HTMLElement>('.entry__abstract, .entry__arrow')
+          : []),
+      )
+      // The landing entry stays, so its rule would too — one lone hairline
+      // under a title flying over an otherwise empty page.
+      if (landingEntry) landingEntry.style.borderBottomColor = 'transparent'
+    }
+  }
+  // Document order, so the stagger reads down the page rather than in the
+  // order the selectors happened to run.
+  held.sort((a, b) =>
+    a.compareDocumentPosition(b) & Node.DOCUMENT_POSITION_FOLLOWING ? -1 : 1,
+  )
+  // Synchronously, before the reveal frame paints — the same discipline as
+  // hiding the words themselves.
+  for (const el of held) el.style.opacity = '0'
 
   if (!t.duration || !words.length) {
     // Reduced motion, or nothing matched: just swap. The OUTGOING page is
@@ -214,155 +298,148 @@ export async function wordFlight(
     return
   }
 
-  // Both ends of the flight have to be on screen, or there is nothing to
-  // watch. The landing is seated first — instantly, hidden under the outgoing
-  // page — and then the outgoing page winds back until the words it has to
-  // fly are visible too. Either step is a no-op when its end is already fine,
-  // which is the usual case: you clicked an entry you could see.
-  await windBack(
-    from.element,
-    words,
-    t.rewind,
-    seatLanding(from.element, words, t.rewind.seat),
-  )
+  // Everything from here holds part of the ARRIVING page hidden, so it must
+  // hand it back however this ends: a throw between the hiding above and the
+  // arrival below would leave the reader on a permanently blank page — the
+  // framework logs a failed transition and commits anyway.
+  try {
+    // Both ends of the flight have to be on screen, or there is nothing to
+    // watch. The landing is seated first — instantly, hidden under the outgoing
+    // page — and then the outgoing page winds back until the words it has to
+    // fly are visible too. Either step is a no-op when its end is already fine,
+    // which is the usual case: you clicked an entry you could see.
+    await windBack(
+      from.element,
+      words,
+      t.rewind,
+      seatLanding(from.element, words, t.rewind.seat),
+    )
 
-  const fly = (pair: SharedPair, delay: number) => {
-    // Measured HERE, not taken from the pair: the rects the framework handed
-    // us predate the rewind above.
-    const fromRect = pair.from.getBoundingClientRect()
-    const toRect = pair.to.getBoundingClientRect()
-    const fromStyle = getComputedStyle(pair.from)
-    const toStyle = getComputedStyle(pair.to)
-    const clone = pair.from.cloneNode(true) as HTMLElement
+    const fly = (pair: SharedPair, delay: number) => {
+      // Measured HERE, not taken from the pair: the rects the framework handed
+      // us predate the rewind above.
+      const fromRect = pair.from.getBoundingClientRect()
+      const toRect = pair.to.getBoundingClientRect()
+      const fromStyle = getComputedStyle(pair.from)
+      const toStyle = getComputedStyle(pair.to)
+      const clone = pair.from.cloneNode(true) as HTMLElement
 
-    // The clone must be indistinguishable from the word it replaces at the
-    // START and from the word it becomes at the END. So it carries real
-    // type metrics on both sides and ANIMATES THEM — a transform scale
-    // renders the source size stretched, which lands at a slightly
-    // different weight and tracking than the real element and shows as a
-    // re-settle the moment the two swap.
-    Object.assign(clone.style, {
-      position: 'fixed',
-      display: 'block',
-      margin: '0',
-      padding: '0',
-      zIndex: '60',
-      pointerEvents: 'none',
-      whiteSpace: 'nowrap',
-      fontFamily: fromStyle.fontFamily,
-      fontWeight: fromStyle.fontWeight,
-      fontStyle: fromStyle.fontStyle,
-      fontSize: fromStyle.fontSize,
-      lineHeight: fromStyle.lineHeight,
-      letterSpacing: fromStyle.letterSpacing,
-      color: fromStyle.color,
-      top: `${fromRect.top}px`,
-      left: `${fromRect.left}px`,
-    })
-    document.body.append(clone)
-    // Both originals hide synchronously, before this frame paints, so the
-    // swap to the clone is invisible.
-    pair.from.style.visibility = 'hidden'
-    pair.to.style.visibility = 'hidden'
-
-    // Act ②: the ink changes, and nothing else. This runs with the index's
-    // own fade, so the word darkens at the same moment the surface under it
-    // turns from the index's black to the chapter's paper — one colour event
-    // the reader can actually follow, rather than a colour shift smuggled
-    // inside a flight.
-    clone.animate([{ color: fromStyle.color }, { color: toStyle.color }], {
-      duration: t.tint.duration,
-      delay: t.hold,
-      easing: t.tint.ease,
-      fill: 'both',
-    })
-
-    // Act ④: the travel. No colour here — it landed an act ago.
-    return clone
-      .animate(
-        [
-          {
-            top: `${fromRect.top}px`,
-            left: `${fromRect.left}px`,
-            fontSize: fromStyle.fontSize,
-            lineHeight: fromStyle.lineHeight,
-            letterSpacing: fromStyle.letterSpacing,
-          },
-          {
-            top: `${toRect.top}px`,
-            left: `${toRect.left}px`,
-            fontSize: toStyle.fontSize,
-            lineHeight: toStyle.lineHeight,
-            letterSpacing: toStyle.letterSpacing,
-          },
-        ],
-        {
-          duration: t.duration,
-          delay: t.hold + t.tint.duration + t.gap + delay,
-          easing: t.ease,
-          fill: 'both',
-        },
-      )
-      .finished.catch(() => {})
-      .then(() => {
-        pair.to.style.visibility = ''
-        clone.remove()
+      // The clone must be indistinguishable from the word it replaces at the
+      // START and from the word it becomes at the END. So it carries real
+      // type metrics on both sides and ANIMATES THEM — a transform scale
+      // renders the source size stretched, which lands at a slightly
+      // different weight and tracking than the real element and shows as a
+      // re-settle the moment the two swap.
+      Object.assign(clone.style, {
+        position: 'fixed',
+        display: 'block',
+        margin: '0',
+        padding: '0',
+        zIndex: '60',
+        pointerEvents: 'none',
+        whiteSpace: 'nowrap',
+        fontFamily: fromStyle.fontFamily,
+        fontWeight: fromStyle.fontWeight,
+        fontStyle: fromStyle.fontStyle,
+        fontSize: fromStyle.fontSize,
+        lineHeight: fromStyle.lineHeight,
+        letterSpacing: fromStyle.letterSpacing,
+        color: fromStyle.color,
+        top: `${fromRect.top}px`,
+        left: `${fromRect.left}px`,
       })
-  }
+      document.body.append(clone)
+      // Both originals hide synchronously, before this frame paints, so the
+      // swap to the clone is invisible.
+      pair.from.style.visibility = 'hidden'
+      pair.to.style.visibility = 'hidden'
 
-  const flights = words.map((pair, i) => fly(pair, i * t.stagger))
-  // Act ②: the abstract goes out line by line with everything else on the
-  // index — before the flight, not under it.
-  if (leaving) flights.push(exitByLine(leaving, tokens.enter.abstract, t.hold))
+      // Act ②: the ink changes, and nothing else. This runs with the index's
+      // own fade, so the word darkens at the same moment the surface under it
+      // turns from the index's black to the chapter's paper — one colour event
+      // the reader can actually follow, rather than a colour shift smuggled
+      // inside a flight.
+      clone.animate([{ color: fromStyle.color }, { color: toStyle.color }], {
+        duration: t.tint.duration,
+        delay: t.hold,
+        easing: t.tint.ease,
+        fill: 'both',
+      })
 
-  // Act ⑤, only going in: the lede arrives once the title has. Measured from
-  // the LAST word landing, so a five-word chapter waits as long as it needs
-  // to and a three-word one does not sit there empty.
-  if (lede) {
-    const landed =
-      t.hold + t.tint.duration + t.gap + t.duration + (words.length - 1) * t.stagger
-    const l = tokens.enter.lede
-    flights.push(
-      lede
+      // Act ④: the travel. No colour here — it landed an act ago.
+      return clone
         .animate(
           [
-            { opacity: 0, transform: `translateY(${l.y}px)` },
-            { opacity: 1, transform: 'translateY(0px)' },
+            {
+              top: `${fromRect.top}px`,
+              left: `${fromRect.left}px`,
+              fontSize: fromStyle.fontSize,
+              lineHeight: fromStyle.lineHeight,
+              letterSpacing: fromStyle.letterSpacing,
+            },
+            {
+              top: `${toRect.top}px`,
+              left: `${toRect.left}px`,
+              fontSize: toStyle.fontSize,
+              lineHeight: toStyle.lineHeight,
+              letterSpacing: toStyle.letterSpacing,
+            },
           ],
           {
-            duration: l.duration,
-            delay: Math.max(0, landed + l.hold),
-            easing: l.ease,
+            duration: t.duration,
+            delay: t.hold + t.tint.duration + t.gap + delay,
+            easing: t.ease,
             fill: 'both',
           },
         )
         .finished.catch(() => {})
         .then(() => {
-          // Hand it back to the stylesheet — the page outlives the transition.
-          lede.style.opacity = ''
-        }),
-    )
-  }
+          pair.to.style.visibility = ''
+          clone.remove()
+        })
+    }
 
-  await Promise.all([
-    ...flights,
-    // Everything else on the index clears out of the way — and that alone
-    // brings the chapter in. The framework stacks the outgoing page ON TOP
-    // of the incoming one, so this single fade is a true dissolve: the
-    // sheet underneath is already opaque and arrives as the index leaves.
-    //
-    // Fading the incoming page up as well would be a SECOND fade over the
-    // first, and two translucent layers always let the backdrop through —
-    // which is exactly what a delayed `fill: 'forwards'` did here: it left
-    // the page at full opacity through its delay, then snapped it to zero
-    // the instant the delay ended, flashing the surface behind it.
-    from.element.animate([{ opacity: 1 }, { opacity: 0 }], {
-      duration: t.clear,
-      delay: t.hold,
-      easing: t.ease,
-      fill: 'forwards',
-    }).finished.catch(() => {}),
-  ])
+    const flights = words.map((pair, i) => fly(pair, i * t.stagger))
+    // Act ②: the abstract goes out line by line with everything else on the
+    // index — before the flight, not under it.
+    if (leaving) flights.push(exitByLine(leaving, tokens.enter.abstract, t.hold))
+
+    // Act ⑤: the page the title landed on fills in behind it.
+    if (held.length) {
+      const landed =
+        t.hold + t.tint.duration + t.gap + t.duration + (words.length - 1) * t.stagger
+      flights.push(
+        arriveAfter(held, entering ? tokens.enter.lede : tokens.back.contents, landed).then(
+          () => {
+            if (landingEntry) landingEntry.style.borderBottomColor = ''
+          },
+        ),
+      )
+    }
+
+    await Promise.all([
+      ...flights,
+      // Everything else on the index clears out of the way — and that alone
+      // brings the chapter in. The framework stacks the outgoing page ON TOP
+      // of the incoming one, so this single fade is a true dissolve: the
+      // sheet underneath is already opaque and arrives as the index leaves.
+      //
+      // Fading the incoming page up as well would be a SECOND fade over the
+      // first, and two translucent layers always let the backdrop through —
+      // which is exactly what a delayed `fill: 'forwards'` did here: it left
+      // the page at full opacity through its delay, then snapped it to zero
+      // the instant the delay ended, flashing the surface behind it.
+      from.element.animate([{ opacity: 1 }, { opacity: 0 }], {
+        duration: t.clear,
+        delay: t.hold,
+        easing: t.ease,
+        fill: 'forwards',
+      }).finished.catch(() => {}),
+    ])
+  } finally {
+    for (const el of held) el.style.opacity = ''
+    if (landingEntry) landingEntry.style.borderBottomColor = ''
+  }
 }
 
 export interface FeedTokens {
