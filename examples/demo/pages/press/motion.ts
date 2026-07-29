@@ -19,10 +19,9 @@ export default motion({
     reduced: { parallax: 0, scale: 1 },
   },
   title: {
-    yPercent: 118,
-    duration: 1.1,
-    stagger: 0.06,
-    ease: 'roller',
-    reduced: { yPercent: 0, duration: 0, stagger: 0 },
+    // Words appear in sequence; the ease shapes the gaps, not any motion.
+    amount: 0.75,
+    ease: 'expo.out',
+    reduced: { amount: 0 },
   },
 })

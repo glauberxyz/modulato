@@ -10,36 +10,26 @@ gsap.registerPlugin(SplitText)
  */
 export async function chapterIntro(element: HTMLElement, tokens: unknown) {
   const t = resolveTokens(tokens as never) as {
-    title: { yPercent: number; duration: number; stagger: number; ease: string }
+    title: { amount: number; ease: string }
   }
   const heading = element.querySelector<HTMLElement>('.chapter__title')
   const tl = gsap.timeline()
   let split: SplitText | null = null
 
-  if (heading && t.title.duration) {
-    split = new SplitText(heading, { type: 'lines', linesClass: 'line' })
-    split.lines.forEach((line) => {
-      const inner = document.createElement('span')
-      inner.append(...line.childNodes)
-      line.append(inner)
+  if (heading) {
+    // Same as the index: the ease shapes the rhythm of appearance, not
+    // any motion. Times computed explicitly — see the note there.
+    split = new SplitText(heading, { type: 'words' })
+    const words = split.words
+    const curve = gsap.parseEase(t.title.ease) ?? ((p: number) => p)
+    tl.set(words, { opacity: 0 }, 0)
+    words.forEach((word, i) => {
+      const at = words.length > 1 ? curve(i / (words.length - 1)) : 0
+      tl.set(word, { opacity: 1 }, at * t.title.amount)
     })
-    // Per line, so each drops its mask as it lands — a single staggered
-    // tween only completes with the last line, leaving descenders clipped
-    // through its imperceptible eased tail.
-    split.lines.forEach((line, i) => {
-      tl.from(
-        line.firstElementChild,
-        {
-          yPercent: t.title.yPercent,
-          duration: t.title.duration,
-          ease: t.title.ease,
-          onComplete: () => {
-            ;(line as HTMLElement).style.overflow = 'visible'
-          },
-        },
-        i * t.title.stagger,
-      )
-    })
+    // Clear of the last word: the revert restores the original DOM, and
+      // firing it on the same frame as the final set() is a race.
+      tl.call(() => split?.revert(), undefined, t.title.amount + 0.12)
   }
 
   tl.from(

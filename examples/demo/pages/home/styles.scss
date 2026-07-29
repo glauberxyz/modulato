@@ -29,14 +29,6 @@
   // Line breaks are authored in the markup; the measure only has to be
   // wide enough not to introduce any of its own.
   max-width: 22ch;
-
-  .line {
-    display: block;
-    overflow: hidden;
-  }
-  .line span {
-    display: block;
-  }
 }
 
 .home__lede {

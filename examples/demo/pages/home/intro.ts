@@ -26,32 +26,25 @@ export default intro({
     )
 
     if (headline) {
-      split = new SplitText(headline, { type: 'lines', linesClass: 'line' })
-      // Each line gets an inner span so it can slide inside its own mask.
-      split.lines.forEach((line) => {
-        const inner = document.createElement('span')
-        inner.append(...line.childNodes)
-        line.append(inner)
+      // Words, not lines — and no masks, so nothing can clip a descender.
+      // Each word simply appears; the EASE shapes the SEQUENCE rather than
+      // any movement, so "There" lands alone and the rest tumble in after
+      // it, the gaps tightening as the line fills.
+      //
+      // The times are computed rather than left to a staggered tween: a
+      // zero-duration tween never applies its from-state, so the words all
+      // arrived at once.
+      split = new SplitText(headline, { type: 'words' })
+      const words = split.words
+      const curve = gsap.parseEase(claim.ease) ?? ((p: number) => p)
+      tl.set(words, { opacity: 0 }, 0)
+      words.forEach((word, i) => {
+        const at = words.length > 1 ? curve(i / (words.length - 1)) : 0
+        tl.set(word, { opacity: 1 }, claim.at + at * claim.amount)
       })
-      // One tween PER LINE rather than one staggered tween, so each line can
-      // drop its own mask the moment it lands. A single staggered tween only
-      // reports completion once the last line finishes, and its eased tail
-      // is imperceptible — which left descenders (g, y, p) clipped for a
-      // beat after the title had visibly stopped.
-      split.lines.forEach((line, i) => {
-        tl.from(
-          line.firstElementChild,
-          {
-            yPercent: claim.yPercent,
-            duration: claim.duration,
-            ease: claim.ease,
-            onComplete: () => {
-              ;(line as HTMLElement).style.overflow = 'visible'
-            },
-          },
-          claim.at + i * claim.stagger,
-        )
-      })
+      // Clear of the last word: the revert restores the original DOM, and
+      // firing it on the same frame as the final set() is a race.
+      tl.call(() => split?.revert(), undefined, claim.at + claim.amount + 0.12)
     }
 
     tl.from(
