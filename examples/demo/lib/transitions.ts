@@ -9,10 +9,9 @@ export interface WordFlightTokens {
   duration: number
   /** Gap between consecutive words setting off. Paced to be watchable. */
   stagger: number
-  /** How long the rest of the index takes to clear. */
+  /** How long the rest of the index takes to clear — and, because the
+   *  incoming page sits UNDER it, how long the chapter takes to arrive. */
   clear: number
-  /** When the chapter body fades up, as a fraction of the whole flight. */
-  bodyAt: number
   /** A beat before anything moves, with every clone sitting exactly over
    *  the word it replaced. Lets the swap settle before the flight reads. */
   hold: number
@@ -57,7 +56,7 @@ async function exitByLine(
  * is pixel-identical to the real word at both ends of the flight.
  */
 export async function wordFlight(
-  { from, to, trigger, shared }: TransitionRunContext,
+  { from, trigger, shared }: TransitionRunContext,
   t: WordFlightTokens,
 ) {
   const words = shared
@@ -72,8 +71,10 @@ export async function wordFlight(
     from.element.querySelector<HTMLElement>('.entry__abstract')
 
   if (!t.duration || !words.length) {
-    // Reduced motion, or nothing matched: just swap.
-    await to.element.animate([{ opacity: 0 }, { opacity: 1 }], {
+    // Reduced motion, or nothing matched: just swap. The OUTGOING page is
+    // the one to animate — the incoming sits under it, so fading it up
+    // reveals nothing while the old page is still opaque on top.
+    await from.element.animate([{ opacity: 1 }, { opacity: 0 }], {
       duration: t.duration || 1,
       fill: 'forwards',
     }).finished.catch(() => {})
@@ -151,22 +152,21 @@ export async function wordFlight(
   // The index's abstract clears out line by line while the words fly over it.
   if (leaving) flights.push(exitByLine(leaving, t.abstract))
 
-  const total = t.duration + Math.max(0, words.length - 1) * t.stagger
-
   await Promise.all([
     ...flights,
-    // Everything else on the index clears out of the way.
+    // Everything else on the index clears out of the way — and that alone
+    // brings the chapter in. The framework stacks the outgoing page ON TOP
+    // of the incoming one, so this single fade is a true dissolve: the
+    // sheet underneath is already opaque and arrives as the index leaves.
+    //
+    // Fading the incoming page up as well would be a SECOND fade over the
+    // first, and two translucent layers always let the backdrop through —
+    // which is exactly what a delayed `fill: 'forwards'` did here: it left
+    // the page at full opacity through its delay, then snapped it to zero
+    // the instant the delay ended, flashing the surface behind it.
     from.element.animate([{ opacity: 1 }, { opacity: 0 }], {
       duration: t.clear,
       delay: t.hold,
-      easing: t.ease,
-      fill: 'forwards',
-    }).finished.catch(() => {}),
-    // The sheet arrives under the words while they are still in the air —
-    // it has to, or they would land dark on a dark page.
-    to.element.animate([{ opacity: 0 }, { opacity: 1 }], {
-      duration: total * 0.5,
-      delay: t.hold + total * t.bodyAt,
       easing: t.ease,
       fill: 'forwards',
     }).finished.catch(() => {}),
@@ -203,7 +203,10 @@ export async function paperFeed({ from, to }: TransitionRunContext, t: FeedToken
         { transform: `translateY(22%) skewY(${t.skew}deg)`, opacity: 0 },
         { transform: 'translateY(0) skewY(0deg)', opacity: 1 },
       ],
-      { ...options, delay: t.duration * 0.12 },
+      // `both`, not `forwards`: a delayed forwards-only animation has no
+      // effect during its delay, so the sheet would sit finished-looking
+      // and then snap back to its start the moment the delay elapsed.
+      { ...options, delay: t.duration * 0.12, fill: 'both' },
     ).finished,
   ]).catch(() => {})
 }

@@ -55,6 +55,15 @@ a {
   min-height: 100vh;
 }
 
+// The framework's wrapper is the element a transition animates, and it sits
+// OUTSIDE the page's own `.is-dark` — so it was painting the light :root
+// paper directly beneath a dark page. Any partial opacity leaked white.
+// `:has` keeps the page component the single source of truth: whichever
+// page declares itself dark, its wrapper follows.
+[data-page]:has(> .is-dark) {
+  @include tokens.dark;
+}
+
 ::selection {
   background: var(--select-bg);
   color: var(--select-fg);

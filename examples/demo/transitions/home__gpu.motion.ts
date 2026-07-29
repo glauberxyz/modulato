@@ -11,7 +11,6 @@ export default motion({
     duration: 1150,
     stagger: 170,
     clear: 520,
-    bodyAt: 0.3,
     ease: 'cubic-bezier(0.62, 0.05, 0.01, 0.99)',
     // The index abstract's exit — a different text from the chapter lede,
     // so it leaves line by line rather than morphing.

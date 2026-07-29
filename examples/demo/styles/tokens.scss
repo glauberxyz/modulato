@@ -38,11 +38,17 @@
 
 // Page-level surface switch. `.is-dark` flips the four surface variables so
 // every component below reads --paper/--ink and needs no dark variant.
-.is-dark {
+// The mixin exists so the framework's page wrapper can adopt the same
+// surface without the class — see global.scss.
+@mixin dark {
   --paper: #14110f;
   --ink: #f4f1ea;
   --muted: #8b857c;
   --rule: #332e29;
+}
+
+.is-dark {
+  @include dark;
 }
 
 @media (max-width: 767px) {

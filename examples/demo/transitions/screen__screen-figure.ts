@@ -25,7 +25,9 @@ export default transition({
         duration: t.duration * 0.7,
         delay: t.duration * 0.3,
         easing: t.ease,
-        fill: 'forwards',
+        // `both`: a forwards-only fill does nothing during the delay, so
+        // the page would show at full opacity and then snap to zero.
+        fill: 'both',
       }).finished,
     ]).catch(() => {})
   },
