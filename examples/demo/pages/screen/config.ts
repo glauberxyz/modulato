@@ -16,10 +16,10 @@ export function meta({ props }: LoadArgs & { props: ReturnType<typeof load> }) {
   }
 }
 
-// A chapter always opens at its title. `restore` is scroll memory for LINK
-// navigations — it would drop you back mid-chapter where you last left off,
-// which loses the opening and gives the word flight nothing to land on.
-// Coming back from a plate inspector DOES keep your place: that control pops
-// history rather than following its href (lib/PlateView.tsx), and the
-// framework restores position on Back/Forward regardless of this flag.
+// A chapter always opens at its title — Back and Forward included. Its
+// opening is choreographed (the title flies in from the index), and a
+// restored scroll position puts that choreography somewhere nobody can see,
+// with the router and the transition then fighting over the scroll mid-flight.
+// The one exception is closing a plate inspector, which asks for the reader's
+// place back explicitly — see lib/PlateView.tsx.
 export const scroll = { restore: false }

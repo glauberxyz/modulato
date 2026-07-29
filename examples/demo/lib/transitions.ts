@@ -152,6 +152,14 @@ function arriveAfter(
  * The reader sees nothing move: the outgoing page is an absolute overlay
  * covering the viewport, so it is counter-translated by exactly what the
  * window scrolled. Returns that offset, for the wind-back to build on.
+ *
+ * The counter-translate goes on FIRST, which means predicting the clamp
+ * rather than reading it back afterwards. Scrolling and then compensating
+ * leaves the page displaced by the whole delta in between — briefly, but a
+ * frame can land there, and it did: arriving at a chapter the router had
+ * restored a scroll position for, the index visibly snapped up 800px before
+ * the compensation caught it. There is no order in which "scroll, then fix
+ * it" is safe.
  */
 function seatLanding(el: HTMLElement, words: SharedPair[], seat: number): number {
   const rects = words.map((p) => p.to.getBoundingClientRect())
@@ -165,10 +173,13 @@ function seatLanding(el: HTMLElement, words: SharedPair[], seat: number): number
   const delta = bottom > vh ? bottom - vh + clear : top < 0 ? top - clear : 0
   if (!delta) return 0
   const before = window.scrollY
-  window.scrollTo(0, before + delta)
-  // What the document ACTUALLY allowed — the ends clamp.
-  const applied = window.scrollY - before
-  if (applied) el.style.transform = `translateY(${applied}px)`
+  // Where the document will ACTUALLY let us land — the ends clamp, and both
+  // pages are mounted, so the height is the incoming page's.
+  const limit = document.documentElement.scrollHeight - vh
+  const applied = Math.max(0, Math.min(before + delta, limit)) - before
+  if (!applied) return 0
+  el.style.transform = `translateY(${applied}px)`
+  window.scrollTo(0, before + applied)
   return applied
 }
 

@@ -1,4 +1,4 @@
-import { Shared } from 'modulato'
+import { Shared, useRouter } from 'modulato'
 import type { Figure } from './content'
 import './plate-view.scss'
 
@@ -8,6 +8,7 @@ import './plate-view.scss'
  * FLIPs one into the other across two genuinely different layouts.
  */
 export function PlateView({ figure, chapter }: { figure: Figure; chapter: string }) {
+  const { navigate } = useRouter()
   return (
     <article className="plate" data-page={`${chapter}/${figure.slug}`}>
       <div className="plate__stage">
@@ -32,16 +33,15 @@ export function PlateView({ figure, chapter }: { figure: Figure; chapter: string
             className="plate__back"
             href={`/${chapter}`}
             onClick={(event) => {
-              // Closing a plate should put the reader back at the figure they
-              // opened, not at the chapter's title. A fresh link navigation
-              // can't do that — the chapter deliberately opens at the top —
-              // so pop instead: the framework restores the position it stored
-              // on that history entry. Only when this page was pushed in
-              // session (`history.state` is null on a cold deep-load, where
-              // there is nothing behind us and the href is already right).
-              if (!window.history.state) return
+              // Closing a plate puts the reader back at the figure they
+              // opened, not at the chapter's title — the one case where a
+              // chapter does NOT open at its head. The chapter declares
+              // `restore: false`, so this asks for the exception explicitly
+              // rather than depending on how the reader got here. On a cold
+              // deep-load there is nothing remembered and it lands at the top,
+              // which is the right answer anyway.
               event.preventDefault()
-              window.history.back()
+              void navigate(`/${chapter}`, { restoreScroll: true })
             }}
           >
             ← Back to the chapter

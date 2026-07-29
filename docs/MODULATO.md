@@ -104,11 +104,21 @@ export function meta({ props }: LoadArgs & { props: ReturnType<typeof load> }) {
 }
 
 // Optional per-page smooth-scroll tuning (Lenis options), or `false` to disable.
-// `restore: true` = scroll memory: link navigations BACK to this page land at
-// the position it was left at (grid → detail → back-to-grid). Session-only;
-// a fresh landing starts at the top. Back/Forward restore regardless.
+// `restore` is scroll memory, session-only — a fresh landing always starts at
+// the top:
+//   true    link navigations BACK to this page land where it was left
+//           (grid → detail → back-to-grid). Back/Forward restore too.
+//   false   this page ALWAYS opens at the top, Back and Forward included —
+//           for a page whose opening is choreographed, where a restored
+//           position would put the choreography off-screen.
+//   omitted link navigations start at the top, Back/Forward restore.
 export const scroll = { lerp: 0.08, restore: true }
 ```
+
+Override it for a single navigation with
+`useRouter().navigate(path, { restoreScroll: true })` — how a detail view
+returns the reader to the exact place in the list it was opened from, even
+when that list declares `restore: false`.
 
 `load` runs server-side for the first paint and client-side on navigations —
 same code, same `content` snapshot. `meta` sets title/description (SSR +

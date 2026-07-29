@@ -75,7 +75,10 @@ export function ModulatoRoot({
   }, [])
 
   const navigate = useCallback(
-    async (path: string, opts: { pop?: boolean; scrollY?: number } = {}) => {
+    async (
+      path: string,
+      opts: { pop?: boolean; scrollY?: number; restoreScroll?: boolean } = {},
+    ) => {
       const url = new URL(path, window.location.origin)
       const pathname = url.pathname
       if (pathname === stateRef.current.current.path && !opts.pop) return
@@ -114,13 +117,23 @@ export function ModulatoRoot({
         )
         window.history.pushState({}, '', url.pathname + url.search)
       }
-      // Explicit target (popstate) → remembered position (scroll.restore
-      // pages, link navs) → top.
-      const remembered =
-        entry.scroll !== false && entry.scroll?.restore
-          ? scrollMemory.get(pathname)
-          : undefined
-      targetScroll.current = opts.scrollY ?? remembered ?? 0
+      // Where the incoming page lands: explicit target (popstate) →
+      // remembered position → top.
+      //
+      // `restore: false` means the page opens at the top FULL STOP — Back and
+      // Forward included. The declaration is about the page, not about how
+      // you arrived at it, and a page whose opening is choreographed (a title
+      // that flies into place, a hero that plays) cannot honour a scroll
+      // position without the choreography arriving somewhere nobody can see.
+      // Say nothing and Back/Forward restore as they always have.
+      //
+      // One navigation can override it — `navigate(path, { restoreScroll:
+      // true })` — which is how a detail view returns the reader to the exact
+      // place in the list it was opened from.
+      const config = entry.scroll === false ? undefined : entry.scroll
+      const wants = opts.restoreScroll ?? config?.restore
+      const remembered = wants ? scrollMemory.get(pathname) : undefined
+      targetScroll.current = wants === false ? 0 : (opts.scrollY ?? remembered ?? 0)
       setPhase('transition')
       setState((s) => ({ current: s.current, next: entry }))
     },

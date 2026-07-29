@@ -67,10 +67,18 @@ export interface ScrollConfig {
   smoothWheel?: boolean
   touchMultiplier?: number
   /**
-   * Scroll memory: when a LINK navigation returns to this page, land at the
-   * position it was left at instead of the top (grid → detail → back-to-grid).
-   * Session-only — a fresh landing always starts at the top. The browser
-   * Back/Forward buttons restore scroll regardless of this flag.
+   * Scroll memory. Session-only — a fresh landing always starts at the top.
+   *
+   * - `true`  — a LINK navigation back to this page lands where it was left
+   *             (grid → detail → back-to-grid). Back/Forward restore too.
+   * - `false` — this page ALWAYS opens at the top, Back and Forward included.
+   *             For a page whose opening is choreographed: a restored scroll
+   *             puts the choreography somewhere nobody can see, and the two
+   *             then fight over the scroll position mid-transition.
+   * - unset   — link navigations start at the top, Back/Forward restore.
+   *
+   * `navigate(path, { restoreScroll: true })` overrides whatever is set here,
+   * for one navigation.
    */
   restore?: boolean
   [option: string]: unknown

@@ -4,7 +4,14 @@ import type { Entry, NavPhase, RouteInfo, RouterState } from './types'
 export interface RouterApi {
   state: RouterState
   phase: NavPhase
-  navigate: (path: string) => Promise<void>
+  /**
+   * Go to a route. `restoreScroll` overrides the destination page's own
+   * `scroll.restore` for this one navigation, landing at the position it was
+   * last left at — how a detail view returns the reader to the exact place in
+   * the list it was opened from, even when that list declares it opens at the
+   * top.
+   */
+  navigate: (path: string, opts?: { restoreScroll?: boolean }) => Promise<void>
   registerEl: (key: string, el: HTMLElement | null) => void
 }
 
