@@ -5,11 +5,11 @@ export default motion({
   intro: {
     // Falls in from above the viewport. `clearance` is how far past the
     // top edge it starts; the rest of the distance is measured.
-    smile: { at: 1.15, clearance: 80, scale: 0.919, duration: 1.1, ease: 'roller' },
+    smile: { at: 1.9, clearance: 15, scale: 0.919, duration: 1.1, ease: 'roller' },
     // `amount` is the whole sequence's span; `ease` shapes the gaps
     // between words rather than any movement.
     claim: { at: 0.562, amount: 0.887, ease: 'none' },
-    lede: { at: 1.9, y: 35.9, duration: 0.9, ease: 'press' },
+    lede: { at: 1.6, y: 35.9, duration: 0.9, ease: 'press' },
     entries: { at: 1.423, y: 40, duration: 0.8, stagger: 0.07, ease: 'press' },
     phone: {
       claim: { amount: 0.7 },

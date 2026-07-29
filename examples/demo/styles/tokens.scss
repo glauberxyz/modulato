@@ -22,6 +22,11 @@
   --plate-y: #f5c400;
   --plate-k: #231f20;
 
+  // Selection: white paper, dark ink — the same two values the site is
+  // printed with, whichever surface you are on.
+  --select-bg: #ffffff;
+  --select-fg: #231f20;
+
   --font-sans: 'franklin-gothic-urw', 'Helvetica Neue', sans-serif;
   --font-serif: 'adobe-garamond-pro', Georgia, serif;
 
