@@ -6,14 +6,20 @@ import tokens from './motion'
 gsap.registerPlugin(SplitText)
 
 /**
- * First load: the claim sets line by line, like a page coming off the press.
- * Numbers live in ./motion.ts — every one of them is tweakable live.
+ * First load: the smile prints, then the claim sets line by line and the
+ * contents rise. Numbers live in ./motion.ts.
  */
 export default intro({
   async run({ element }) {
-    const { claim, lede, entries } = resolveTokens(tokens).intro
+    const { smile, claim, lede, entries } = resolveTokens(tokens).intro
     const headline = element.querySelector<HTMLElement>('.home__claim')
     const tl = gsap.timeline()
+
+    tl.from(
+      element.querySelector('.home__smile'),
+      { scale: smile.scale, opacity: 0, duration: smile.duration, ease: smile.ease },
+      0,
+    )
 
     if (headline) {
       const split = new SplitText(headline, { type: 'lines', linesClass: 'line' })
@@ -31,18 +37,18 @@ export default intro({
           stagger: claim.stagger,
           ease: claim.ease,
         },
-        0,
+        claim.at,
       )
     }
 
     tl.from(
-      element.querySelectorAll('.home__lede p'),
+      element.querySelectorAll('.home__lede, .home__note'),
       { y: lede.y, opacity: 0, duration: lede.duration, ease: lede.ease, stagger: 0.08 },
       lede.at,
     )
 
     tl.from(
-      element.querySelectorAll('.home__entry, .home__indexhead'),
+      element.querySelectorAll('.home__contents, .entry'),
       {
         y: entries.y,
         opacity: 0,

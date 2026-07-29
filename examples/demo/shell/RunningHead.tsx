@@ -1,39 +1,30 @@
 import { useNavigation, useRoute } from 'modulato'
 import './running-head.scss'
 
-const TITLES: Record<string, string> = {
-  home: 'Halftone',
-  press: 'I · The Binary Press',
-  screen: 'II · The Screen',
-  angles: 'III · Four Screens, One Sheet',
-  gpu: 'IV · The Press on the GPU',
-  darkroom: 'Darkroom',
-  styles: 'Type & Colour',
-}
-
 /**
- * The running head — a magazine's page furniture. It never unmounts, so it
- * can cross-fade its label the instant navigation STARTS (nav.to), while
- * the outgoing page is still on screen.
+ * Page furniture: it never unmounts, so it survives every navigation. The
+ * label is deliberately fixed — the chapter name is the page's own job now
+ * that titles fly into place.
  */
 export function RunningHead() {
   const route = useRoute()
   const nav = useNavigation()
-  const id = (nav.to ?? route).id
-  const base = id.split('/')[0]
-  const dark = base === 'home' || base === 'darkroom'
+  const id = (nav.to ?? route).id.split('/')[0]
 
   return (
-    <header className={`runhead ${dark ? 'runhead--dark' : ''}`} data-lenis-prevent="">
+    <header className="runhead" data-lenis-prevent="">
       <a className="runhead__mark" href="/">
-        Halftone
+        Halftone. A demo website by Modulato
       </a>
-      <span className="runhead__title" key={base}>
-        {TITLES[base] ?? base}
-      </span>
-      <a className="runhead__end" href="/darkroom">
-        Darkroom
-      </a>
+      {id === 'darkroom' ? (
+        <a className="runhead__end" href="/">
+          Index
+        </a>
+      ) : (
+        <a className="runhead__end" href="/darkroom">
+          Darkroom
+        </a>
+      )}
     </header>
   )
 }

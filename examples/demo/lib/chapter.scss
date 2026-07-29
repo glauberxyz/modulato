@@ -5,27 +5,35 @@
 }
 
 .chapter__head {
-  padding-top: 22vh;
-  padding-bottom: 8vh;
-  row-gap: 18px;
-}
-
-.chapter__meta {
   display: flex;
-  justify-content: space-between;
-  padding-bottom: 12px;
-  border-bottom: 1px solid var(--ink);
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  padding: 16vh var(--margin) 12vh;
 }
 
 .chapter__title {
   @include type.display;
   margin: 0;
+  max-width: 12ch;
+
+  // Words stack — this is where the index's inline words land.
+  .chapter__word {
+    display: block;
+  }
+}
+
+.chapter__abstract {
+  @include type.body;
+  color: var(--muted);
+  max-width: 30ch;
+  margin-top: 0.5em;
 }
 
 .chapter__lede {
   @include type.body-large;
-  max-width: 30ch;
-  margin-top: 4vh;
+  max-width: 32ch;
+  margin-top: 6vh;
 }
 
 // ── movements ────────────────────────────────────────────────────────

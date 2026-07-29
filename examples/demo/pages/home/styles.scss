@@ -1,29 +1,33 @@
 @use '../../styles/typography' as type;
 
+// The index is centred, not gridded — one column of type down the middle.
 .home {
-  position: relative;
   min-height: 100vh;
-  padding-bottom: 12vh;
-  overflow: clip;
-}
-
-.home__hero,
-.home__index,
-.home__foot {
-  position: relative;
-  z-index: 1;
+  padding-bottom: 14vh;
+  text-align: center;
 }
 
 .home__hero {
-  padding-top: 26vh;
-  padding-bottom: 18vh;
-  align-items: end;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  // Away from the top, so the title has room above it — and tall enough
+  // that the copy under it runs past the fold and reads as scrollable.
+  padding: 16vh var(--margin) 18vh;
+}
+
+.home__smile {
+  width: 100px;
+  height: 100px;
+  display: block;
+  margin-bottom: 14vh;
 }
 
 .home__claim {
   @include type.display;
   margin: 0;
-  // Each line is wrapped by the intro for the stagger.
+  max-width: 16ch;
+
   .line {
     display: block;
     overflow: hidden;
@@ -33,131 +37,112 @@
   }
 }
 
-.home__lede p {
-  margin-bottom: 1em;
-  max-width: 46ch;
+.home__lede {
+  @include type.body-large;
+  color: var(--muted);
+  max-width: 30ch;
+  margin-top: 6vh;
 }
 
 .home__note {
   @include type.small;
   color: var(--muted);
   max-width: 44ch;
+  margin-top: 3vh;
 }
 
-// ── the contents list ────────────────────────────────────────────────
+// ── contents ─────────────────────────────────────────────────────────
 .home__index {
-  row-gap: 0;
-}
-
-.home__indexhead {
   display: flex;
-  justify-content: space-between;
-  padding-bottom: 12px;
-  border-bottom: 1px solid var(--rule);
+  flex-direction: column;
+  align-items: center;
+  padding-inline: var(--margin);
 }
 
-.home__entry {
-  display: grid;
-  grid-template-columns: 3ch minmax(0, 5fr) minmax(0, 7fr) auto;
-  gap: var(--gutter);
-  align-items: baseline;
-  padding: 26px 0;
-  border-bottom: 1px solid var(--rule);
+.home__contents {
+  margin-bottom: 6vh;
+}
+
+.entry {
+  display: block;
   text-decoration: none;
-  position: relative;
+  padding: 5vh 0;
+  width: 100%;
+  max-width: 34ch;
+  border-bottom: 1px solid var(--rule);
 
-  &::after {
-    content: '';
-    position: absolute;
-    inset: 0 -12px;
-    background: var(--ink);
-    opacity: 0;
-    z-index: -1;
-    transition: opacity 0.35s ease;
-  }
-
-  &:hover .home__entrytitle {
-    transform: translateX(10px);
-  }
-  &:hover .home__dot {
-    transform: scale(2.4);
+  &:last-of-type {
+    border-bottom: 0;
   }
 }
 
-.home__numeral {
-  @include type.small;
-  color: var(--muted);
-  font-variant-numeric: tabular-nums;
-}
-
-.home__entrytitle {
+.entry__title {
   @include type.title;
-  font-size: clamp(26px, 3.2vw, 40px);
+  display: block;
+
+  // Each word is inline-block so it can be measured and flown on its own
+  // during the transition to a chapter.
+  .entry__word {
+    display: inline-block;
+  }
+  .entry__word + .entry__word {
+    margin-left: 0.24em;
+  }
+}
+
+.entry__arrow {
+  display: inline-block;
+  margin-left: 0.34em;
+  vertical-align: middle;
   transition: transform 0.45s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
-.home__abstract {
-  @include type.small;
+.entry:hover .entry__arrow {
+  transform: translateX(6px);
+}
+
+.entry__abstract {
+  @include type.body;
+  display: block;
   color: var(--muted);
-  max-width: 46ch;
+  margin-top: 0.4em;
 }
 
-.home__dot {
-  width: 9px;
-  height: 9px;
-  border-radius: 50%;
-  background: currentColor;
-  justify-self: end;
-  align-self: center;
-  transition: transform 0.45s cubic-bezier(0.16, 1, 0.3, 1);
-}
-
-// The only colour on the index: one dot per chapter, in that chapter's
-// plate. Chapter III is where they get explained.
-.home__dot--c {
-  background: var(--plate-c);
-}
-.home__dot--m {
-  background: var(--plate-m);
-}
-.home__dot--y {
-  background: var(--plate-y);
-}
-.home__dot--k {
-  background: var(--dark-ink);
-}
-
-.home__entry--alt .home__entrytitle {
-  font-weight: 400;
-}
-
+// ── foot ─────────────────────────────────────────────────────────────
 .home__foot {
-  padding-top: 14vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 16vh var(--margin) 0;
+}
+
+.home__by {
+  @include type.small;
+  font-weight: 700;
 }
 
 .home__colophon {
   @include type.small;
   color: var(--muted);
-  max-width: 40ch;
+  max-width: 34ch;
+  margin-top: 3vh;
+
+  a {
+    color: inherit;
+  }
 }
 
 @media (max-width: 767px) {
   .home__hero {
-    padding-top: 22vh;
+    padding-top: 14vh;
   }
-  .home__entry {
-    grid-template-columns: 3ch 1fr auto;
-  }
-  .home__abstract {
-    grid-column: 2 / 3;
-    margin-top: 8px;
+  .home__smile {
+    margin-bottom: 9vh;
   }
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .home__entrytitle,
-  .home__dot,
-  .home__entry::after {
+  .entry__arrow {
     transition: none;
   }
 }

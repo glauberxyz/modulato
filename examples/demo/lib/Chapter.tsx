@@ -80,13 +80,21 @@ export function ChapterView({
 
   return (
     <article className="chapter" data-page={chapter.slug}>
-      <header className="chapter__head grid">
-        <div className="chapter__meta col-full">
-          <span className="label">Chapter {chapter.numeral}</span>
-          <span className="label">Halftone</span>
-        </div>
-        <h1 className="chapter__title col-full">{chapter.title}</h1>
-        <p className="chapter__lede col-stack-b">{chapter.lede}</p>
+      {/* The landing zone. Each title word carries the SAME <Shared> id as
+          its counterpart on the index, so the transition can fly them here
+          one by one; the abstract follows to sit under them. */}
+      <header className="chapter__head">
+        <h1 className="chapter__title">
+          {chapter.title.split(' ').map((word, i) => (
+            <Shared key={i} id={`w:${chapter.slug}:${i}`}>
+              <span className="chapter__word">{word}</span>
+            </Shared>
+          ))}
+        </h1>
+        <Shared id={`d:${chapter.slug}`}>
+          <p className="chapter__abstract">{chapter.abstract}</p>
+        </Shared>
+        <p className="chapter__lede">{chapter.lede}</p>
       </header>
 
       <div className="chapter__body">

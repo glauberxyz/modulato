@@ -11,6 +11,8 @@
   justify-content: space-between;
   gap: var(--gutter);
   padding: 18px var(--margin);
+  // difference blend keeps it legible over either surface without the shell
+  // needing to know which page is under it.
   mix-blend-mode: difference;
   color: #f4f1ea;
   pointer-events: none;
@@ -21,45 +23,22 @@
   }
 }
 
-.runhead__mark {
-  @include type.label;
-  font-weight: 900;
-}
-
-.runhead__title {
+.runhead__mark,
+.runhead__end {
   @include type.small;
-  opacity: 0.75;
-  animation: runhead-in 0.5s cubic-bezier(0.16, 1, 0.3, 1) both;
 }
 
 .runhead__end {
-  @include type.label;
-  opacity: 0.75;
+  font-weight: 700;
+  opacity: 0.8;
 
   &:hover {
     opacity: 1;
   }
 }
 
-@keyframes runhead-in {
-  from {
-    opacity: 0;
-    transform: translateY(0.4em);
-  }
-  to {
-    opacity: 0.75;
-    transform: none;
-  }
-}
-
 @media (max-width: 767px) {
-  .runhead__title {
-    display: none;
-  }
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .runhead__title {
-    animation: none;
+  .runhead__mark {
+    max-width: 22ch;
   }
 }
