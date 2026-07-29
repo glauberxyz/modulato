@@ -130,7 +130,9 @@
   @include type.small;
   color: var(--muted);
   max-width: 34ch;
-  margin-top: 3vh;
+  // Spaced in ems, not vh — a paragraph gap should follow the type, not
+  // the window height. Roughly one line of the 1.5 leading.
+  margin-top: 1.5em;
 
   a {
     color: inherit;
