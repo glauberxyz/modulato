@@ -15,6 +15,10 @@ export interface WordFlightTokens {
   /** A beat before anything moves, with every clone sitting exactly over
    *  the word it replaced. Lets the swap settle before the flight reads. */
   hold: number
+  /** Winding a scrolled page back until the words it has to fly are on
+   *  screen. `seat` is where they come to rest, as a fraction of the
+   *  viewport height. Only ever runs when they are above the fold. */
+  rewind: { duration: number; ease: string; seat: number }
   ease: string
   /** The index abstract's exit: it does NOT morph into the chapter lede —
    *  different text — so it leaves per line and the lede takes the space. */
@@ -41,6 +45,79 @@ async function exitByLine(
     stagger: t.stagger,
     ease: t.ease,
   })
+}
+
+/**
+ * Scroll the INCOMING page until the words' destination is on screen.
+ *
+ * A flight needs somewhere visible to land, and the index is 1.4 screens of
+ * hero before its contents: arriving at scroll 0 puts the entry a thousand
+ * pixels below the fold, and the words leave the bottom edge and are never
+ * seen again. Scroll memory covers the common case — you come back to where
+ * you were browsing — but not returning to the index from a chapter you
+ * reached some other way, so this is the guarantee.
+ *
+ * The reader sees nothing move: the outgoing page is an absolute overlay
+ * covering the viewport, so it is counter-translated by exactly what the
+ * window scrolled. Returns that offset, for the wind-back to build on.
+ */
+function seatLanding(el: HTMLElement, words: SharedPair[], seat: number): number {
+  const rects = words.map((p) => p.to.getBoundingClientRect())
+  const top = Math.min(...rects.map((r) => r.top))
+  const bottom = Math.max(...rects.map((r) => r.bottom))
+  const vh = window.innerHeight
+  // Only when the landing is genuinely outside, and only by what it takes to
+  // clear the edge — a restored scroll position is where the reader was, and
+  // is not ours to tidy up.
+  const clear = seat * vh
+  const delta = bottom > vh ? bottom - vh + clear : top < 0 ? top - clear : 0
+  if (!delta) return 0
+  const before = window.scrollY
+  window.scrollTo(0, before + delta)
+  // What the document ACTUALLY allowed — the ends clamp.
+  const applied = window.scrollY - before
+  if (applied) el.style.transform = `translateY(${applied}px)`
+  return applied
+}
+
+/**
+ * Wind a scrolled outgoing page back until the words it has to fly are on
+ * screen — and no further.
+ *
+ * The framework lifts the outgoing page into an absolute overlay offset by
+ * the scroll it was left at, so it appears unmoved while the viewport jumps
+ * to where the incoming page lands. Translating that overlay is therefore
+ * the honest way to "scroll" a page that is no longer scrollable.
+ *
+ * Driven by the WORDS, not by the page's top: this transition is symmetric,
+ * so it also runs index → chapter, where the words are an entry a screen and
+ * a half down. Winding that page to its own top would shove them further
+ * away — the opposite of the point. Two clamps keep it honest: it only ever
+ * winds BACKWARD (a word below the fold means the reader clicked something
+ * they could not see, which cannot happen), and never past the page's own
+ * top, so no blank ever appears above it.
+ */
+async function windBack(
+  el: HTMLElement,
+  words: SharedPair[],
+  t: WordFlightTokens['rewind'],
+  base: number,
+): Promise<void> {
+  const top = Math.min(...words.map((p) => p.from.getBoundingClientRect().top))
+  if (top >= 0) return
+  const pageTop = el.getBoundingClientRect().top
+  const shift = Math.min(t.seat * window.innerHeight - top, -pageTop)
+  if (shift < 1) return
+  // Built on `base`, the offset seatLanding already put on this element.
+  const to = `translateY(${base + shift}px)`
+  if (!t.duration) {
+    el.style.transform = to
+    return
+  }
+  await el.animate(
+    [{ transform: `translateY(${base}px)` }, { transform: to }],
+    { duration: t.duration, easing: t.ease, fill: 'forwards' },
+  ).finished.catch(() => {})
 }
 
 /**
@@ -81,7 +158,23 @@ export async function wordFlight(
     return
   }
 
+  // Both ends of the flight have to be on screen, or there is nothing to
+  // watch. The landing is seated first — instantly, hidden under the outgoing
+  // page — and then the outgoing page winds back until the words it has to
+  // fly are visible too. Either step is a no-op when its end is already fine,
+  // which is the usual case: you clicked an entry you could see.
+  await windBack(
+    from.element,
+    words,
+    t.rewind,
+    seatLanding(from.element, words, t.rewind.seat),
+  )
+
   const fly = (pair: SharedPair, delay: number) => {
+    // Measured HERE, not taken from the pair: the rects the framework handed
+    // us predate the rewind above.
+    const fromRect = pair.from.getBoundingClientRect()
+    const toRect = pair.to.getBoundingClientRect()
     const fromStyle = getComputedStyle(pair.from)
     const toStyle = getComputedStyle(pair.to)
     const clone = pair.from.cloneNode(true) as HTMLElement
@@ -107,8 +200,8 @@ export async function wordFlight(
       lineHeight: fromStyle.lineHeight,
       letterSpacing: fromStyle.letterSpacing,
       color: fromStyle.color,
-      top: `${pair.fromRect.top}px`,
-      left: `${pair.fromRect.left}px`,
+      top: `${fromRect.top}px`,
+      left: `${fromRect.left}px`,
     })
     document.body.append(clone)
     // Both originals hide synchronously, before this frame paints, so the
@@ -120,16 +213,16 @@ export async function wordFlight(
       .animate(
         [
           {
-            top: `${pair.fromRect.top}px`,
-            left: `${pair.fromRect.left}px`,
+            top: `${fromRect.top}px`,
+            left: `${fromRect.left}px`,
             fontSize: fromStyle.fontSize,
             lineHeight: fromStyle.lineHeight,
             letterSpacing: fromStyle.letterSpacing,
             color: fromStyle.color,
           },
           {
-            top: `${pair.toRect.top}px`,
-            left: `${pair.toRect.left}px`,
+            top: `${toRect.top}px`,
+            left: `${toRect.left}px`,
             fontSize: toStyle.fontSize,
             lineHeight: toStyle.lineHeight,
             letterSpacing: toStyle.letterSpacing,

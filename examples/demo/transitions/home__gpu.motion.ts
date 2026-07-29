@@ -8,6 +8,9 @@ import { motion } from 'modulato'
 export default motion({
   flight: {
     hold: 280,
+    // Winding a scrolled chapter back to its own title before the words
+    // leave it. Skipped entirely when the title is already on screen.
+    rewind: { duration: 620, ease: 'cubic-bezier(0.65, 0, 0.35, 1)', seat: 0.16 },
     duration: 1150,
     stagger: 170,
     clear: 520,
@@ -15,9 +18,16 @@ export default motion({
     // The index abstract's exit — a different text from the chapter lede,
     // so it leaves line by line rather than morphing.
     abstract: { y: -18, duration: 0.5, stagger: 0.06, ease: 'press' },
-    phone: { hold: 200, duration: 850, stagger: 120, clear: 380 },
+    phone: {
+      hold: 200,
+      duration: 850,
+      stagger: 120,
+      clear: 380,
+      rewind: { duration: 480 },
+    },
     reduced: {
       hold: 0,
+      rewind: { duration: 0 },
       duration: 0,
       stagger: 0,
       clear: 0,

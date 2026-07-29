@@ -28,7 +28,22 @@ export function PlateView({ figure, chapter }: { figure: Figure; chapter: string
             <dt>Rights</dt>
             <dd>{figure.license}</dd>
           </dl>
-          <a className="plate__back" href={`/${chapter}`}>
+          <a
+            className="plate__back"
+            href={`/${chapter}`}
+            onClick={(event) => {
+              // Closing a plate should put the reader back at the figure they
+              // opened, not at the chapter's title. A fresh link navigation
+              // can't do that — the chapter deliberately opens at the top —
+              // so pop instead: the framework restores the position it stored
+              // on that history entry. Only when this page was pushed in
+              // session (`history.state` is null on a cold deep-load, where
+              // there is nothing behind us and the href is already right).
+              if (!window.history.state) return
+              event.preventDefault()
+              window.history.back()
+            }}
+          >
             ← Back to the chapter
           </a>
         </div>
