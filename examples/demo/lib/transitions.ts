@@ -4,16 +4,35 @@ import type { SharedPair, TransitionRunContext } from 'modulato'
 
 gsap.registerPlugin(SplitText)
 
+/**
+ * The flight runs in two acts, and the pause between them is the point:
+ *
+ *   ① hold      — nothing. Every clone sits exactly over the word it replaced.
+ *   ② clear+tint— the index fades out, which is what turns the surface over,
+ *                 and the clicked title takes the arriving page's ink IN
+ *                 PLACE. Colour is the whole event; nothing moves.
+ *   ③ gap       — breathing room. The words sit in their new colour on the
+ *                 new surface, alone.
+ *   ④ flight    — only now do they travel.
+ *
+ * Colour and movement used to happen together, which read as one hurried
+ * gesture. Separated, each gets to be seen.
+ */
 export interface WordFlightTokens {
-  /** How long one word takes to fly. */
+  /** How long one word takes to fly (act ④). */
   duration: number
   /** Gap between consecutive words setting off. Paced to be watchable. */
   stagger: number
-  /** How long the rest of the index takes to clear — and, because the
+  /** Act ②: how long the rest of the index takes to clear — and, because the
    *  incoming page sits UNDER it, how long the chapter takes to arrive. */
   clear: number
-  /** A beat before anything moves, with every clone sitting exactly over
-   *  the word it replaced. Lets the swap settle before the flight reads. */
+  /** Act ②, on the clicked title only: the words cross-fade from the index's
+   *  ink to the chapter's, without moving, as the surface turns over. */
+  tint: { duration: number; ease: string }
+  /** Act ③: the beat between the colour landing and the flight setting off. */
+  gap: number
+  /** Act ①: a beat before anything happens at all, with every clone sitting
+   *  exactly over the word it replaced. Lets the swap settle first. */
   hold: number
   /** Winding a scrolled page back until the words it has to fly are on
    *  screen. `seat` is where they come to rest, as a fraction of the
@@ -32,6 +51,7 @@ export interface WordFlightTokens {
 async function exitByLine(
   el: HTMLElement,
   t: WordFlightTokens['abstract'],
+  delay: number,
 ): Promise<void> {
   if (!t.duration) {
     el.style.opacity = '0'
@@ -41,6 +61,8 @@ async function exitByLine(
   await gsap.to(split.lines, {
     y: t.y,
     opacity: 0,
+    // Seconds — this is the one GSAP animation in here; the rest is WAAPI.
+    delay: delay / 1000,
     duration: t.duration,
     stagger: t.stagger,
     ease: t.ease,
@@ -209,6 +231,19 @@ export async function wordFlight(
     pair.from.style.visibility = 'hidden'
     pair.to.style.visibility = 'hidden'
 
+    // Act ②: the ink changes, and nothing else. This runs with the index's
+    // own fade, so the word darkens at the same moment the surface under it
+    // turns from the index's black to the chapter's paper — one colour event
+    // the reader can actually follow, rather than a colour shift smuggled
+    // inside a flight.
+    clone.animate([{ color: fromStyle.color }, { color: toStyle.color }], {
+      duration: t.tint.duration,
+      delay: t.hold,
+      easing: t.tint.ease,
+      fill: 'both',
+    })
+
+    // Act ④: the travel. No colour here — it landed an act ago.
     return clone
       .animate(
         [
@@ -218,7 +253,6 @@ export async function wordFlight(
             fontSize: fromStyle.fontSize,
             lineHeight: fromStyle.lineHeight,
             letterSpacing: fromStyle.letterSpacing,
-            color: fromStyle.color,
           },
           {
             top: `${toRect.top}px`,
@@ -226,13 +260,14 @@ export async function wordFlight(
             fontSize: toStyle.fontSize,
             lineHeight: toStyle.lineHeight,
             letterSpacing: toStyle.letterSpacing,
-            color: toStyle.color,
           },
         ],
-        // The hold: every clone sits exactly over the word it replaced
-        // before anything moves. Nothing is visibly happening, which is
-        // the point — the swap has to be complete before the flight reads.
-        { duration: t.duration, delay: t.hold + delay, easing: t.ease, fill: 'forwards' },
+        {
+          duration: t.duration,
+          delay: t.hold + t.tint.duration + t.gap + delay,
+          easing: t.ease,
+          fill: 'both',
+        },
       )
       .finished.catch(() => {})
       .then(() => {
@@ -242,8 +277,9 @@ export async function wordFlight(
   }
 
   const flights = words.map((pair, i) => fly(pair, i * t.stagger))
-  // The index's abstract clears out line by line while the words fly over it.
-  if (leaving) flights.push(exitByLine(leaving, t.abstract))
+  // Act ②: the abstract goes out line by line with everything else on the
+  // index — before the flight, not under it.
+  if (leaving) flights.push(exitByLine(leaving, t.abstract, t.hold))
 
   await Promise.all([
     ...flights,
