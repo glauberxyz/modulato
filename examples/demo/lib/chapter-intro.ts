@@ -14,9 +14,10 @@ export async function chapterIntro(element: HTMLElement, tokens: unknown) {
   }
   const heading = element.querySelector<HTMLElement>('.chapter__title')
   const tl = gsap.timeline()
+  let split: SplitText | null = null
 
   if (heading && t.title.duration) {
-    const split = new SplitText(heading, { type: 'lines', linesClass: 'line' })
+    split = new SplitText(heading, { type: 'lines', linesClass: 'line' })
     split.lines.forEach((line) => {
       const inner = document.createElement('span')
       inner.append(...line.childNodes)
@@ -41,4 +42,7 @@ export async function chapterIntro(element: HTMLElement, tokens: unknown) {
   )
 
   await tl.then()
+  // Undo the split: the masks have done their job and would clip
+  // descenders from here on.
+  split?.revert()
 }
