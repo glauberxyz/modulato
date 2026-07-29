@@ -33,16 +33,25 @@ export default intro({
         inner.append(...line.childNodes)
         line.append(inner)
       })
-      tl.from(
-        split.lines.map((l) => l.firstElementChild),
-        {
-          yPercent: claim.yPercent,
-          duration: claim.duration,
-          stagger: claim.stagger,
-          ease: claim.ease,
-        },
-        claim.at,
-      )
+      // One tween PER LINE rather than one staggered tween, so each line can
+      // drop its own mask the moment it lands. A single staggered tween only
+      // reports completion once the last line finishes, and its eased tail
+      // is imperceptible — which left descenders (g, y, p) clipped for a
+      // beat after the title had visibly stopped.
+      split.lines.forEach((line, i) => {
+        tl.from(
+          line.firstElementChild,
+          {
+            yPercent: claim.yPercent,
+            duration: claim.duration,
+            ease: claim.ease,
+            onComplete: () => {
+              ;(line as HTMLElement).style.overflow = 'visible'
+            },
+          },
+          claim.at + i * claim.stagger,
+        )
+      })
     }
 
     tl.from(
@@ -64,8 +73,7 @@ export default intro({
     )
 
     await tl.then()
-    // Back to plain text: no clipping, and the line breaks are free to
-    // re-wrap on resize instead of being frozen at their split positions.
+    // Belt and braces: if the tween was interrupted, onComplete never ran.
     split?.revert()
   },
 })

@@ -23,16 +23,23 @@ export async function chapterIntro(element: HTMLElement, tokens: unknown) {
       inner.append(...line.childNodes)
       line.append(inner)
     })
-    tl.from(
-      split.lines.map((l) => l.firstElementChild),
-      {
-        yPercent: t.title.yPercent,
-        duration: t.title.duration,
-        stagger: t.title.stagger,
-        ease: t.title.ease,
-      },
-      0,
-    )
+    // Per line, so each drops its mask as it lands — a single staggered
+    // tween only completes with the last line, leaving descenders clipped
+    // through its imperceptible eased tail.
+    split.lines.forEach((line, i) => {
+      tl.from(
+        line.firstElementChild,
+        {
+          yPercent: t.title.yPercent,
+          duration: t.title.duration,
+          ease: t.title.ease,
+          onComplete: () => {
+            ;(line as HTMLElement).style.overflow = 'visible'
+          },
+        },
+        i * t.title.stagger,
+      )
+    })
   }
 
   tl.from(
@@ -42,7 +49,6 @@ export async function chapterIntro(element: HTMLElement, tokens: unknown) {
   )
 
   await tl.then()
-  // Undo the split: the masks have done their job and would clip
-  // descenders from here on.
+  // Belt and braces: if the tween was interrupted, onComplete never ran.
   split?.revert()
 }
