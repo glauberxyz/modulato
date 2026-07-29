@@ -54,15 +54,25 @@
 }
 
 .home__contents {
-  margin-bottom: 6vh;
+  // Normal tracking, not the tracked-out .label style — at this size the
+  // letters read as separated rather than as a word.
+  @include type.small;
+  text-transform: uppercase;
+  letter-spacing: 0;
+  color: var(--muted);
+  // Sits close to the first entry; the entry's own padding is the gap.
+  margin-bottom: 0;
 }
 
 .entry {
   display: block;
   text-decoration: none;
-  padding: 5vh 0;
+  // Wider than its own text, with side padding — so the rule runs past
+  // where the type stops instead of ending flush with it, and the title
+  // has room to hold on one line at larger sizes.
+  padding: 5vh 56px;
   width: 100%;
-  max-width: 34ch;
+  max-width: 660px;
   border-bottom: 1px solid var(--rule);
 
   &:last-of-type {
@@ -99,7 +109,9 @@
   @include type.body;
   display: block;
   color: var(--muted);
-  margin-top: 0.4em;
+  // The abstract keeps its own reading measure inside the wider item.
+  max-width: 34ch;
+  margin: 0.4em auto 0;
 }
 
 // ── foot ─────────────────────────────────────────────────────────────
@@ -112,7 +124,6 @@
 
 .home__by {
   @include type.small;
-  font-weight: 700;
 }
 
 .home__colophon {

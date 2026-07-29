@@ -10,7 +10,9 @@
   align-items: baseline;
   justify-content: space-between;
   gap: var(--gutter);
-  padding: 18px var(--margin);
+  // Equal on every side, and equal to the page gutter, so it lines up
+  // with the grid on the chapter pages.
+  padding: var(--margin);
   // difference blend keeps it legible over either surface without the shell
   // needing to know which page is under it.
   mix-blend-mode: difference;
@@ -25,12 +27,10 @@
 
 .runhead__mark,
 .runhead__end {
+  // Same size, same weight — the Darkroom link is not more important
+  // than the site's own name.
   @include type.small;
-}
-
-.runhead__end {
-  font-weight: 700;
-  opacity: 0.8;
+  opacity: 0.85;
 
   &:hover {
     opacity: 1;

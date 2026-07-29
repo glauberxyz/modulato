@@ -18,6 +18,9 @@ body {
   background: var(--paper);
   color: var(--ink);
   @include type.body;
+  // text-wrap inherits, so this reaches every text node on the site.
+  // Browsers cap balancing at a few lines and fall back on long prose.
+  text-wrap: balance;
   -webkit-font-smoothing: antialiased;
   text-rendering: optimizeLegibility;
   // Surface changes belong to the page, but the body backstops the gap
