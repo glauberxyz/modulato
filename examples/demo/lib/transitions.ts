@@ -1,4 +1,8 @@
+import gsap from 'gsap'
+import { SplitText } from 'gsap/SplitText'
 import type { SharedPair, TransitionRunContext } from 'modulato'
+
+gsap.registerPlugin(SplitText)
 
 export interface WordFlightTokens {
   /** How long one word takes to fly. */
@@ -10,6 +14,31 @@ export interface WordFlightTokens {
   /** When the chapter body fades up, as a fraction of the whole flight. */
   bodyAt: number
   ease: string
+  /** The index abstract's exit: it does NOT morph into the chapter lede —
+   *  different text — so it leaves per line and the lede takes the space. */
+  abstract: { y: number; duration: number; stagger: number; ease: string }
+}
+
+/**
+ * Send a paragraph away line by line. SplitText is only used to find the
+ * line boxes; the animation is ordinary GSAP on the resulting spans.
+ */
+async function exitByLine(
+  el: HTMLElement,
+  t: WordFlightTokens['abstract'],
+): Promise<void> {
+  if (!t.duration) {
+    el.style.opacity = '0'
+    return
+  }
+  const split = new SplitText(el, { type: 'lines' })
+  await gsap.to(split.lines, {
+    y: t.y,
+    opacity: 0,
+    duration: t.duration,
+    stagger: t.stagger,
+    ease: t.ease,
+  })
 }
 
 /**
@@ -25,15 +54,21 @@ export interface WordFlightTokens {
  * from the width ratio of the same string at both sizes.
  */
 export async function wordFlight(
-  { from, to, shared }: TransitionRunContext,
+  { from, to, trigger, shared }: TransitionRunContext,
   t: WordFlightTokens,
 ) {
   const words = shared
     .filter((p) => p.id.startsWith('w:'))
     .sort((a, b) => Number(a.id.split(':')[2]) - Number(b.id.split(':')[2]))
-  const abstract = shared.find((p) => p.id.startsWith('d:'))
 
-  if (!t.duration || (!words.length && !abstract)) {
+  // The abstract the reader clicked. It is NOT shared — the chapter shows
+  // its lede there instead — so it leaves rather than travels. `trigger` is
+  // the <a> that started the navigation, which is how we know which one.
+  const leaving =
+    (trigger as HTMLElement | null)?.querySelector<HTMLElement>('.entry__abstract') ??
+    from.element.querySelector<HTMLElement>('.entry__abstract')
+
+  if (!t.duration || !words.length) {
     // Reduced motion, or nothing matched: just swap.
     await to.element.animate([{ opacity: 0 }, { opacity: 1 }], {
       duration: t.duration || 1,
@@ -90,8 +125,8 @@ export async function wordFlight(
   }
 
   const flights = words.map((pair, i) => fly(pair, i * t.stagger))
-  // The abstract sets off with the last word and lands under it.
-  if (abstract) flights.push(fly(abstract, Math.max(0, words.length - 1) * t.stagger))
+  // The index's abstract clears out line by line while the words fly over it.
+  if (leaving) flights.push(exitByLine(leaving, t.abstract))
 
   const total = t.duration + Math.max(0, words.length - 1) * t.stagger
 

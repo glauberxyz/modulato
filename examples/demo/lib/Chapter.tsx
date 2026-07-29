@@ -91,9 +91,8 @@ export function ChapterView({
             </Shared>
           ))}
         </h1>
-        <Shared id={`d:${chapter.slug}`}>
-          <p className="chapter__abstract">{chapter.abstract}</p>
-        </Shared>
+        {/* The lede, not the index's abstract — they are different texts,
+            so the index's fades out rather than morphing into this one. */}
         <p className="chapter__lede">{chapter.lede}</p>
       </header>
 

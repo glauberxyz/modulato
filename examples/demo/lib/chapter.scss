@@ -23,17 +23,10 @@
   }
 }
 
-.chapter__abstract {
-  @include type.body;
-  color: var(--muted);
-  max-width: 30ch;
-  margin-top: 0.5em;
-}
-
 .chapter__lede {
   @include type.body-large;
   max-width: 32ch;
-  margin-top: 6vh;
+  margin-top: 0.6em;
 }
 
 // ── movements ────────────────────────────────────────────────────────
