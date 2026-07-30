@@ -445,10 +445,21 @@ function groupLeaves(leaves: TokenLeaf[], overrideKeys: Set<string>, order: stri
   const byPath = new Map<string, TokenGroup>()
   for (const leaf of leaves) {
     const parent = leaf.path.slice(0, -1)
-    const last = parent[parent.length - 1]
-    const isOverride = last !== undefined && overrideKeys.has(last)
-    const path = isOverride ? parent.slice(0, -1) : parent
-    const blockKey = isOverride ? last : 'base'
+    // An override block names the SAME group with one extra segment, wherever
+    // that segment sits: `claim.reduced.amount` and `reduced.claim.amount`
+    // both override `claim.amount`, and resolveTokens honours either spelling
+    // at any depth (override keys are reserved at every level). Fold on the
+    // override segment nearest the leaf, so the row lands in its real group's
+    // icon tab instead of spawning a sibling card named after the override.
+    let over = -1
+    for (let i = parent.length - 1; i >= 0; i -= 1) {
+      if (overrideKeys.has(parent[i])) {
+        over = i
+        break
+      }
+    }
+    const path = over === -1 ? parent : parent.filter((_, i) => i !== over)
+    const blockKey = over === -1 ? 'base' : parent[over]
     const id = path.join('.')
     let group = byPath.get(id)
     if (!group) {
@@ -466,6 +477,17 @@ function groupLeaves(leaves: TokenLeaf[], overrideKeys: Set<string>, order: stri
   for (const group of groups)
     group.blocks.sort((a, b) => order.indexOf(a.key) - order.indexOf(b.key))
   return groups
+}
+
+/** Does a row match the filter? On EITHER spelling: its source path, or the
+ *  path the panel displays — the folded group plus the row's own name. For a
+ *  hoisted override (`intro.reduced.claim.amount`, shown under `intro › claim`)
+ *  the two differ, and a reader types what they see: without the display path,
+ *  querying `intro.claim` would hide the reduced tab of the very card it names. */
+function rowMatches(query: string, groupPath: string[], leaf: TokenLeaf): boolean {
+  if (leaf.path.join('.').toLowerCase().includes(query)) return true
+  const shown = [...groupPath, leaf.path[leaf.path.length - 1]]
+  return shown.join('.').toLowerCase().includes(query)
 }
 
 // A route id as it's written in a transition filename: `/` → `-`, brackets
@@ -526,9 +548,7 @@ function GroupSection({
   const rowsOf = (block: TokenBlock) =>
     query
       ? block.leaves.filter(
-          (l) =>
-            l.path.join('.').toLowerCase().includes(query) ||
-            dirtySet.has(l.path.join('.')),
+          (l) => rowMatches(query, group.path, l) || dirtySet.has(l.path.join('.')),
         )
       : block.leaves
   const withRows = group.blocks
@@ -907,7 +927,7 @@ function Overlay() {
                   b.leaves.some(
                     (l) =>
                       !query ||
-                      l.path.join('.').toLowerCase().includes(query) ||
+                      rowMatches(query, g.path, l) ||
                       dirtySet.has(l.path.join('.')),
                   ),
                 )

@@ -305,6 +305,10 @@ export default motion({
 - Read tokens through **`resolveTokens(tokens)`** at animation-run time — it
   deep-merges the active breakpoint's block over the base (then `reduced`),
   so replays and breakpoint changes always see fresh values.
+- Override keys are reserved at **every** nesting level: write the block next
+  to the group it modifies, as above. A hoisted spelling
+  (`intro: { phone: { headline: {…} } }`) resolves — and folds into the same
+  overlay tabs — identically, but colocated is the house style.
 - **Tweak Mode** (dev, with `@modulato/tweak` installed): the ✦ Tweak
   overlay shows the token files for the current view (shell + this page +
   transitions touching this route; "Show all" reveals the rest) — edit live,

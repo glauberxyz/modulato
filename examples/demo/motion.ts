@@ -14,6 +14,10 @@ import { motion } from 'modulato'
  *
  * `pages/*​/motion.ts` stays per-page, where the values genuinely differ —
  * each chapter tunes its own reveals and figure parallax.
+ *
+ * A phone/reduced override sits NEXT TO the group it modifies — `tint.phone`,
+ * not `phone.tint` — so each group's overrides land in its own icon tabs in
+ * the overlay. Both spellings resolve identically; this one reads in place.
  */
 export default motion({
   marker: {
@@ -49,46 +53,52 @@ export default motion({
     enter: {
       hold: 201,
       clear: 245,
-      tint: { duration: 380, ease: 'cubic-bezier(0.22, 1, 0.36, 1)' },
-      // The index abstract's exit — a different text from the chapter lede,
-      // so it leaves line by line rather than morphing. Goes out in act 2.
-      abstract: { y: -13, duration: 0.5, stagger: 0.163, ease: 'press' },
       gap: 240,
       duration: 1000,
       stagger: 69,
       ease: 'cubic-bezier(0.22, 1, 0.36, 1)',
+      phone: { hold: 200, clear: 380, gap: 180, duration: 850, stagger: 120 },
+      reduced: { hold: 0, clear: 0, gap: 0, duration: 0, stagger: 0 },
+      tint: {
+        duration: 380,
+        ease: 'cubic-bezier(0.22, 1, 0.36, 1)',
+        phone: { duration: 300 },
+        reduced: { duration: 0 },
+      },
+      // The index abstract's exit — a different text from the chapter lede,
+      // so it leaves line by line rather than morphing. Goes out in act 2.
+      abstract: {
+        y: -13,
+        duration: 0.5,
+        stagger: 0.163,
+        ease: 'press',
+        reduced: { y: 0, duration: 0, stagger: 0 },
+      },
       // The chapter's lede is held back until its title has arrived — it
       // reads as an answer to the title, so it must not precede it. `hold`
       // counts from the LAST word landing, so one value holds correctly for
       // a three-word chapter and a five-word one; negative brings it early.
-      lede: { hold: -180, y: 16, duration: 760, stagger: 0, ease: 'cubic-bezier(0.22, 1, 0.36, 1)' },
+      lede: {
+        hold: -180,
+        y: 16,
+        duration: 760,
+        stagger: 0,
+        ease: 'cubic-bezier(0.22, 1, 0.36, 1)',
+        phone: { hold: -140, duration: 600, stagger: 0 },
+        reduced: { hold: 0, y: 0, duration: 0, stagger: 0 },
+      },
       // Only when the words to fly are off-screen: winding the index to the
       // entry first, whichever way is shorter, so the flight has a visible
       // start. `seat` is where they come to rest, as a fraction of the
       // viewport. Going in this is usually a no-op — you clicked an entry you
       // could see — but a trackpad swipe Forward is not a click, and the
       // index may be sitting at its top with the entry well below the fold.
-      rewind: { duration: 940, ease: 'cubic-bezier(0.22, 1, 0.36, 1)', seat: 0.658 },
-      phone: {
-        hold: 200,
-        clear: 380,
-        tint: { duration: 300 },
-        gap: 180,
-        duration: 850,
-        stagger: 120,
-        lede: { hold: -140, duration: 600, stagger: 0 },
-        rewind: { duration: 480 },
-      },
-      reduced: {
-        hold: 0,
-        clear: 0,
-        tint: { duration: 0 },
-        gap: 0,
-        duration: 0,
-        stagger: 0,
-        abstract: { y: 0, duration: 0, stagger: 0 },
-        lede: { hold: 0, y: 0, duration: 0, stagger: 0 },
-        rewind: { duration: 0 },
+      rewind: {
+        duration: 940,
+        ease: 'cubic-bezier(0.22, 1, 0.36, 1)',
+        seat: 0.658,
+        phone: { duration: 480 },
+        reduced: { duration: 0 },
       },
     },
 
@@ -99,35 +109,36 @@ export default motion({
       // title has to arrive at the top and be SEEN there before it leaves.
       hold: 320,
       clear: 300,
-      tint: { duration: 420, ease: 'cubic-bezier(0.22, 1, 0.36, 1)' },
       gap: 300,
       duration: 1000,
       stagger: 69,
       ease: 'cubic-bezier(0.22, 1, 0.36, 1)',
-      rewind: { duration: 940, ease: 'cubic-bezier(0.22, 1, 0.36, 1)', seat: 0.658 },
+      phone: { hold: 240, clear: 380, gap: 200, duration: 850, stagger: 120 },
+      reduced: { hold: 0, clear: 0, gap: 0, duration: 0, stagger: 0 },
+      tint: {
+        duration: 420,
+        ease: 'cubic-bezier(0.22, 1, 0.36, 1)',
+        phone: { duration: 320 },
+        reduced: { duration: 0 },
+      },
+      rewind: {
+        duration: 940,
+        ease: 'cubic-bezier(0.22, 1, 0.36, 1)',
+        seat: 0.658,
+        phone: { duration: 480 },
+        reduced: { duration: 0 },
+      },
       // The index fills in behind the title once it has landed — the mirror
       // of `enter.lede`. Without it the index arrives complete and the title
       // flies across a page that is already full. Staggered down the page.
-      contents: { hold: -1200, y: 10, duration: 850, stagger: 60, ease: 'cubic-bezier(0.83, 0, 0.17, 1)' },
-      phone: {
-        hold: 240,
-        clear: 380,
-        tint: { duration: 320 },
-        gap: 200,
+      contents: {
+        hold: -1200,
+        y: 10,
         duration: 850,
-        stagger: 120,
-        rewind: { duration: 480 },
-        contents: { hold: -180, duration: 560, stagger: 40 },
-      },
-      reduced: {
-        hold: 0,
-        clear: 0,
-        tint: { duration: 0 },
-        gap: 0,
-        duration: 0,
-        stagger: 0,
-        rewind: { duration: 0 },
-        contents: { hold: 0, y: 0, duration: 0, stagger: 0 },
+        stagger: 60,
+        ease: 'cubic-bezier(0.83, 0, 0.17, 1)',
+        phone: { hold: -180, duration: 560, stagger: 40 },
+        reduced: { hold: 0, y: 0, duration: 0, stagger: 0 },
       },
     },
   },
