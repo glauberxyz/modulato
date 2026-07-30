@@ -3,8 +3,10 @@ import { motion } from 'modulato'
 /** Index motion — all tweakable live in the overlay. */
 export default motion({
   intro: {
-    // Prints in place: scale only, no arrival from anywhere.
-    smile: { at: 1.9, scale: 0.919, duration: 1.1, ease: 'roller' },
+    // Prints in place: it grows from nothing at `at`, no arrival from
+    // anywhere. `scale` is where it starts — 0 so there is nothing on the
+    // page until its moment, which is the job the old drop-in did.
+    smile: { at: 1.9, scale: 0, duration: 1.1, ease: 'roller' },
     // `amount` is the whole sequence's span; `ease` shapes the gaps
     // between words rather than any movement.
     claim: { at: 0.562, amount: 0.887, ease: 'none' },

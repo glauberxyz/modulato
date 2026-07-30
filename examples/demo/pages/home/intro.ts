@@ -22,6 +22,9 @@ export default intro({
     const smileEl = element.querySelector<HTMLElement>('.home__smile')
     if (smileEl) {
       // Scale only — it prints in place rather than arriving from anywhere.
+      // `from` renders its start state as soon as the timeline is built, so
+      // starting at scale 0 also keeps it off the page until `at` — which is
+      // what the drop-in used to do by being above the fold.
       tl.from(
         smileEl,
         {
