@@ -62,9 +62,12 @@ export default motion({
       // counts from the LAST word landing, so one value holds correctly for
       // a three-word chapter and a five-word one; negative brings it early.
       lede: { hold: -180, y: 16, duration: 760, stagger: 0, ease: 'cubic-bezier(0.22, 1, 0.36, 1)' },
-      // Only when the words to fly are off-screen: winding a scrolled page
-      // back until they are visible. Rare going in — it takes clicking an
-      // entry whose own title has already scrolled past the top edge.
+      // Only when the words to fly are off-screen: winding the index to the
+      // entry first, whichever way is shorter, so the flight has a visible
+      // start. `seat` is where they come to rest, as a fraction of the
+      // viewport. Going in this is usually a no-op — you clicked an entry you
+      // could see — but a trackpad swipe Forward is not a click, and the
+      // index may be sitting at its top with the entry well below the fold.
       rewind: { duration: 940, ease: 'cubic-bezier(0.22, 1, 0.36, 1)', seat: 0.658 },
       phone: {
         hold: 200,

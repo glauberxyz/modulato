@@ -35,9 +35,10 @@ export interface FlightActs {
   /** Act ①: a beat before anything happens at all, with every clone sitting
    *  exactly over the word it replaced. Lets the swap settle first. */
   hold: number
-  /** Winding a scrolled page back until the words it has to fly are on
-   *  screen. `seat` is where they come to rest, as a fraction of the
-   *  viewport height. Only ever runs when they are above the fold. */
+  /** Winding the outgoing page until the words it has to fly are on screen —
+   *  either direction, whichever is shorter. `seat` is where they come to
+   *  rest, as a fraction of the viewport height. Skipped when any part of
+   *  them is already showing. */
   rewind: { duration: number; ease: string; seat: number }
   ease: string
 }
@@ -184,33 +185,47 @@ function seatLanding(el: HTMLElement, words: SharedPair[], seat: number): number
 }
 
 /**
- * Wind a scrolled outgoing page back until the words it has to fly are on
- * screen — and no further.
+ * Wind the outgoing page until the words it has to fly are on screen — and
+ * no further. Either direction.
  *
  * The framework lifts the outgoing page into an absolute overlay offset by
  * the scroll it was left at, so it appears unmoved while the viewport jumps
  * to where the incoming page lands. Translating that overlay is therefore
  * the honest way to "scroll" a page that is no longer scrollable.
  *
- * Driven by the WORDS, not by the page's top: this transition is symmetric,
- * so it also runs index → chapter, where the words are an entry a screen and
- * a half down. Winding that page to its own top would shove them further
- * away — the opposite of the point. Two clamps keep it honest: it only ever
- * winds BACKWARD (a word below the fold means the reader clicked something
- * they could not see, which cannot happen), and never past the page's own
- * top, so no blank ever appears above it.
+ * Driven by the WORDS, not by the page's own top: this transition is
+ * symmetric, and the words sit in different places on each side — a chapter
+ * title at its head, an index entry a screen and a half down. Winding to the
+ * page's top would be right for one and shove the other further away.
+ *
+ * It used to wind only BACKWARD, on the reasoning that a word below the fold
+ * meant the reader had clicked something they could not see. A trackpad swipe
+ * is not a click: swipe Forward into a chapter from an index sitting at its
+ * top and the entry to fly is a screen and a half BELOW the fold, so the
+ * flight set off from a ghost position the reader never saw. Now it winds
+ * whichever way is shorter, clamped at both of the page's own edges so no
+ * blank is ever exposed past them.
  */
-async function windBack(
+async function windToWords(
   el: HTMLElement,
   words: SharedPair[],
   t: FlightActs['rewind'],
   base: number,
 ): Promise<void> {
-  const top = Math.min(...words.map((p) => p.from.getBoundingClientRect().top))
-  if (top >= 0) return
-  const pageTop = el.getBoundingClientRect().top
-  const shift = Math.min(t.seat * window.innerHeight - top, -pageTop)
-  if (shift < 1) return
+  const rects = words.map((p) => p.from.getBoundingClientRect())
+  const top = Math.min(...rects.map((r) => r.top))
+  const bottom = Math.max(...rects.map((r) => r.bottom))
+  const vh = window.innerHeight
+  // Any part of them showing is enough — this is about the flight having a
+  // visible start, not about framing it.
+  if (bottom > 0 && top < vh) return
+  const page = el.getBoundingClientRect()
+  // How far the page may travel before its own top (or bottom) would leave
+  // the viewport edge and show blank behind it.
+  const down = Math.max(0, -page.top)
+  const up = Math.min(0, vh - page.bottom)
+  const shift = Math.min(down, Math.max(up, t.seat * vh - top))
+  if (Math.abs(shift) < 1) return
   // Built on `base`, the offset seatLanding already put on this element.
   const to = `translateY(${base + shift}px)`
   if (!t.duration) {
@@ -316,10 +331,10 @@ export async function wordFlight(
   try {
     // Both ends of the flight have to be on screen, or there is nothing to
     // watch. The landing is seated first — instantly, hidden under the outgoing
-    // page — and then the outgoing page winds back until the words it has to
-    // fly are visible too. Either step is a no-op when its end is already fine,
-    // which is the usual case: you clicked an entry you could see.
-    await windBack(
+    // page — and then the outgoing page winds, either way, until the words it
+    // has to fly are visible too. Both steps are no-ops when their end is
+    // already fine, which is the usual case: you clicked an entry you could see.
+    await windToWords(
       from.element,
       words,
       t.rewind,
