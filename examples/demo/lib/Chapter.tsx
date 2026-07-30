@@ -1,6 +1,7 @@
 import gsap from 'gsap'
 import { ScrollTrigger } from 'gsap/ScrollTrigger'
-import { resolveTokens, Shared } from 'modulato'
+import { useEffect, useRef } from 'react'
+import { resolveTokens, Shared, usePage } from 'modulato'
 import { useMotion } from '@modulato/gsap'
 import type { Chapter, Figure } from './content'
 
@@ -41,6 +42,11 @@ export function ChapterView({
 }) {
   const byslug = new Map(figures.map((f) => [f.slug, f]))
   let figN = 0
+  const reveals = useRef<Array<{ section: HTMLElement; tween: gsap.core.Tween }>>([])
+  // `element` is null on the first render — the page root registers itself
+  // after mount — so it has to be a dependency below: the reveals do not
+  // exist until useMotion has run against a real element.
+  const { phase, element } = usePage()
 
   // Scroll choreography: every movement rises as it enters, and figures
   // drift against the scroll. gsap.context() is page-scoped and reverts on
@@ -51,9 +57,17 @@ export function ChapterView({
       figure: { parallax: number; scale: number }
     }
 
-    q<HTMLElement>('.movement').forEach((section) => {
+    // Each movement rises as it enters. `start` is a line down the viewport,
+    // which is right for everything you scroll to — and wrong for whatever is
+    // ALREADY on screen when the chapter arrives, since there is no scrolling
+    // left to cross it. Where that line falls relative to the first movement
+    // is an accident of how tall the chapter's head is: /press clears it by
+    // 76px and reveals on arrival, /angles misses it by 10 and sat blank
+    // until the reader nudged the page. So anything in view on arrival is
+    // played outright.
+    reveals.current = q<HTMLElement>('.movement').map((section) => {
       const targets = section.querySelectorAll('.movement__p, .movement__h, figure, .diagram')
-      gsap.from(targets, {
+      const tween = gsap.from(targets, {
         y: t.reveal.y,
         opacity: 0,
         duration: t.reveal.duration,
@@ -61,6 +75,7 @@ export function ChapterView({
         ease: t.reveal.ease,
         scrollTrigger: { trigger: section, start: `top ${t.reveal.start * 100}%` },
       })
+      return { section, tween }
     })
 
     if (t.figure.parallax) {
@@ -76,7 +91,27 @@ export function ChapterView({
         )
       })
     }
+    return () => {
+      reveals.current = []
+    }
   })
+
+  // Once the chapter has actually arrived — the transition committed, the
+  // scroll settled, ScrollTrigger refreshed — play whatever is already on
+  // screen. Measured HERE rather than when the tweens were built, because at
+  // build time the page is mid-transition and its position is not final.
+  useEffect(() => {
+    if (!element || phase !== 'active') return
+    for (const { section, tween } of reveals.current) {
+      if (section.getBoundingClientRect().top >= window.innerHeight) continue
+      // Released from its trigger first, not just played: ScrollTrigger holds
+      // an animation whose start line has not been crossed, and re-pauses it
+      // on the next update. `kill(false, true)` drops the gate without
+      // reverting the elements or taking the tween with it.
+      tween.scrollTrigger?.kill(false, true)
+      tween.play()
+    }
+  }, [element, phase])
 
   return (
     <article className="chapter" data-page={chapter.slug}>

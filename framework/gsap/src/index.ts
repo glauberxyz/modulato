@@ -54,10 +54,20 @@ export interface MotionScope {
 // lenis.destroy() on unmount, so no manual teardown is needed.
 const scrollTriggerWired = new WeakSet<object>()
 
+interface ScrollTriggerApi {
+  update: () => void
+  refresh: () => void
+  getAll: () => Array<{
+    trigger?: Element | null
+    disable: (revert?: boolean) => void
+    enable: (reset?: boolean) => void
+  }>
+}
+
 /** `gsap.core.globals()` returns registered plugins (runtime API, untyped). */
-function scrollTrigger(): { update: () => void; refresh: () => void } | undefined {
+function scrollTrigger(): ScrollTriggerApi | undefined {
   const globals = (gsap.core as { globals?: () => Record<string, unknown> }).globals?.() ?? {}
-  return globals.ScrollTrigger as { update: () => void; refresh: () => void } | undefined
+  return globals.ScrollTrigger as ScrollTriggerApi | undefined
 }
 
 function wireScrollTrigger(lenis: { on: (e: 'scroll', cb: () => void) => void }): void {
@@ -131,11 +141,29 @@ export function useMotion(
   // measured its start/end against THAT arrangement. Once the transition
   // commits — outgoing gone, height real, scroll settled — those positions
   // are stale, which shows up as sections that never reveal until you
-  // scroll, or that arrived already revealed. Declared after the create
-  // effect so it runs after it on the same commit.
+  // scroll, or that arrived already revealed.
+  //
+  // While a page is entering or leaving, its triggers are disabled outright.
+  // A transition scrolls the WINDOW — to land the incoming page, to lift the
+  // outgoing one into its overlay — and a page being transitioned has not
+  // moved under the reader at all. Left enabled, those triggers read the
+  // jump as scrolling and fire: a chapter's whole body would reveal itself
+  // in the moment before it flies away.
+  //
+  // Declared after the create effect so it runs after it on the same commit.
   useEffect(() => {
-    if (!element || phase !== 'active') return
-    scrollTrigger()?.refresh()
+    if (!element) return undefined
+    const ST = scrollTrigger()
+    if (!ST) return undefined
+    const mine = () => ST.getAll().filter((s) => s.trigger && element.contains(s.trigger))
+    if (phase === 'active') {
+      ST.refresh()
+      return undefined
+    }
+    for (const s of mine()) s.disable(false)
+    return () => {
+      for (const s of mine()) s.enable(false)
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [element, phase, replayTick, breakpoint, reducedMotion, ...deps])
 }
