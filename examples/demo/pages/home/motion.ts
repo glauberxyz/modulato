@@ -25,4 +25,30 @@ export default motion({
       entries: { y: 0, duration: 0, stagger: 0, at: 0 },
     },
   },
+
+  /**
+   * The reading head: scrolling the hero lights each word of the lede in
+   * turn and hands the light to the next, so it travels rather than
+   * accumulating.
+   */
+  read: {
+    // The scroll window, as fractions of the viewport height: the sweep
+    // begins when the lede's top crosses `start` and finishes when its
+    // bottom crosses `end`. Lower `end` = a longer scroll to get through it.
+    start: 0.85,
+    end: 0.25,
+    // Seconds the playhead takes to catch up with the scroll. 0 links it
+    // rigidly; higher trails behind and glides on after you stop.
+    scrub: 0.6,
+    // RELATIVE units, not seconds — the scrub stretches the whole sequence
+    // across the scroll window, so only the ratios matter. `rise + fall`
+    // greater than `stagger` keeps several words lit at once, as a soft
+    // band; less, and a single word travels alone.
+    stagger: 1,
+    rise: 0.6,
+    fall: 2.2,
+    // `rise: 0` switches the whole effect off — the lede just sits in its
+    // resting colour.
+    reduced: { rise: 0 },
+  },
 })

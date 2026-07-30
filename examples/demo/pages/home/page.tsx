@@ -1,9 +1,16 @@
 import { useRef } from 'react'
-import { Shared } from 'modulato'
+import gsap from 'gsap'
+import { SplitText } from 'gsap/SplitText'
+import { ScrollTrigger } from 'gsap/ScrollTrigger'
+import { resolveTokens, Shared } from 'modulato'
+import { useMotion } from '@modulato/gsap'
 import type { Chapter } from '../../lib/content'
 import { Arrow } from '../../lib/Arrow'
 import { HalftoneImage } from '../../lib/HalftoneCanvas'
 import { DEFAULTS, type HalftoneUniforms } from '../../lib/halftone'
+import tokens from './motion'
+
+gsap.registerPlugin(SplitText, ScrollTrigger)
 
 /**
  * Every chapter title is split PER WORD, and each word is a <Shared>
@@ -39,6 +46,42 @@ export default function Home({ chapters }: { chapters: Chapter[] }) {
     gains: [-0.17, -0.3, 0, 0],
     paper: '#14110f',
     inks: ['#00a0c6', '#d81e78', '#f5c400', '#14110f'],
+  })
+
+  // A reading head down the lede: each word takes the ink colour and hands
+  // it back, so the highlight travels rather than accumulating. Scrubbed, so
+  // the scroll position IS the playhead — scroll back up and it runs in
+  // reverse. Numbers in ./motion.ts under `read`.
+  useMotion(({ element, q, gsap }) => {
+    const t = resolveTokens(tokens as never) as {
+      read: { start: number; end: number; scrub: number; stagger: number; rise: number; fall: number }
+    }
+    const lede = q<HTMLElement>('.home__lede')[0]
+    if (!lede || !t.read.rise) return undefined
+
+    const split = new SplitText(lede, { type: 'words' })
+    // Both ends read off the DOM rather than hardcoded, so the sweep follows
+    // the palette: `rest` is whatever the lede already is, `lit` is the
+    // surface's own ink — near-white here, and correct on a light page too.
+    const rest = getComputedStyle(split.words[0]).color
+    const lit = getComputedStyle(element).getPropertyValue('--ink').trim() || rest
+
+    const tl = gsap.timeline({
+      scrollTrigger: {
+        trigger: lede,
+        start: `top ${t.read.start * 100}%`,
+        end: `bottom ${t.read.end * 100}%`,
+        scrub: t.read.scrub,
+      },
+    })
+    split.words.forEach((word, i) => {
+      const at = i * t.read.stagger
+      tl.to(word, { color: lit, duration: t.read.rise, ease: 'none' }, at)
+      tl.to(word, { color: rest, duration: t.read.fall, ease: 'none' }, at + t.read.rise)
+    })
+
+    // The context reverts the timeline and its trigger; the split is ours.
+    return () => split.revert()
   })
 
   return (
