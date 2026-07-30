@@ -108,7 +108,7 @@ export default motion({
       // The index fills in behind the title once it has landed — the mirror
       // of `enter.lede`. Without it the index arrives complete and the title
       // flies across a page that is already full. Staggered down the page.
-      contents: { hold: -220, y: 18, duration: 720, stagger: 55, ease: 'cubic-bezier(0.22, 1, 0.36, 1)' },
+      contents: { hold: -1200, y: 10, duration: 850, stagger: 60, ease: 'cubic-bezier(0.83, 0, 0.17, 1)' },
       phone: {
         hold: 240,
         clear: 380,

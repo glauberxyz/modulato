@@ -29,6 +29,7 @@ export default intro({
         smileEl,
         {
           scale: smile.scale,
+          opacity: smile.opacity,
           duration: smile.duration,
           ease: smile.ease,
         },
