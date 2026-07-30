@@ -21,14 +21,10 @@ export default intro({
 
     const smileEl = element.querySelector<HTMLElement>('.home__smile')
     if (smileEl) {
-      // Drops in from outside the viewport. The distance is MEASURED —
-      // its own bottom edge plus a clearance — so it starts genuinely
-      // off-screen at any window height rather than at a guessed offset.
-      const travel = smileEl.getBoundingClientRect().bottom + smile.clearance
+      // Scale only — it prints in place rather than arriving from anywhere.
       tl.from(
         smileEl,
         {
-          y: -travel,
           scale: smile.scale,
           duration: smile.duration,
           ease: smile.ease,
