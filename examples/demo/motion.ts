@@ -132,11 +132,11 @@ export default motion({
       // of `enter.lede`. Without it the index arrives complete and the title
       // flies across a page that is already full. Staggered down the page.
       contents: {
-        hold: -1200,
+        hold: -710,
         y: 10,
         duration: 850,
-        stagger: 60,
-        ease: 'cubic-bezier(0.83, 0, 0.17, 1)',
+        stagger: 85,
+        ease: 'cubic-bezier(0.87, 0, 0.13, 1)',
         phone: { hold: -180, duration: 560, stagger: 40 },
         reduced: { hold: 0, y: 0, duration: 0, stagger: 0 },
       },

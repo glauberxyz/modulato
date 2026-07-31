@@ -11,6 +11,17 @@
 html {
   // Lenis drives scrolling; the UA smooth-scroll would fight it.
   scroll-behavior: auto;
+  // No rubber-band, and no swipe-nav glyph dragging the sheet sideways. The
+  // page has no horizontal scroll of its own (measured: scrollWidth ===
+  // clientWidth on every route), so a sideways trackpad swipe was only ever
+  // the browser's back/forward affordance moving the whole page under you.
+  // Set on the ROOT, which is where it propagates to the viewport from.
+  //
+  // The cost is real: in Chromium this also disables two-finger swipe to go
+  // Back or Forward. Keyboard (⌘←/⌘→) and the toolbar buttons still work.
+  // `overscroll-behavior-y: none` instead would keep the swipe and only stop
+  // the vertical bounce.
+  overscroll-behavior: none;
 }
 
 body {

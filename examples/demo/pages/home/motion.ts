@@ -53,7 +53,7 @@ export default motion({
     // The scroll window, as fractions of the viewport height: the sweep
     // begins when the lede's top crosses `start` and finishes when its
     // bottom crosses `end`. Lower `end` = a longer scroll to get through it.
-    start: 0.85,
+    start: 0.6,
     end: 0.25,
     // Seconds the playhead takes to catch up with the scroll. 0 links it
     // rigidly; higher trails behind and glides on after you stop.
@@ -62,7 +62,7 @@ export default motion({
     // across the scroll window, so only the ratios matter. `rise + fall`
     // greater than `stagger` keeps several words lit at once, as a soft
     // band; less, and a single word travels alone.
-    stagger: 1,
+    stagger: 0.31,
     rise: 0.6,
     fall: 2.2,
     // `rise: 0` switches the whole effect off — the lede just sits in its
