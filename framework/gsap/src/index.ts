@@ -57,6 +57,7 @@ const scrollTriggerWired = new WeakSet<object>()
 interface ScrollTriggerApi {
   update: () => void
   refresh: () => void
+  clearScrollMemory?: (scrollRestoration?: string) => void
   getAll: () => Array<{
     trigger?: Element | null
     disable: (revert?: boolean) => void
@@ -70,9 +71,22 @@ function scrollTrigger(): ScrollTriggerApi | undefined {
   return globals.ScrollTrigger as ScrollTriggerApi | undefined
 }
 
+let scrollMemoryCleared = false
+
 function wireScrollTrigger(lenis: { on: (e: 'scroll', cb: () => void) => void }): void {
   const ST = scrollTrigger()
-  if (!ST || scrollTriggerWired.has(lenis)) return
+  if (!ST) return
+  if (!scrollMemoryCleared) {
+    scrollMemoryCleared = true
+    // ScrollTrigger snapshots history.scrollRestoration when it initialises
+    // and RE-APPLIES the snapshot on kill/refresh. If it initialised before
+    // the router set 'manual' (module scope runs early), the snapshot is
+    // 'auto' — and the first page unmount would hand scroll restoration back
+    // to the browser, which then natively yanks the viewport on every
+    // Back/Forward. This is GSAP's own SPA remedy: replace the snapshot.
+    ST.clearScrollMemory?.('manual')
+  }
+  if (scrollTriggerWired.has(lenis)) return
   scrollTriggerWired.add(lenis)
   lenis.on('scroll', () => ST.update())
 }

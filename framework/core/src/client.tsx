@@ -70,6 +70,16 @@ export async function boot({
   breakpoints?: Record<string, string> | null
   eases?: Record<string, string> | null
 }): Promise<void> {
+  // Before ANYTHING else — including route-chunk resolution below, whose
+  // module scope may register gsap's ScrollTrigger. ScrollTrigger snapshots
+  // history.scrollRestoration at init and re-applies that snapshot on every
+  // kill/refresh, so it must snapshot 'manual': snapshotting the browser
+  // default meant the first page unmount silently flipped restoration back
+  // to 'auto', and every Back/Forward after that natively yanked the
+  // viewport to the destination's old scroll before the router could run.
+  // The router re-asserts this in an effect, but by then module scopes have
+  // long since run.
+  window.history.scrollRestoration = 'manual'
   initViewport(breakpoints)
   initEases(eases)
 

@@ -245,6 +245,20 @@ export function ModulatoRoot({
     return () => document.removeEventListener('click', onClick)
   }, [navigate])
 
+  // The reader's actual position, as of the last scroll EVENT. A native
+  // history-traversal restore moves window.scrollY before popstate fires,
+  // but its scroll event only dispatches on the next rendering frame — so
+  // at popstate time this still holds the pre-traversal position.
+  const trueScroll = useRef(0)
+  useEffect(() => {
+    trueScroll.current = window.scrollY
+    const onScroll = () => {
+      trueScroll.current = window.scrollY
+    }
+    window.addEventListener('scroll', onScroll, { passive: true })
+    return () => window.removeEventListener('scroll', onScroll)
+  }, [])
+
   // Back/forward with scroll restoration.
   useEffect(() => {
     window.history.scrollRestoration = 'manual'
@@ -253,6 +267,13 @@ export function ModulatoRoot({
       // pushed by useSearchParam) must not re-resolve or remount the page —
       // useSearchParam readers pick it up via their own popstate listener.
       if (window.location.pathname === stateRef.current.current.path) return
+      // A browser that natively restored the DESTINATION's scroll has just
+      // moved the viewport while the OUTGOING page is still on screen — the
+      // page visibly snaps to wherever the other page was left. Undone here,
+      // in the same task, before it can paint — and before scroll memory
+      // records the corrupted position as the outgoing page's own.
+      if (window.scrollY !== trueScroll.current)
+        window.scrollTo(0, trueScroll.current)
       const scrollY = (event.state?.__modulatoScroll as number | undefined) ?? 0
       void navigate(window.location.pathname + window.location.search, {
         pop: true,
