@@ -3,6 +3,7 @@ import {
   useCallback,
   useContext,
   useEffect,
+  useLayoutEffect,
   useMemo,
   useRef,
   useState,
@@ -32,6 +33,11 @@ export interface PageApi {
    */
   lenis: Lenis | null
 }
+
+// useLayoutEffect on the client (fires before paint), silent no-op fallback
+// during SSR — same pattern as the router's transition effect in root.tsx.
+const useIsomorphicLayoutEffect =
+  typeof window !== 'undefined' ? useLayoutEffect : useEffect
 
 const PageContext = createContext<PageApi | null>(null)
 
@@ -166,7 +172,19 @@ export function PageScope({ entry, phase, hidden, registerEl }: PageScopeProps) 
     }
   }, [element, entry.scroll])
 
-  useEffect(() => {
+  // LAYOUT effect, not a passive one, and the ordering is the point: child
+  // effects run before the parent's, so a leaving page's Lenis is stopped
+  // BEFORE the router's own layout effect lifts the page into its overlay
+  // and scrolls the window to where the incoming page lands (root.tsx).
+  //
+  // Stopped as a passive effect it let go one paint too late: the reposition
+  // happened while Lenis was still live, and a mid-glide Lenis refuses to
+  // adopt a native jump (isScrolling 'smooth' skips the adopt branch) — its
+  // next raf dragged the window back toward its own target, a visible yank
+  // toward wherever the reader had been scrolling. stop() resets Lenis to
+  // the actual scroll and kills its animation, so once it runs first, the
+  // reposition lands on a Lenis that has already let go.
+  useIsomorphicLayoutEffect(() => {
     if (!lenis) return
     if (phase === 'active') lenis.start()
     else lenis.stop()
