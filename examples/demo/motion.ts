@@ -27,7 +27,7 @@ export default motion({
     reduced: { lerp: 100 },
   },
   runhead: {
-    duration: 0.5,
+    duration: 0.963,
     ease: 'press',
     reduced: { duration: 0 },
   },
@@ -52,7 +52,7 @@ export default motion({
     // ── index → chapter ────────────────────────────────────────────────
     enter: {
       hold: 201,
-      clear: 245,
+      clear: 800,
       gap: 240,
       duration: 1000,
       stagger: 69,
@@ -60,7 +60,7 @@ export default motion({
       phone: { hold: 200, clear: 380, gap: 180, duration: 850, stagger: 120 },
       reduced: { hold: 0, clear: 0, gap: 0, duration: 0, stagger: 0 },
       tint: {
-        duration: 380,
+        duration: 725,
         ease: 'cubic-bezier(0.22, 1, 0.36, 1)',
         phone: { duration: 300 },
         reduced: { duration: 0 },
@@ -108,7 +108,7 @@ export default motion({
       // the way back (you read the chapter, so you scrolled it), and the
       // title has to arrive at the top and be SEEN there before it leaves.
       hold: 320,
-      clear: 300,
+      clear: 800,
       gap: 300,
       duration: 1000,
       stagger: 69,
@@ -141,6 +141,26 @@ export default motion({
         reduced: { hold: 0, y: 0, duration: 0, stagger: 0 },
       },
     },
+  },
+
+  /**
+   * The chapter's body, on arrival. Movements already on screen when a
+   * chapter lands have no scrolling left to trigger them, so they are played
+   * outright — `hold` is how long they wait first.
+   *
+   * The page only becomes active once the whole arrival has resolved, so
+   * this is a beat ON TOP of a chapter that has already delivered its title
+   * and lede. Raise it to let the head sit alone before the prose arrives.
+   *
+   * SECONDS, not milliseconds: these are GSAP reveals, like `abstract`
+   * above and unlike the flight's acts. Shared rather than per-chapter
+   * because it is one gesture all four perform — the reveal's own shape
+   * (distance, stagger, trigger line) is identical in all four
+   * `pages/<chapter>/motion.ts` too; only the figure parallax really differs.
+   */
+  body: {
+    hold: 0,
+    reduced: { hold: 0 },
   },
 
   /** Chapter → chapter: a paper feed, sheet out and sheet in. */

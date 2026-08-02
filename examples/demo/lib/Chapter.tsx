@@ -3,6 +3,7 @@ import { ScrollTrigger } from 'gsap/ScrollTrigger'
 import { useEffect, useRef } from 'react'
 import { resolveTokens, Shared, usePage } from 'modulato'
 import { useMotion } from '@modulato/gsap'
+import site from '../motion'
 import type { Chapter, Figure } from './content'
 
 // ScrollTrigger is the app's to register. @modulato/gsap detects it and
@@ -100,16 +101,44 @@ export function ChapterView({
   // scroll settled, ScrollTrigger refreshed — play whatever is already on
   // screen. Measured HERE rather than when the tweens were built, because at
   // build time the page is mid-transition and its position is not final.
+  //
+  // `body.hold` is the beat before that: the page becomes active only after
+  // the whole flight has resolved, so this waits on top of an arrival that
+  // has already delivered the title and its lede. Site-wide, not per chapter
+  // — see the group's note in /motion.ts.
   useEffect(() => {
-    if (!element || phase !== 'active') return
-    for (const { section, tween } of reveals.current) {
-      if (section.getBoundingClientRect().top >= window.innerHeight) continue
-      // Released from its trigger first, not just played: ScrollTrigger holds
-      // an animation whose start line has not been crossed, and re-pauses it
-      // on the next update. `kill(false, true)` drops the gate without
-      // reverting the elements or taking the tween with it.
+    if (!element || phase !== 'active') return undefined
+    const { body } = resolveTokens(site)
+    const onScreen = reveals.current.filter(
+      ({ section }) => section.getBoundingClientRect().top < window.innerHeight,
+    )
+    // Every one of them comes off its trigger, not just the ones waiting on
+    // it. A movement that happens to sit ABOVE the trigger line on arrival
+    // was already fired by ScrollTrigger's refresh — which runs earlier in
+    // this same commit, so nothing has painted yet — and leaving those alone
+    // made `hold` apply to some of the body and not the rest, purely by where
+    // a chapter's head height dropped the first section. Rewound to their
+    // start state here, so one beat governs all of it.
+    //
+    // `kill(false, true)` drops the gate without reverting the elements or
+    // taking the tween with it; ScrollTrigger would otherwise re-pause an
+    // animation whose start line it thinks is uncrossed.
+    for (const { tween } of onScreen) {
       tween.scrollTrigger?.kill(false, true)
-      tween.play()
+      tween.progress(0).pause()
+    }
+    const play = () => {
+      for (const { tween } of onScreen) tween.play()
+    }
+    if (!body.hold) {
+      play()
+      return undefined
+    }
+    // Outside useMotion's context, so it needs its own teardown — a chapter
+    // left before the beat elapses must not play into a reverted page.
+    const waiting = gsap.delayedCall(body.hold, play)
+    return () => {
+      waiting.kill()
     }
   }, [element, phase])
 
