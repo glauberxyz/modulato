@@ -260,8 +260,33 @@ export async function wordFlight(
   const entering = to.route.id !== 'home'
   const t = entering ? tokens.enter : tokens.back
 
+  // The chapter end of a flight is always the chapter's OWN head — never a
+  // next-chapter card.
+  //
+  // Shared ids are derived from the slug, so a chapter page carries two
+  // matchable sets: its title, and the card for whatever follows it. The index
+  // carries all of them. Both pairs therefore match on every index↔chapter
+  // move, and both flew: leaving /press for the index sent the press title AND
+  // the screen card, and arriving at /press the index's screen entry flew a
+  // full page down to the card. That also broke the two winds, which measure
+  // one bounding span across every word — with a second group at the far end
+  // of the document, `seatLanding` seated the BOTTOM of the page, and
+  // `windToWords` saw something on screen and declined to wind at all.
+  //
+  // Which end to test depends on the direction — entering, the chapter is the
+  // destination (`to`); leaving, it is the departure (`from`). The index side
+  // is never a card, so it is never the side to test. A card is the legitimate
+  // SOURCE of the chapter → chapter handoff, which is why only one end is
+  // constrained rather than both.
+  //
+  // No fallback for "nothing matched a head": the chapter end of a flight is
+  // always a real head, because the one move that would land on a card — going
+  // back along a handoff — deliberately isn't symmetric and never reaches
+  // here. If one is ever made symmetric, the empty set below degrades to the
+  // crossfade `default.ts` gives that pairing today.
+  const chapterEnd = entering ? 'to' : 'from'
   const words = shared
-    .filter((p) => p.id.startsWith('w:'))
+    .filter((p) => p.id.startsWith('w:') && !p[chapterEnd].closest('.next'))
     .sort((a, b) => Number(a.id.split(':')[2]) - Number(b.id.split(':')[2]))
 
   // The abstract the reader clicked. It is NOT shared — the chapter shows
