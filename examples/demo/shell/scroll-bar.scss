@@ -1,20 +1,30 @@
-// A hairline across the very top. `--fill` is 0..1, written by the ticker.
+// A hairline along the BOTTOM edge. `--fill` is 0..1, written by the ticker.
 //
-// scaleX rather than width: a transform is composited, so the bar costs
-// nothing to move at scroll rate. transform-origin puts the growth on the
-// left, which is the direction of reading.
+// It wears the next-chapter card's own surface, and sits where that card's
+// top edge will be: at 100% the bar is a full-width band of exactly the
+// card's colour along the fold, and the card then rises into it. The bar
+// reads as the card's leading edge arriving rather than as a separate
+// widget — which is why the fill has to complete BEFORE the card scrolls in,
+// not at the document's end.
+//
+// scaleX rather than width: a transform is composited, so it costs nothing
+// to move at scroll rate. The origin is on the left, the reading direction.
 .scrollbar {
   position: fixed;
-  top: 0;
+  bottom: 0;
   left: 0;
   right: 0;
   height: 3px;
   z-index: 40;
   pointer-events: none;
-  background: var(--ink);
+  background: var(--dark-paper);
   transform: scaleX(var(--fill, 0));
   transform-origin: 0 50%;
-  // Legible over either surface without the shell knowing which page is
-  // under it — the same trick the running head uses.
-  mix-blend-mode: difference;
+}
+
+// Pages with no card to hand off to — the index, the darkroom — are already
+// that colour, so the bar would be invisible on its own surface. There is no
+// edge to imitate there, so it takes the page's ink instead.
+.scrollbar[data-on-dark='true'] {
+  background: var(--dark-ink);
 }
