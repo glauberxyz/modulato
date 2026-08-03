@@ -71,7 +71,14 @@ a {
 // paper directly beneath a dark page. Any partial opacity leaked white.
 // `:has` keeps the page component the single source of truth: whichever
 // page declares itself dark, its wrapper follows.
-[data-page]:has(> .is-dark) {
+//
+// Scoped to the OUTLET'S OWN CHILD, not to any [data-page]. Pages carry
+// `data-page` on their own root too, so the bare selector also matched a
+// light chapter holding one dark section — the next-chapter card is a direct
+// child of the chapter's <article> — and flipped the entire chapter to the
+// dark palette. Only the wrapper the framework animates should follow the
+// page's surface; a dark band inside a light page is just a dark band.
+[data-modulato-outlet] > [data-page]:has(> .is-dark) {
   @include tokens.dark;
 }
 
