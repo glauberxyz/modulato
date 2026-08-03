@@ -99,6 +99,51 @@ a {
   margin: 0;
 }
 
+// A chapter, listed. Worn by the index's contents AND by every chapter's
+// next-chapter card, which is what lets one transition serve both: the word
+// flight finds `.entry__word` by <Shared> id and the departing text by
+// `.entry__abstract`, wherever the link happens to live. Shared furniture
+// rather than page styles, because a cold landing on a chapter never imports
+// the index's stylesheet.
+.entry {
+  display: block;
+  text-decoration: none;
+}
+
+.entry__title {
+  @include type.title;
+  display: block;
+
+  // Each word is inline-block so it can be measured and flown on its own
+  // during the transition to a chapter.
+  .entry__word {
+    display: inline-block;
+  }
+  .entry__word + .entry__word {
+    margin-left: 0.24em;
+  }
+}
+
+.entry__arrow {
+  display: inline-block;
+  margin-left: 0.34em;
+  vertical-align: middle;
+  transition: transform 0.45s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.entry:hover .entry__arrow {
+  transform: translateX(6px);
+}
+
+.entry__abstract {
+  @include type.body;
+  display: block;
+  color: var(--muted);
+  // The abstract keeps its own reading measure inside the wider item.
+  max-width: 34ch;
+  margin: 0.4em auto 0;
+}
+
 // A figure reference — "ABB. 3 · S. 94" in the reference spreads.
 .figref {
   @include type.small;
@@ -108,6 +153,9 @@ a {
 
 @media (prefers-reduced-motion: reduce) {
   body {
+    transition: none;
+  }
+  .entry__arrow {
     transition: none;
   }
 }

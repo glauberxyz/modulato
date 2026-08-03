@@ -4,6 +4,7 @@ import { useEffect, useRef } from 'react'
 import { resolveTokens, Shared, usePage } from 'modulato'
 import { useMotion } from '@modulato/gsap'
 import site from '../motion'
+import { NextChapter } from './NextChapter'
 import type { Chapter, Figure } from './content'
 
 // ScrollTrigger is the app's to register. @modulato/gsap detects it and
@@ -32,10 +33,14 @@ const DIAGRAMS: Record<string, () => React.JSX.Element> = {
  */
 export function ChapterView({
   chapter,
+  next,
   figures,
   tokens,
 }: {
   chapter: Chapter
+  /** The chapter this one hands off to — the sequence wraps, so the last
+      chapter points back at the first. */
+  next: Chapter
   figures: Figure[]
   /** The page's own motion.ts module — kept per-chapter so each one tunes
       its own reveals in the overlay. */
@@ -275,6 +280,8 @@ export function ChapterView({
           ))}
         </ol>
       </footer>
+
+      <NextChapter chapter={next} />
     </article>
   )
 }

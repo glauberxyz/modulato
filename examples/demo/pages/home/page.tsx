@@ -5,31 +5,12 @@ import { ScrollTrigger } from 'gsap/ScrollTrigger'
 import { resolveTokens, Shared } from 'modulato'
 import { useMotion } from '@modulato/gsap'
 import type { Chapter } from '../../lib/content'
-import { Arrow } from '../../lib/Arrow'
+import { EntryTitle } from '../../lib/EntryTitle'
 import { HalftoneImage } from '../../lib/HalftoneCanvas'
 import { DEFAULTS, type HalftoneUniforms } from '../../lib/halftone'
 import tokens from './motion'
 
 gsap.registerPlugin(SplitText, ScrollTrigger)
-
-/**
- * Every chapter title is split PER WORD, and each word is a <Shared>
- * element — the words are what fly to the top of the chapter page during
- * the transition, so they have to be individually addressable here. It
- * reads as an ordinary line of type until you click it.
- */
-function Title({ chapter }: { chapter: Chapter }) {
-  return (
-    <span className="entry__title">
-      {chapter.title.split(' ').map((word, i) => (
-        <Shared key={i} id={`w:${chapter.slug}:${i}`}>
-          <span className="entry__word">{word}</span>
-        </Shared>
-      ))}
-      <Arrow className="entry__arrow" />
-    </span>
-  )
-}
 
 export default function Home({ chapters }: { chapters: Chapter[] }) {
   // The smile is the shader's calling card: a 100px canvas running the same
@@ -122,7 +103,7 @@ export default function Home({ chapters }: { chapters: Chapter[] }) {
         <span className="label home__contents">Contents</span>
         {chapters.map((c) => (
           <a key={c.slug} className="entry" href={`/${c.slug}`} data-plate={c.plate}>
-            <Title chapter={c} />
+            <EntryTitle chapter={c} />
             <Shared id={`d:${c.slug}`}>
               <span className="entry__abstract">{c.abstract}</span>
             </Shared>

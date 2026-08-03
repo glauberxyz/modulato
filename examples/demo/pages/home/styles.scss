@@ -64,12 +64,9 @@
   margin-bottom: 0;
 }
 
-.entry {
-  display: block;
-  text-decoration: none;
-  // No side padding — the box is simply wider than the type it holds, so
-  // the rule clears the text on its own and the title has room to hold a
-  // single line.
+// The index's own list chrome. The `.entry` type itself is shared furniture
+// in styles/global.scss — the chapter tail wears it too.
+.home__index .entry {
   padding: 5vh 0;
   width: 100%;
   max-width: 560px;
@@ -78,40 +75,6 @@
   &:last-of-type {
     border-bottom: 0;
   }
-}
-
-.entry__title {
-  @include type.title;
-  display: block;
-
-  // Each word is inline-block so it can be measured and flown on its own
-  // during the transition to a chapter.
-  .entry__word {
-    display: inline-block;
-  }
-  .entry__word + .entry__word {
-    margin-left: 0.24em;
-  }
-}
-
-.entry__arrow {
-  display: inline-block;
-  margin-left: 0.34em;
-  vertical-align: middle;
-  transition: transform 0.45s cubic-bezier(0.16, 1, 0.3, 1);
-}
-
-.entry:hover .entry__arrow {
-  transform: translateX(6px);
-}
-
-.entry__abstract {
-  @include type.body;
-  display: block;
-  color: var(--muted);
-  // The abstract keeps its own reading measure inside the wider item.
-  max-width: 34ch;
-  margin: 0.4em auto 0;
 }
 
 // ── foot ─────────────────────────────────────────────────────────────
@@ -145,11 +108,5 @@
   }
   .home__smile {
     margin-bottom: 9vh;
-  }
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .entry__arrow {
-    transition: none;
   }
 }

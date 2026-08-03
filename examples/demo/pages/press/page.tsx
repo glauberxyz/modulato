@@ -2,6 +2,14 @@ import type { Chapter, Figure } from '../../lib/content'
 import { ChapterView } from '../../lib/Chapter'
 import tokens from './motion'
 
-export default function Press({ chapter, figures }: { chapter: Chapter; figures: Figure[] }) {
-  return <ChapterView chapter={chapter} figures={figures} tokens={tokens} />
+export default function Press({
+  chapter,
+  next,
+  figures,
+}: {
+  chapter: Chapter
+  next: Chapter
+  figures: Figure[]
+}) {
+  return <ChapterView chapter={chapter} next={next} figures={figures} tokens={tokens} />
 }

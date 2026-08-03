@@ -20,6 +20,12 @@ import { motion } from 'modulato'
  * the overlay. Both spellings resolve identically; this one reads in place.
  */
 export default motion({
+  /** The reading bar's catch-up, in units/second toward the true scroll. */
+  progress: {
+    lerp: 9,
+    phone: { lerp: 12 },
+    reduced: { lerp: 100 },
+  },
   runhead: {
     duration: 0.963,
     ease: 'press',
@@ -172,15 +178,6 @@ export default motion({
     stagger: 0.12,
     ease: 'press',
     reduced: { y: 0, duration: 0, stagger: 0 },
-  },
-
-  /** Chapter → chapter: a paper feed, sheet out and sheet in. */
-  feed: {
-    duration: 760,
-    skew: 1.6,
-    ease: 'cubic-bezier(0.16, 1, 0.3, 1)',
-    phone: { duration: 560, skew: 1 },
-    reduced: { duration: 0 },
   },
 
   /** Chapter → plate inspector: the figure FLIPs into the full-bleed plate. */

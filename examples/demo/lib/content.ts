@@ -27,6 +27,15 @@ export interface Chapter {
   sources: Source[]
 }
 
+/**
+ * The chapter after this one, wrapping past the last back to the first — the
+ * sequence is a loop, so the reader is never handed a dead end.
+ */
+export function nextChapter(chapters: Chapter[], slug: string): Chapter {
+  const i = chapters.findIndex((c) => c.slug === slug)
+  return chapters[(i + 1) % chapters.length]
+}
+
 export interface Figure {
   slug: string
   title: string

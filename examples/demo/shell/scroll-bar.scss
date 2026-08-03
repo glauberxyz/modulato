@@ -1,0 +1,20 @@
+// A hairline across the very top. `--fill` is 0..1, written by the ticker.
+//
+// scaleX rather than width: a transform is composited, so the bar costs
+// nothing to move at scroll rate. transform-origin puts the growth on the
+// left, which is the direction of reading.
+.scrollbar {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 3px;
+  z-index: 40;
+  pointer-events: none;
+  background: var(--ink);
+  transform: scaleX(var(--fill, 0));
+  transform-origin: 0 50%;
+  // Legible over either surface without the shell knowing which page is
+  // under it — the same trick the running head uses.
+  mix-blend-mode: difference;
+}

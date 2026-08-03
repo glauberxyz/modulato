@@ -2,6 +2,14 @@ import type { Chapter, Figure } from '../../lib/content'
 import { ChapterView } from '../../lib/Chapter'
 import tokens from './motion'
 
-export default function Gpu({ chapter, figures }: { chapter: Chapter; figures: Figure[] }) {
-  return <ChapterView chapter={chapter} figures={figures} tokens={tokens} />
+export default function Gpu({
+  chapter,
+  next,
+  figures,
+}: {
+  chapter: Chapter
+  next: Chapter
+  figures: Figure[]
+}) {
+  return <ChapterView chapter={chapter} next={next} figures={figures} tokens={tokens} />
 }

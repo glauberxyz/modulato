@@ -3,13 +3,13 @@ import tokens from '../motion'
 import { wordFlight } from '../lib/transitions'
 
 /**
- * The Binary Press → The Screen. The same move as index → chapter, started from the
+ * The Press on the GPU → back round to The Binary Press. The same move as index → chapter, started from the
  * next-chapter card at the tail instead of the contents list: the card wears
  * the index's `.entry` clothes, so the flight finds its words and its
  * abstract without knowing which page it was launched from.
  *
  * NOT symmetric — the reverse is a Back, and the reader going back from
- * /screen expects /press's own next-card, not this one played
+ * /press expects /gpu's own next-card, not this one played
  * in reverse. Each direction is its own pair.
  */
 export default transition({

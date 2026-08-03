@@ -1,10 +1,11 @@
 import type { LoadArgs } from 'modulato'
-import type { Content } from '../../lib/content'
+import { nextChapter, type Content } from '../../lib/content'
 
 export function load({ content }: LoadArgs) {
   const c = content as unknown as Content
   return {
     chapter: c.chapters.find((x) => x.slug === 'press')!,
+    next: nextChapter(c.chapters, 'press'),
     figures: c.figures,
   }
 }

@@ -1,0 +1,43 @@
+@use '../styles/typography' as type;
+
+// The chapter's tail: the index's dark surface, full bleed, so the reader
+// arrives at the next chapter's colour before its type. `.is-dark` flips the
+// surface variables, so everything inside reads --paper/--ink as usual.
+//
+// Full-bleed out of a padded page: the article is centred within the
+// viewport, so 50vw either side of the element's own centre reaches the
+// edges without depending on the page's padding.
+.next {
+  margin-left: calc(50% - 50vw);
+  margin-right: calc(50% - 50vw);
+  width: 100vw;
+  background: var(--paper);
+  color: var(--ink);
+  // Tall enough to fill the fold on arrival — the progress bar completes as
+  // this begins, so it reads as the end of the reading rather than a footer.
+  min-height: 78vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  padding: 12vh var(--margin);
+  margin-top: 12vh;
+}
+
+.next__entry {
+  max-width: 46ch;
+}
+
+.next__label {
+  display: block;
+  color: var(--muted);
+  margin-bottom: 1.2em;
+}
+
+@media (max-width: 767px) {
+  .next {
+    min-height: 62vh;
+    padding: 9vh var(--margin);
+    margin-top: 9vh;
+  }
+}
