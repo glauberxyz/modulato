@@ -1,44 +1,25 @@
 import gsap from 'gsap'
-import { SplitText } from 'gsap/SplitText'
 import { resolveTokens } from 'modulato'
-
-gsap.registerPlugin(SplitText)
+import site from '../motion'
 
 /**
- * Shared chapter opener: the title sets line by line, the lede follows.
- * Each chapter's own motion.ts supplies the numbers.
+ * A chapter's opening on a COLD landing — arriving from the index flies the
+ * title into place instead (transitions/home__*.ts), and this never runs.
+ *
+ * One stagger over the head. The title used to set word by word, borrowed
+ * from the index's claim, but the two are not the same object: the claim is a
+ * long line the eye reads across, while a chapter title is two or three
+ * stacked words that are already the largest thing on the page — sequencing
+ * them read as a list assembling itself rather than as a page arriving.
  */
-export async function chapterIntro(element: HTMLElement, tokens: unknown) {
-  const t = resolveTokens(tokens as never) as {
-    title: { amount: number; ease: string }
-  }
-  const heading = element.querySelector<HTMLElement>('.chapter__title')
-  const tl = gsap.timeline()
-  let split: SplitText | null = null
-
-  if (heading) {
-    // Same as the index: the ease shapes the rhythm of appearance, not
-    // any motion. Times computed explicitly — see the note there.
-    split = new SplitText(heading, { type: 'words' })
-    const words = split.words
-    const curve = gsap.parseEase(t.title.ease) ?? ((p: number) => p)
-    tl.set(words, { opacity: 0 }, 0)
-    words.forEach((word, i) => {
-      const at = words.length > 1 ? curve(i / (words.length - 1)) : 0
-      tl.set(word, { opacity: 1 }, at * t.title.amount)
-    })
-    // Clear of the last word: the revert restores the original DOM, and
-      // firing it on the same frame as the final set() is a race.
-      tl.call(() => split?.revert(), undefined, t.title.amount + 0.12)
-  }
-
-  tl.from(
-    element.querySelectorAll('.chapter__meta, .chapter__lede'),
-    { y: 24, opacity: 0, duration: 0.8, stagger: 0.08, ease: 'press' },
-    0.15,
-  )
-
-  await tl.then()
-  // Belt and braces: if the tween was interrupted, onComplete never ran.
-  split?.revert()
+export async function chapterIntro(element: HTMLElement) {
+  const { opening } = resolveTokens(site)
+  if (!opening.duration) return
+  await gsap.from(element.querySelectorAll('.chapter__title, .chapter__lede'), {
+    y: opening.y,
+    opacity: 0,
+    duration: opening.duration,
+    stagger: opening.stagger,
+    ease: opening.ease,
+  })
 }

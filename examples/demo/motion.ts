@@ -163,6 +163,23 @@ export default motion({
     reduced: { hold: 0 },
   },
 
+  /**
+   * A chapter's opening on a COLD landing — one stagger over its head, the
+   * title as a whole rather than word by word. Arriving from the index flies
+   * the title instead, so this never runs on that path.
+   *
+   * SECONDS (GSAP). Shared rather than per-chapter: all four open the same
+   * way, and this replaced a `title` group that was byte-identical in every
+   * `pages/<chapter>/motion.ts`.
+   */
+  opening: {
+    y: 24,
+    duration: 0.8,
+    stagger: 0.12,
+    ease: 'press',
+    reduced: { y: 0, duration: 0, stagger: 0 },
+  },
+
   /** Chapter → chapter: a paper feed, sheet out and sheet in. */
   feed: {
     duration: 760,

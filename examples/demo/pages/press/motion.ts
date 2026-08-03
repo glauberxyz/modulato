@@ -18,10 +18,4 @@ export default motion({
     phone: { parallax: 20 },
     reduced: { parallax: 0, scale: 1 },
   },
-  title: {
-    // Words appear in sequence; the ease shapes the gaps, not any motion.
-    amount: 0.75,
-    ease: 'expo.out',
-    reduced: { amount: 0 },
-  },
 })
