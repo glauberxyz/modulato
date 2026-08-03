@@ -22,9 +22,14 @@
   transform-origin: 0 50%;
 }
 
-// Pages with no card to hand off to — the index, the darkroom — are already
-// that colour, so the bar would be invisible on its own surface. There is no
-// edge to imitate there, so it takes the page's ink instead.
-.scrollbar[data-on-dark='true'] {
-  background: var(--dark-ink);
+// Only where there is a card to be the edge OF. On the index, the darkroom
+// and the plate inspectors the bar would be a progress readout for a page
+// with nowhere to hand off to — and on the dark ones it would vanish into
+// its own colour anyway. Shown by the ticker when a card is present.
+.scrollbar {
+  display: none;
+}
+
+.scrollbar[data-reading='true'] {
+  display: block;
 }

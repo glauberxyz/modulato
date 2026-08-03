@@ -180,6 +180,22 @@ export default motion({
     reduced: { y: 0, duration: 0, stagger: 0 },
   },
 
+  /**
+   * The next-chapter card arriving: one stagger down it — label, title,
+   * abstract — as it rises past `start` (a line down the viewport). SECONDS.
+   * Fires once; the card is the last thing on the page, so there is no
+   * scrolling back past it and re-triggering to worry about.
+   */
+  handoff: {
+    y: 26,
+    duration: 0.9,
+    stagger: 0.12,
+    ease: 'press',
+    start: 0.9,
+    phone: { y: 16, duration: 0.7, stagger: 0.09 },
+    reduced: { y: 0, duration: 0, stagger: 0 },
+  },
+
   /** Chapter → plate inspector: the figure FLIPs into the full-bleed plate. */
   flip: {
     duration: 820,

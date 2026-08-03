@@ -21,7 +21,7 @@ export function ScrollBar() {
   const ref = useRef<HTMLDivElement>(null)
   const target = useRef(0)
   const eased = useRef(0)
-  const onDark = useRef<boolean | null>(null)
+  const reading = useRef<boolean | null>(null)
 
   useScroll(() => {
     target.current = readingProgress()
@@ -37,14 +37,13 @@ export function ScrollBar() {
       (target.current - eased.current) * Math.min(1, (delta / 1000) * progress.lerp)
     el.style.setProperty('--fill', String(eased.current))
 
-    // A page with no card has no edge to imitate, and is itself the card's
-    // colour — so the bar would vanish into it. Written only on change: this
-    // runs every frame, and the route can change under a shell that never
-    // re-renders.
-    const dark = !tail()
-    if (dark !== onDark.current) {
-      onDark.current = dark
-      el.dataset.onDark = String(dark)
+    // Present only where there is a card to be the leading edge of. Written
+    // only on change: this runs every frame, and the route changes under a
+    // shell that never re-renders, so there is nothing else to react to.
+    const has = !!tail()
+    if (has !== reading.current) {
+      reading.current = has
+      el.dataset.reading = String(has)
     }
   })
 

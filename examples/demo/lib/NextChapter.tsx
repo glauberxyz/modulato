@@ -1,4 +1,7 @@
+import { resolveTokens } from 'modulato'
+import { useMotion } from '@modulato/gsap'
 import { EntryTitle } from './EntryTitle'
+import site from '../motion'
 import type { Chapter } from './content'
 import './next-chapter.scss'
 
@@ -18,6 +21,24 @@ import './next-chapter.scss'
  * arriving paper.
  */
 export function NextChapter({ chapter }: { chapter: Chapter }) {
+  // The card sets its own type as it rises. Safe to leave to the trigger
+  // rather than holding it like the chapter body: the card is the LAST thing
+  // on the page, so on arrival it is always far below the fold and its start
+  // line cannot already be crossed at build time.
+  useMotion(({ q, gsap }) => {
+    const { handoff } = resolveTokens(site)
+    const card = q<HTMLElement>('.next')[0]
+    if (!card || !handoff.duration) return
+    gsap.from(card.querySelectorAll('.next__label, .entry__title, .entry__abstract'), {
+      y: handoff.y,
+      opacity: 0,
+      duration: handoff.duration,
+      stagger: handoff.stagger,
+      ease: handoff.ease,
+      scrollTrigger: { trigger: card, start: `top ${handoff.start * 100}%`, once: true },
+    })
+  })
+
   return (
     <aside className="next is-dark" aria-label="Next chapter">
       <a className="entry next__entry" href={`/${chapter.slug}`} data-plate={chapter.plate}>
