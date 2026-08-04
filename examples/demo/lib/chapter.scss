@@ -139,11 +139,17 @@
 
 // ── sources ──────────────────────────────────────────────────────────
 .chapter__foot {
-  // Full-bleed white — the surface change IS the divider, so there is no
-  // rule and no top margin holding it off the prose.
+  // Full-bleed white — the surface change IS the divider, so there is no rule
+  // holding it off the prose.
   background: var(--paper-bright);
-  padding-block: 8vh 12vh;
-  margin-top: 6vh;
+  // Half a screen, and the weight deliberately at the BOTTOM. `min-height`
+  // rather than `height` so a chapter with a long source list grows instead
+  // of spilling; block flow then drops the whole surplus below the list,
+  // which is the asymmetry: the apparatus sits up close under the argument
+  // it supports, and the new surface runs on beneath it.
+  min-height: 50vh;
+  padding-block: 5vh 12vh;
+  margin-top: 3vh;
 
   .label {
     display: block;
