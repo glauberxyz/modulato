@@ -84,7 +84,12 @@ export function ChapterView({
     // until the reader nudged the page. So anything in view on arrival is
     // played outright.
     reveals.current = q<HTMLElement>('.movement').map((section) => {
-      const targets = section.querySelectorAll('.movement__p, .movement__h, figure, .diagram')
+      // `.movement__label` and not a bare `.label`: a diagram's controls
+      // carry labels of their own ("Tightest beat", "Texture fetches / pixel")
+      // that belong to the instrument, not to the reveal.
+      const targets = section.querySelectorAll(
+        '.movement__p, .movement__h, .movement__label, figure, .diagram',
+      )
       const tween = gsap.from(targets, {
         y: t.reveal.y,
         opacity: 0,
@@ -228,7 +233,9 @@ export function ChapterView({
                     the interruption, so it has to be wider than the text. */}
                 <div className="col-field movement__band" />
                 <aside className="col-main chapter__aside">
-                  {m.heading && <h3 className="movement__h movement__h--small">{m.heading}</h3>}
+                  {/* The global `.label` carries the type; `movement__label`
+                      adds only its rule, and is the reveal's hook. */}
+                  {m.heading && <h3 className="label movement__label">{m.heading}</h3>}
                   {m.body.map((p, j) => (
                     <p className="movement__p" key={j}>
                       {p}

@@ -215,7 +215,7 @@ export default motion({
    */
   figure: {
     /** Rest is 1 — this is where it lands under the pointer. */
-    hover: 1.03,
+    hover: 1.004,
     /** SECONDS: it becomes a CSS transition-duration, not a GSAP tween. */
     duration: 0.7,
     ease: 'cubic-bezier(0.16, 1, 0.3, 1)',

@@ -45,12 +45,17 @@
 .movement__h {
   @include type.title;
   font-size: clamp(24px, 2.4vw, 32px);
+}
 
-  &--small {
-    @include type.label;
-    color: var(--muted);
-    margin-bottom: 10px;
-  }
+// An aside's heading is a LABEL, not a small heading — so it wears the global
+// `.label` class and this adds only its rule and spacing. It used to re-include
+// the label mixin here, which made chapter.scss a second place the style was
+// described; letter-spacing had to be changed in two files to change once.
+.movement__label {
+  display: block;
+  padding-bottom: 10px;
+  margin-bottom: 10px;
+  border-bottom: 1px solid var(--rule);
 }
 
 .movement__p {
@@ -77,13 +82,13 @@
   align-self: start;
 }
 
-.chapter__aside {
-  .movement__h--small {
-    display: block;
-    padding-bottom: 10px;
-    border-bottom: 1px solid var(--rule);
-  }
+// Tighter than the other movements: the band is the aside's own top edge, so
+// it should sit close to the text it opens rather than float above it.
+.movement--aside {
+  row-gap: 10px;
+}
 
+.chapter__aside {
   .movement__p {
     @include type.small;
     max-width: 52ch;

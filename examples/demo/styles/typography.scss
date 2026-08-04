@@ -46,9 +46,17 @@
   letter-spacing: 0;
 }
 
-// Small copy, tracked out — labels and running heads only.
+// Small uppercase copy — labels and running heads only. Set solid: the caps
+// carry the distinction on their own, and tracking them out turned every
+// label into a texture you read letter by letter.
+//
+// The ONE definition of this style. Everything that is a label wears the
+// global `.label` class (global.scss) rather than including this mixin again
+// — so a change here reaches the running head, the contents and sources
+// headings, the next-chapter card, the diagram readouts and the plate meta
+// in one edit.
 @mixin label {
   @include small;
   text-transform: uppercase;
-  letter-spacing: 0.14em;
+  letter-spacing: 0;
 }
