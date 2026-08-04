@@ -278,7 +278,10 @@ export function ChapterView({
         <div className="grid">
           <div className="col-main">
             <span className="label">Sources</span>
-            <ol className="chapter__sources">
+            {/* `role="list"` because the numbers are a CSS counter and
+                `list-style: none` drops list semantics in Safari/VoiceOver —
+                without it the count is announced to nobody. */}
+            <ol className="chapter__sources" role="list">
               {chapter.sources.map((s) => (
                 <li key={s.url}>
                   <a href={s.url} target="_blank" rel="noreferrer noopener" data-native>

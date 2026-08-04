@@ -157,21 +157,53 @@
   }
 }
 
+// Numbered rows, ruled off from each other. The number holds a column of its
+// own so every link begins at the same x whether the list runs to one digit
+// or two — which is the whole reason this is a CSS counter and not
+// `list-style: decimal`: a ::marker cannot be given a width, and a real
+// marker's position depends on how wide its own digits are.
 .chapter__sources {
   @include type.small;
-  list-style: decimal;
-  padding-left: 1.4em;
-  color: var(--muted);
+  // Tune the alignment here and nowhere else.
+  --sources-number: 3.5em;
+  list-style: none;
+  padding-left: 0;
+  margin: 0;
+  counter-reset: source;
 
-  li + li {
-    margin-top: 6px;
+  li {
+    counter-increment: source;
+    display: grid;
+    // The one value that governs where every link starts.
+    grid-template-columns: var(--sources-number) 1fr;
+    align-items: baseline;
+    padding-block: 14px;
+    // Above each row, so the list opens with a rule and does not close with
+    // one — the last row's edge is the white running out beneath it.
+    border-top: 1px solid var(--rule);
   }
+
+  li::before {
+    content: counter(source);
+    color: var(--muted);
+    // Tabular, so the digits themselves cannot shift the column.
+    font-variant-numeric: tabular-nums;
+  }
+
   a {
-    text-decoration: none;
-    border-bottom: 1px solid var(--rule);
+    // One line, clipped. A source is a reference, and a long title wrapping
+    // to three lines turns a list you scan into prose you have to read.
+    display: -webkit-box;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 1;
+    line-clamp: 1;
+    overflow: hidden;
+    color: var(--ink);
+    text-decoration: underline;
+    text-underline-offset: 3px;
   }
   a:hover {
-    color: var(--ink);
+    color: var(--muted);
   }
 }
 
