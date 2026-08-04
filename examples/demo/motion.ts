@@ -12,8 +12,9 @@ import { motion } from 'modulato'
  * showed you a different copy depending on which page you were standing on.
  * The concept is shared, so the tokens are: one group, one row, one edit.
  *
- * `pages/*​/motion.ts` stays per-page, where the values genuinely differ —
- * each chapter tunes its own reveals and figure parallax.
+ * `pages/*​/motion.ts` stays per-page so each chapter can tune its own
+ * reveals. Since the figure parallax was removed the four are identical in
+ * value, and are kept apart only for that per-chapter headroom.
  *
  * A phone/reduced override sits NEXT TO the group it modifies — `tint.phone`,
  * not `phone.tint` — so each group's overrides land in its own icon tabs in
@@ -156,7 +157,8 @@ export default motion({
    * above and unlike the flight's acts. Shared rather than per-chapter
    * because it is one gesture all four perform — the reveal's own shape
    * (distance, stagger, trigger line) is identical in all four
-   * `pages/<chapter>/motion.ts` too; only the figure parallax really differs.
+   * `pages/<chapter>/motion.ts` too, now that the parallax that used to
+   * distinguish them is gone.
    */
   body: {
     hold: 0,

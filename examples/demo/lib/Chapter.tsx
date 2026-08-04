@@ -57,13 +57,12 @@ export function ChapterView({
   const phaseRef = useRef(phase)
   phaseRef.current = phase
 
-  // Scroll choreography: every movement rises as it enters, and figures
-  // drift against the scroll. gsap.context() is page-scoped and reverts on
-  // unmount, so nothing leaks into the next chapter mid-transition.
+  // Scroll choreography: every movement rises as it enters. gsap.context() is
+  // page-scoped and reverts on unmount, so nothing leaks into the next
+  // chapter mid-transition.
   useMotion(({ q, gsap }) => {
     const t = resolveTokens(tokens as never) as {
       reveal: { y: number; duration: number; stagger: number; ease: string; start: number }
-      figure: { parallax: number; scale: number }
     }
 
     // Each movement rises as it enters. `start` is a line down the viewport,
@@ -98,19 +97,6 @@ export function ChapterView({
       for (const { tween } of reveals.current) tween.progress(0).pause()
     }
 
-    if (t.figure.parallax) {
-      q<HTMLElement>('.movement__figlink img').forEach((img) => {
-        gsap.fromTo(
-          img,
-          { yPercent: -t.figure.parallax / 10 },
-          {
-            yPercent: t.figure.parallax / 10,
-            ease: 'none',
-            scrollTrigger: { trigger: img, scrub: true, start: 'top bottom', end: 'bottom top' },
-          },
-        )
-      })
-    }
     return () => {
       reveals.current = []
     }

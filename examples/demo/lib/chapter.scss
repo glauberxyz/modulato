@@ -45,12 +45,9 @@
 .movement__h {
   @include type.title;
   font-size: clamp(24px, 2.4vw, 32px);
-  position: sticky;
-  top: 88px;
 
   &--small {
     @include type.label;
-    position: static;
     color: var(--muted);
     margin-bottom: 10px;
   }
@@ -166,9 +163,6 @@
 }
 
 @media (max-width: 767px) {
-  .movement__h {
-    position: static;
-  }
   .chapter__head {
     padding-top: 18vh;
   }
