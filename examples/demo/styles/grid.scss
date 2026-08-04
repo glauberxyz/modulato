@@ -65,6 +65,25 @@
   grid-column: 7 / 11;
 }
 
+// Below a large screen the field widens to 10 of the 12 — one column clear on
+// each side instead of two. Two columns of margin buy air on a wide monitor;
+// at this width they are just taken out of the measure.
+//
+// Bounded at BOTH ends on purpose: the phone rules below set every span
+// full-bleed, and scoping this to the config's `tablet` range means it can
+// never partly apply underneath them.
+@media (min-width: 768px) and (max-width: 1279px) {
+  .col-field {
+    grid-column: 2 / 12;
+  }
+  .col-side {
+    grid-column: 2 / 7;
+  }
+  .col-main {
+    grid-column: 7 / 12;
+  }
+}
+
 @media (max-width: 767px) {
   .grid {
     // Every span below is full-bleed, so the inset has to come back as a

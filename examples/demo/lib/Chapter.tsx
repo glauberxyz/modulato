@@ -27,6 +27,50 @@ const DIAGRAMS: Record<string, () => React.JSX.Element> = {
 }
 
 /**
+ * A movement's heading, always over two lines.
+ *
+ * These sit in a narrow column beside their prose, and left to the line
+ * breaker they came out as one, two, three or four lines depending on the
+ * viewport and on how long the words happened to be — so the column changed
+ * shape as you resized, and two headings of similar length could look like
+ * different sizes of thing. Two lines is the shape that reads, so it is
+ * decided here rather than discovered at layout time.
+ *
+ * The break goes at the word boundary that leaves the halves closest in
+ * length. That is what `text-wrap: balance` optimises for, but balance cannot
+ * be told HOW MANY lines to balance across — it takes the count the width
+ * gives it. Choosing the split makes the count the constant and lets the
+ * width vary, which is the way round we want.
+ */
+function MovementHeading({ text }: { text: string }) {
+  const words = text.split(' ')
+  let at = 0
+  let closest = Infinity
+  for (let i = 1; i < words.length; i++) {
+    const gap = Math.abs(
+      words.slice(0, i).join(' ').length - words.slice(i).join(' ').length,
+    )
+    if (gap < closest) {
+      closest = gap
+      at = i
+    }
+  }
+  return (
+    <h2 className="movement__h col-side">
+      {at ? (
+        <>
+          {words.slice(0, at).join(' ')}
+          <br />
+          {words.slice(at).join(' ')}
+        </>
+      ) : (
+        text
+      )}
+    </h2>
+  )
+}
+
+/**
  * One chapter, rendered from content. Movements alternate across the 12-col
  * grid — prose in the text measure, figures wide, asides in the margin — so
  * the rhythm comes from column placement rather than from type sizes.
@@ -254,7 +298,7 @@ export function ChapterView({
                 {/* A diagram is a picture, so it takes the field and the
                     heading answers it below — the same shape as a figure. */}
                 <div className="col-field movement__diagram">{D ? <D /> : null}</div>
-                {m.heading && <h2 className="movement__h col-side">{m.heading}</h2>}
+                {m.heading && <MovementHeading text={m.heading} />}
                 {copy}
               </section>
             )
@@ -262,7 +306,7 @@ export function ChapterView({
 
           return (
             <section className="grid movement movement--prose" key={key}>
-              {m.heading && <h2 className="movement__h col-side">{m.heading}</h2>}
+              {m.heading && <MovementHeading text={m.heading} />}
               {copy}
             </section>
           )
