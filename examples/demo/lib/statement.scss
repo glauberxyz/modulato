@@ -1,0 +1,45 @@
+@use '../styles/typography' as type;
+
+// A statement holds the fold on its own: one heading at the largest size its
+// column allows, and the copy centred beneath it.
+.statement {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  padding-block: 10vh;
+  // A gutter, not a margin. The heading fills whatever column it is given, so
+  // this is the one place that decides how close to the glass the type comes;
+  // set it to 0 for true edge-to-edge.
+  padding-inline: var(--margin);
+}
+
+.statement__title {
+  @include type.title;
+  // The SIZE is not here. It is measured against the rendered line boxes in
+  // Statement.tsx, because a column's width and the width the type comes to
+  // are the same number only by accident. What is here is the fallback for
+  // the frame before that runs — and for no JS at all — so the heading is
+  // never unstyled, only less exact.
+  font-size: clamp(40px, 13vw, 190px);
+  line-height: 0.92;
+  text-align: center;
+  margin: 0;
+  // Greedy wrapping, deliberately. `balance` evens the lines out, which fights
+  // a fit whose whole purpose is to put the LONGEST line on the column edge —
+  // the two would keep answering each other. Overrides the type system's
+  // default; see styles/typography.scss.
+  text-wrap: normal;
+}
+
+.statement__copy {
+  @include type.body;
+  max-width: 44ch;
+  margin: 7vh auto 0;
+  text-align: center;
+
+  .movement__p + .movement__p {
+    margin-top: 0.85em;
+  }
+}
+

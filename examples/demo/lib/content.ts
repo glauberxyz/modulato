@@ -6,7 +6,9 @@ export interface Source {
 }
 
 export interface Movement {
-  kind: 'prose' | 'figure' | 'aside' | 'diagram'
+  /** `statement` is a prose movement given the whole fold: its heading set as
+   *  large as the column allows, its body centred beneath. */
+  kind: 'prose' | 'figure' | 'aside' | 'diagram' | 'statement'
   heading?: string
   body: string[]
   /** figure slug, when kind === 'figure' */

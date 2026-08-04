@@ -5,6 +5,7 @@ import { resolveTokens, Shared, usePage } from 'modulato'
 import { useMotion } from '@modulato/gsap'
 import site from '../motion'
 import { NextChapter } from './NextChapter'
+import { Statement } from './Statement'
 import { Track } from './Track'
 import type { Chapter, Figure, Movement } from './content'
 
@@ -288,6 +289,21 @@ export function ChapterView({
             {m.note && <p className="movement__note">{m.note}</p>}
           </aside>
         </section>
+      )
+    }
+
+    if (m.kind === 'statement') {
+      // Not `.movement` and not on the grid: the statement owns the fold and
+      // sets its own measure, and the per-movement reveal would fade in a
+      // heading whose size is still being fitted.
+      return (
+        <Statement text={m.heading ?? ''} key={key}>
+          {m.body.map((p, j) => (
+            <p className="movement__p" key={j}>
+              {p}
+            </p>
+          ))}
+        </Statement>
       )
     }
 

@@ -124,7 +124,7 @@
           ]
         },
         {
-          "kind": "prose",
+          "kind": "statement",
           "heading": "How coarse is coarse",
           "body": [
             "Screens are measured in lines per inch. Newsprint takes a coarse screen — absorbent paper spreads ink, and fine dots simply fill in and go black. Coated stock takes a fine one.",
