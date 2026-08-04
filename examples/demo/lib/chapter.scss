@@ -62,9 +62,10 @@
   @include type.body;
   max-width: 62ch;
 
+  // Space between paragraphs, and no first-line indent. The two are
+  // alternative ways to mark a paragraph break and using both marks it twice.
   & + & {
     margin-top: 0.85em;
-    text-indent: 1.6em;
   }
 }
 
@@ -92,7 +93,6 @@
   .movement__p {
     @include type.small;
     max-width: 52ch;
-    text-indent: 0;
   }
 }
 
