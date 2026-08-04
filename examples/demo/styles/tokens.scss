@@ -8,6 +8,11 @@
   --ink: #231f20;
   --muted: #7a7a75;
   --rule: #d6d1c6;
+  // A second, brighter sheet for apparatus laid UNDER the argument — the
+  // chapter's sources band. Paper is warm and slightly grey; this is the
+  // white it would be printed on, so the change of surface reads as a
+  // change of register rather than as a panel.
+  --paper-bright: #ffffff;
 
   --dark-paper: #14110f;
   --dark-ink: #f4f1ea;
@@ -45,6 +50,8 @@
   --ink: #f4f1ea;
   --muted: #8b857c;
   --rule: #332e29;
+  // Brighter than the surface, same as on paper — a lift, not a white.
+  --paper-bright: #1c1916;
 }
 
 .is-dark {

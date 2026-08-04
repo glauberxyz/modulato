@@ -7,11 +7,15 @@
 //     <p class="col-text">…</p>               7 / 12
 //   </div>
 
+// No side padding: a block's inset is its COLUMN SPAN, not a margin added on
+// top of one. The two were compounding — a span that already left columns
+// clear was then pushed in again, so the grid never occupied the width it
+// was measured against. The phone breakpoint below puts the margin back,
+// where every span collapses to full-bleed and there is no inset left.
 @mixin grid {
   display: grid;
   grid-template-columns: repeat(var(--cols), 1fr);
   column-gap: var(--gutter);
-  padding-inline: var(--margin);
 }
 
 .grid {
@@ -45,7 +49,29 @@
   grid-column: 6 / 12;
 }
 
+// ── the chapter field ────────────────────────────────────────────────
+// A chapter reads in 8 of the 12, two columns clear on each side, and that
+// field splits in half: the heading holds the left, the prose the right.
+// Three spans instead of the six a chapter used to draw from — the rhythm
+// now comes from what a movement IS (picture, section, aside) rather than
+// from each one picking a different pair of columns.
+.col-field {
+  grid-column: 3 / 11;
+}
+.col-side {
+  grid-column: 3 / 7;
+}
+.col-main {
+  grid-column: 7 / 11;
+}
+
 @media (max-width: 767px) {
+  .grid {
+    // Every span below is full-bleed, so the inset has to come back as a
+    // margin — there are no clear columns left to provide it.
+    padding-inline: var(--margin);
+  }
+
   .col-full,
   .col-wide,
   .col-text,
@@ -53,7 +79,10 @@
   .col-left,
   .col-right,
   .col-stack-a,
-  .col-stack-b {
+  .col-stack-b,
+  .col-field,
+  .col-side,
+  .col-main {
     grid-column: 1 / -1;
   }
 }

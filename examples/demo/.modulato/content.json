@@ -9,17 +9,16 @@
       "lede": "A printing press is a binary device. It carries one film of ink at one density: it can put ink somewhere, or leave the paper bare. There is no dial for forty per cent grey.",
       "movements": [
         {
+          "kind": "figure",
+          "figure": "printing-shop-1600",
+          "body": []
+        },
+        {
           "kind": "prose",
           "heading": "One ink, one density",
           "body": [
             "This is not a limitation anyone designed. It falls out of the physics: a plate is inked, the ink transfers, and what transfers is ink — opaque, uniform, the colour it already was. A plate cannot be inked with different shades of grey.",
-            "So for the first four centuries of printing, a photograph could not be printed. Not badly — at all. What appeared in newspapers and magazines instead was something else entirely: a drawing of a photograph, cut into wood by a person."
-          ]
-        },
-        {
-          "kind": "figure",
-          "figure": "printing-shop-1600",
-          "body": [
+            "So for the first four centuries of printing, a photograph could not be printed. Not badly — at all. What appeared in newspapers and magazines instead was something else entirely: a drawing of a photograph, cut into wood by a person.",
             "The press as it stood around 1600, in Stradanus's engraving: compositors at the type cases, the great screw press mid-pull, damp sheets hung to dry. The mechanism that would still be printing pictures three hundred years later — and still unable to print a photograph."
           ]
         },

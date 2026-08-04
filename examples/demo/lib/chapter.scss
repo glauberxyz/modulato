@@ -71,9 +71,18 @@
   border-top: 1px solid var(--rule);
 }
 
-.chapter__aside {
+// The aside's rule, spanning the whole field above the text.
+.movement__band {
   border-top: 2px solid var(--ink);
-  padding-top: 14px;
+  align-self: start;
+}
+
+.chapter__aside {
+  .movement__h--small {
+    display: block;
+    padding-bottom: 10px;
+    border-bottom: 1px solid var(--rule);
+  }
 
   .movement__p {
     @include type.small;
@@ -102,10 +111,9 @@
   }
 }
 
+// One line, set as a figure reference — see the `figref` class it carries.
 .movement__cap {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
+  display: block;
   margin-top: 10px;
 }
 
@@ -114,28 +122,18 @@
   padding-block: 9vh;
 }
 
-.movement__diagramcopy {
-  margin-top: 32px;
-  columns: 2;
-  column-gap: var(--gutter);
-
-  .movement__p {
-    @include type.small;
-    max-width: none;
-    text-indent: 0;
-    break-inside: avoid;
-
-    & + & {
-      margin-top: 0.9em;
-    }
-  }
-}
-
 // ── sources ──────────────────────────────────────────────────────────
 .chapter__foot {
-  padding-top: 8vh;
+  // Full-bleed white — the surface change IS the divider, so there is no
+  // rule and no top margin holding it off the prose.
+  background: var(--paper-bright);
+  padding-block: 8vh 12vh;
   margin-top: 6vh;
-  border-top: 1px solid var(--rule);
+
+  .label {
+    display: block;
+    margin-bottom: 18px;
+  }
 }
 
 .chapter__sources {
@@ -153,12 +151,6 @@
   }
   a:hover {
     color: var(--ink);
-  }
-}
-
-@media (max-width: 1023px) {
-  .movement__diagramcopy {
-    columns: 1;
   }
 }
 

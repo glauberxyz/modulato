@@ -169,6 +169,20 @@ export function ChapterView({
         {chapter.movements.map((m, i) => {
           const key = `${chapter.slug}-${i}`
 
+          // Whatever prose a movement carries always sits in the right half,
+          // whole. It used to be split across a pair of columns that changed
+          // with the movement's index — which made the same kind of block
+          // look like two different kinds depending on where it fell.
+          const copy = m.body.length ? (
+            <div className="col-main">
+              {m.body.map((p, j) => (
+                <p className="movement__p" key={j}>
+                  {p}
+                </p>
+              ))}
+            </div>
+          ) : null
+
           if (m.kind === 'figure') {
             const fig = byslug.get(m.figure ?? '')
             if (!fig) return null
@@ -176,7 +190,7 @@ export function ChapterView({
             const n = figN
             return (
               <section className="grid movement movement--figure" key={key}>
-                <figure className={i % 2 ? 'col-stack-b' : 'col-wide'}>
+                <figure className="col-field">
                   {/* FLIP target: this exact element morphs into the plate
                       inspector at /<chapter>/<figure>. */}
                   <a href={`/${chapter.slug}/${fig.slug}`} className="movement__figlink">
@@ -184,20 +198,14 @@ export function ChapterView({
                       <img src={`/plates/${fig.slug}.jpg`} alt={fig.title} loading="lazy" />
                     </Shared>
                   </a>
-                  <figcaption className="movement__cap">
-                    <span className="figref">
-                      Abb. {n} · {fig.year}
-                    </span>
-                    <span className="caption">{fig.title}</span>
+                  {/* One line. Number, date and title used to stack, which
+                      gave a two-line block the weight of a caption proper —
+                      this is a label on a picture, not a paragraph. */}
+                  <figcaption className="movement__cap figref">
+                    Abb. {n} · {fig.year}. {fig.title}
                   </figcaption>
                 </figure>
-                <div className={i % 2 ? 'col-aside' : 'col-text'}>
-                  {m.body.map((p, j) => (
-                    <p className="movement__p" key={j}>
-                      {p}
-                    </p>
-                  ))}
-                </div>
+                {copy}
               </section>
             )
           }
@@ -205,7 +213,11 @@ export function ChapterView({
           if (m.kind === 'aside') {
             return (
               <section className="grid movement movement--aside" key={key}>
-                <aside className="col-stack-a chapter__aside">
+                {/* The rule runs the full field while the aside itself keeps
+                    to the right half — the width of the line is what marks
+                    the interruption, so it has to be wider than the text. */}
+                <div className="col-field movement__band" />
+                <aside className="col-main chapter__aside">
                   {m.heading && <h3 className="movement__h movement__h--small">{m.heading}</h3>}
                   {m.body.map((p, j) => (
                     <p className="movement__p" key={j}>
@@ -222,49 +234,44 @@ export function ChapterView({
             const D = DIAGRAMS[m.diagram ?? '']
             return (
               <section className="grid movement movement--diagram" key={key}>
-                <div className="col-full">
-                  {m.heading && <h2 className="movement__h">{m.heading}</h2>}
-                  {D ? <D /> : null}
-                  <div className="movement__diagramcopy">
-                    {m.body.map((p, j) => (
-                      <p className="movement__p" key={j}>
-                        {p}
-                      </p>
-                    ))}
-                  </div>
-                </div>
+                {/* A diagram is a picture, so it takes the field and the
+                    heading answers it below — the same shape as a figure. */}
+                <div className="col-field movement__diagram">{D ? <D /> : null}</div>
+                {m.heading && <h2 className="movement__h col-side">{m.heading}</h2>}
+                {copy}
               </section>
             )
           }
 
           return (
             <section className="grid movement movement--prose" key={key}>
-              {m.heading && <h2 className="movement__h col-aside">{m.heading}</h2>}
-              <div className="col-text">
-                {m.body.map((p, j) => (
-                  <p className="movement__p" key={j}>
-                    {p}
-                  </p>
-                ))}
-              </div>
+              {m.heading && <h2 className="movement__h col-side">{m.heading}</h2>}
+              {copy}
             </section>
           )
         })}
       </div>
 
-      <footer className="chapter__foot grid">
-        <div className="col-aside">
-          <span className="label">Sources</span>
+      {/* The apparatus, on its own surface. A white band rather than a rule:
+          the sources are not the end of the argument, they are underneath it,
+          and a change of paper says that without spending a heading on it.
+          Full-bleed, with the list held in the same right half the prose ran
+          in, so the reader's column never moves. */}
+      <footer className="chapter__foot">
+        <div className="grid">
+          <div className="col-main">
+            <span className="label">Sources</span>
+            <ol className="chapter__sources">
+              {chapter.sources.map((s) => (
+                <li key={s.url}>
+                  <a href={s.url} target="_blank" rel="noreferrer noopener" data-native>
+                    {s.text}
+                  </a>
+                </li>
+              ))}
+            </ol>
+          </div>
         </div>
-        <ol className="col-text chapter__sources">
-          {chapter.sources.map((s) => (
-            <li key={s.url}>
-              <a href={s.url} target="_blank" rel="noreferrer noopener" data-native>
-                {s.text}
-              </a>
-            </li>
-          ))}
-        </ol>
       </footer>
 
       <NextChapter chapter={next} />
