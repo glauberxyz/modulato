@@ -107,10 +107,13 @@
   margin: 0;
 }
 
+// No fill behind the picture. It was a placeholder for the moment before an
+// image loads, and it cost more than it bought: on a track panel the image is
+// letterboxed inside its column, so the rule colour showed as a band down
+// each side of the plate.
 .movement__figlink {
   display: block;
   overflow: hidden;
-  background: var(--rule);
 
   img {
     width: 100%;
