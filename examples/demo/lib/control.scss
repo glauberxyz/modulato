@@ -99,6 +99,19 @@
   border: 1px solid var(--rule);
   overflow: hidden;
 
+  // The stage's one child fills it absolutely rather than by `height: 100%`.
+  // A percentage height needs a definite parent height, and once the stage
+  // took its height from a stretched grid area that stopped resolving — the
+  // canvas fell back to the intrinsic ratio of its width/height ATTRIBUTES,
+  // which the resize observer had just written from the canvas's own box. So
+  // it sat at whatever shape it was already at and called it stable: an
+  // 830x415 canvas in an 832x900 stage. `inset: 0` has no such dependency,
+  // and works the same under the 4/3 ratio below.
+  > * {
+    position: absolute;
+    inset: 0;
+  }
+
   canvas {
     width: 100%;
     height: 100%;
@@ -124,6 +137,33 @@
   @include type.small;
   color: var(--muted);
   margin-top: 12px;
+}
+
+// On a large screen an interactive module is the whole viewport: it breaks the
+// field (see chapter.scss) and lays its own 12 columns across 100vw, one clear
+// on each side. 1 + 7 of stage + 3 of controls + 1 = 12.
+//
+// The stage stretches to the full height while the panel centres against it —
+// the canvas takes its resolution from `clientWidth * dpr` under a
+// ResizeObserver (halftone.ts), so dropping the 4/3 ratio re-renders the
+// scene at the new shape rather than stretching a 4/3 image to fit.
+@media (min-width: 1280px) {
+  .diagram {
+    grid-template-columns: repeat(12, 1fr);
+    column-gap: var(--gutter);
+    height: 100vh;
+    align-items: center;
+  }
+
+  .diagram__stage {
+    grid-column: 2 / 9;
+    align-self: stretch;
+    aspect-ratio: auto;
+  }
+
+  .diagram__panel {
+    grid-column: 9 / 12;
+  }
 }
 
 @media (max-width: 1023px) {

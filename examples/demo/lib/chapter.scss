@@ -137,6 +137,19 @@
   padding-block: 9vh;
 }
 
+// On a large screen the interactive modules leave the field and take the whole
+// width — the grid carries no side padding, so spanning every column IS 100vw.
+// The frame's own 12-column split lives in control.scss.
+//
+// Two classes deep so it beats `.col-field` on specificity rather than on
+// stylesheet order, which is not ours to depend on: both are single-class
+// selectors, and which file Vite emits last is an implementation detail.
+@media (min-width: 1280px) {
+  .movement--diagram .movement__diagram {
+    grid-column: 1 / -1;
+  }
+}
+
 // ── sources ──────────────────────────────────────────────────────────
 .chapter__foot {
   // Full-bleed white — the surface change IS the divider, so there is no rule
