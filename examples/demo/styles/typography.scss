@@ -19,11 +19,12 @@
   font-size: clamp(44px, 9vw, 90px);
 }
 
-// Adobe Garamond. All prose.
+// Adobe Garamond. All prose. The size steps down below a large screen — see
+// `--type-body` in tokens.scss, which is where that step is declared.
 @mixin body {
   font-family: var(--font-serif);
   font-weight: 400;
-  font-size: 24px;
+  font-size: var(--type-body);
   line-height: 1.32;
   letter-spacing: -0.01em;
 }

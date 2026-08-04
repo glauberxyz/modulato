@@ -35,6 +35,15 @@
   --font-sans: 'franklin-gothic-urw', 'Helvetica Neue', sans-serif;
   --font-serif: 'adobe-garamond-pro', Georgia, serif;
 
+  // Prose size, in one step: 24px on a large screen, 22px below it.
+  //
+  // A custom property rather than a media query inside the `body` mixin,
+  // because `body-large` INCLUDES that mixin and then overrides the size —
+  // Sass hoists a nested @media below the rule it came from, so it would
+  // out-cascade the lede's 30px and shrink every lede to body size at the
+  // same breakpoint. A variable is read where it is used and cannot do that.
+  --type-body: 24px;
+
   // 12 columns everywhere; 6 on phones. Every block is placed by column.
   --cols: 12;
   --gutter: 20px;
@@ -56,6 +65,14 @@
 
 .is-dark {
   @include dark;
+}
+
+// Anything that is not a large screen — the config's `tablet` breakpoint
+// begins at 768px and runs to 1279px, so this is phone and tablet together.
+@media (max-width: 1279px) {
+  :root {
+    --type-body: 22px;
+  }
 }
 
 @media (max-width: 767px) {
