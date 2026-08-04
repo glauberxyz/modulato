@@ -22,7 +22,15 @@
   // the frame before that runs — and for no JS at all — so the heading is
   // never unstyled, only less exact.
   font-size: clamp(40px, 13vw, 190px);
-  line-height: 0.92;
+  // 10% under the 0.92 this started at. At this size the leading is the gap
+  // between three heavy lines, not the rhythm of a paragraph, so it wants to
+  // be tighter than the type system's default — and every 1% here is roughly
+  // 10px of block height at a laptop width.
+  line-height: 0.828;
+  // Tighter than the title style's -0.03em. At this size the default tracking
+  // reads loose; the fit picks the difference up on its own, since narrower
+  // lines simply mean a larger size is needed to reach the edge.
+  letter-spacing: -0.04em;
   text-align: center;
   margin: 0;
 }
