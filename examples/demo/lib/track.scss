@@ -63,15 +63,25 @@
   }
 }
 
-// Below a large screen the sideways move has nothing to show — a panel would
-// be narrower than its own two columns — so it becomes a column again.
+// Between a medium screen and a large one the panel keeps its shape but drops
+// the column of air between picture and prose — at this width that column is
+// taken out of a measure that has none to spare, and the two blocks read as a
+// pair without it.
+@media (min-width: 1024px) and (max-width: 1279px) {
+  .track__text {
+    grid-column: 7 / 12;
+  }
+}
+
+// Below a medium screen the sideways move has nothing left to show — the two
+// blocks would be narrower than a readable measure — so it becomes a column.
 //
-// 1279px deliberately, the config's `tablet` ceiling and not a number of its
-// own: `useMotion` re-runs on a BREAKPOINT change, so Track.tsx only gets the
-// chance to reconsider the pin at the boundaries the config names. A stacking
-// point in between would leave the rail a column with the pin still installed
-// until something else forced a re-run.
-@media (max-width: 1279px) {
+// MIRRORS `HORIZONTAL` in Track.tsx; change both together. It used to sit at
+// 1279 because the pin was gated on `useMotion` re-running, which only happens
+// at one of the config's NAMED breakpoints. `gsap.matchMedia()` owns its own
+// boundary now, so this one is chosen for the layout rather than inherited
+// from the token system.
+@media (max-width: 1023px) {
   .track {
     height: auto;
     overflow: visible;

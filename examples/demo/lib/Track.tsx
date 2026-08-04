@@ -20,46 +20,56 @@ import './track.scss'
  * early on a wide screen and still moving on a narrow one. `invalidateOnRefresh`
  * re-measures it on resize.
  */
+/**
+ * Where the rail is laid out side by side. MIRRORS the query in track.scss —
+ * change both together.
+ *
+ * It is a query rather than one of the config's breakpoints on purpose. The
+ * pin used to be gated on `useMotion` re-running, which only happens when a
+ * NAMED breakpoint changes, so the stacking point was pinned to the config's
+ * 1279 whether or not the layout wanted it there. `gsap.matchMedia()` owns
+ * its own boundary: it builds the pin on entering the query and tears it down
+ * on leaving, so the module is free to stack wherever it actually needs to.
+ */
+const HORIZONTAL = '(min-width: 1024px)'
+
 export function Track({ children }: { children: ReactNode }) {
   const ref = useRef<HTMLElement>(null)
 
   useMotion(({ gsap }) => {
     const section = ref.current
     const rail = section?.firstElementChild as HTMLElement | null
-    if (!section || !rail) return
+    if (!section || !rail) return undefined
 
     const { track } = resolveTokens(site)
-    // Two ways this stays still. Reduced motion (or the pin switched off in
-    // the tokens), and a screen too narrow for two panels abreast — where the
-    // stylesheet has already turned the rail into a column.
-    //
-    // That second one ASKS THE STYLESHEET rather than repeating its
-    // breakpoint. One definition of where the rail is horizontal, and it lives
-    // with the layout; this effect re-runs on a breakpoint change, so it gets
-    // to reconsider exactly when the answer can have changed. Without it the
-    // pin was still being installed over a stacked column — harmless only by
-    // accident, because a column's overhang is zero and the pin came out
-    // zero-length, spacer and all.
-    const horizontal = getComputedStyle(rail).flexDirection === 'row'
-    if (!track.scrub || !horizontal) {
-      section.dataset.static = 'true'
-      return
-    }
-    section.dataset.static = 'false'
+    // Reduced motion, or the pin switched off in the tokens: the rail becomes
+    // an ordinary side-scrolling strip. Still reachable, just not driven.
+    section.dataset.static = 'true'
+    if (!track.scrub) return undefined
 
-    const overhang = () => Math.max(0, rail.scrollWidth - window.innerWidth)
-    gsap.to(rail, {
-      x: () => -overhang(),
-      ease: 'none',
-      scrollTrigger: {
-        trigger: section,
-        start: 'top top',
-        end: () => `+=${overhang() * track.length}`,
-        pin: true,
-        scrub: track.scrub,
-        invalidateOnRefresh: true,
-      },
+    const mm = gsap.matchMedia()
+    mm.add(HORIZONTAL, () => {
+      section.dataset.static = 'false'
+      const overhang = () => Math.max(0, rail.scrollWidth - window.innerWidth)
+      gsap.to(rail, {
+        x: () => -overhang(),
+        ease: 'none',
+        scrollTrigger: {
+          trigger: section,
+          start: 'top top',
+          end: () => `+=${overhang() * track.length}`,
+          pin: true,
+          scrub: track.scrub,
+          invalidateOnRefresh: true,
+        },
+      })
+      // Runs when the query stops matching: GSAP reverts what was made inside,
+      // and the rail goes back to being a column.
+      return () => {
+        section.dataset.static = 'true'
+      }
     })
+    return () => mm.revert()
   })
 
   return (
