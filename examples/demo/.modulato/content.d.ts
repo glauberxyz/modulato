@@ -50,6 +50,16 @@ declare module 'modulato/config' {
         body: string[]
       } | {
         kind: string
+        figure: string
+        body: unknown[]
+        track: string
+      } | {
+        kind: string
+        heading: string
+        body: string[]
+        track: string
+      } | {
+        kind: string
         diagram: string
         heading: string
         body: string[]

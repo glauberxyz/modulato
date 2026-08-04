@@ -1,0 +1,91 @@
+@use '../styles/typography' as type;
+
+// The horizontal track. Full-bleed and a screen tall, so that when the pin
+// takes hold the rail is the only thing in view — a pinned section shorter
+// than the fold would show the page above and below it holding still, which
+// reads as a stuck page rather than a deliberate stop.
+.track {
+  height: 100vh;
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+}
+
+.track__rail {
+  display: flex;
+  align-items: center;
+  gap: var(--gutter);
+  // The rail starts and ends inset, so the first panel is not jammed against
+  // the edge at rest and the last is not still touching it when the pin ends.
+  padding-inline: 8vw;
+  will-change: transform;
+}
+
+.track__panel {
+  flex: 0 0 auto;
+}
+
+// Pictures lead, so they take the larger measure.
+.track__panel--figure {
+  width: 42vw;
+
+  img {
+    // Capped against the fold rather than the panel: a tall plate would
+    // otherwise decide the height of the whole rail.
+    max-height: 62vh;
+    object-fit: contain;
+  }
+}
+
+.track__panel--prose {
+  width: 32vw;
+
+  .movement__h {
+    margin-bottom: 0.7em;
+  }
+}
+
+// Reduced motion, or the pin switched off in the tokens: no pin, no transform
+// — just a strip you can scroll yourself.
+.track[data-static='true'] {
+  height: auto;
+  padding-block: 9vh;
+
+  .track__rail {
+    overflow-x: auto;
+    transform: none;
+  }
+}
+
+// Below a large screen the sideways move has nothing to show — two panels do
+// not fit side by side — so it becomes a column again.
+//
+// 1279px deliberately, the config's `tablet` ceiling and not a number of its
+// own: `useMotion` re-runs on a BREAKPOINT change, so Track.tsx only gets the
+// chance to reconsider the pin at the boundaries the config names. A stacking
+// point in between would leave the rail a column with the pin still installed
+// until something else forced a re-run.
+@media (max-width: 1279px) {
+  .track {
+    height: auto;
+    overflow: visible;
+    padding-block: 9vh;
+  }
+
+  .track__rail {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 6vh;
+    padding-inline: var(--margin);
+    transform: none !important;
+  }
+
+  .track__panel--figure,
+  .track__panel--prose {
+    width: auto;
+  }
+
+  .track__panel--figure img {
+    max-height: none;
+  }
+}

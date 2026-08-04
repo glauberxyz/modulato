@@ -1,11 +1,12 @@
 import gsap from 'gsap'
 import { ScrollTrigger } from 'gsap/ScrollTrigger'
-import { useEffect, useRef } from 'react'
+import { Fragment, useEffect, useRef } from 'react'
 import { resolveTokens, Shared, usePage } from 'modulato'
 import { useMotion } from '@modulato/gsap'
 import site from '../motion'
 import { NextChapter } from './NextChapter'
-import type { Chapter, Figure } from './content'
+import { Track } from './Track'
+import type { Chapter, Figure, Movement } from './content'
 
 // ScrollTrigger is the app's to register. @modulato/gsap detects it and
 // bridges Lenis into it automatically, so scrub stays in sync with the
@@ -42,7 +43,25 @@ const DIAGRAMS: Record<string, () => React.JSX.Element> = {
  * gives it. Choosing the split makes the count the constant and lets the
  * width vary, which is the way round we want.
  */
-function MovementHeading({ text }: { text: string }) {
+/**
+ * Consecutive movements sharing a `track` id, gathered into one run. Anything
+ * without a track is its own run of ordinary sections, so the page is a list
+ * of runs rather than a list of movements — which is what lets a group of
+ * them be wrapped without the wrapper leaking around their neighbours.
+ */
+function runs(movements: Movement[]): Array<{ track?: string; items: Array<[Movement, number]> }> {
+  const out: Array<{ track?: string; items: Array<[Movement, number]> }> = []
+  movements.forEach((m, i) => {
+    const last = out[out.length - 1]
+    // A run continues only while the id is the SAME and unbroken — two tracks
+    // that happen to share a name with a section between them stay separate.
+    if (last && last.track === m.track) last.items.push([m, i])
+    else out.push({ track: m.track, items: [[m, i]] })
+  })
+  return out
+}
+
+function MovementHeading({ text, className = 'movement__h col-side' }: { text: string; className?: string }) {
   const words = text.split(' ')
   let at = 0
   let closest = Infinity
@@ -56,7 +75,7 @@ function MovementHeading({ text }: { text: string }) {
     }
   }
   return (
-    <h2 className="movement__h col-side">
+    <h2 className={className}>
       {at ? (
         <>
           {words.slice(0, at).join(' ')}
@@ -206,6 +225,136 @@ export function ChapterView({
     }
   }, [element, phase])
 
+  /** Whatever prose a movement carries, in the right half of the field. */
+  const copyOf = (m: Movement) =>
+    m.body.length ? (
+      <div className="col-main">
+        {m.body.map((p, j) => (
+          <p className="movement__p" key={j}>
+            {p}
+          </p>
+        ))}
+      </div>
+    ) : null
+
+  /** A movement as a section down the page. */
+  const movement = (m: Movement, i: number) => {
+    const key = `${chapter.slug}-${i}`
+    const copy = copyOf(m)
+
+    if (m.kind === 'figure') {
+      const fig = byslug.get(m.figure ?? '')
+      if (!fig) return null
+      figN += 1
+      const n = figN
+      return (
+        <section className="grid movement movement--figure" key={key}>
+          <figure className="col-field">
+            {/* FLIP target: this exact element morphs into the plate
+                inspector at /<chapter>/<figure>. */}
+            <a href={`/${chapter.slug}/${fig.slug}`} className="movement__figlink">
+              <Shared id={`plate:${fig.slug}`}>
+                <img src={`/plates/${fig.slug}.jpg`} alt={fig.title} loading="lazy" />
+              </Shared>
+            </a>
+            {/* One line. Number, date and title used to stack, which gave a
+                two-line block the weight of a caption proper — this is a
+                label on a picture, not a paragraph. */}
+            <figcaption className="movement__cap figref">
+              Abb. {n} · {fig.year}. {fig.title}
+            </figcaption>
+          </figure>
+          {copy}
+        </section>
+      )
+    }
+
+    if (m.kind === 'aside') {
+      return (
+        <section className="grid movement movement--aside" key={key}>
+          {/* The rule runs the full field while the aside itself keeps to the
+              right half — the width of the line is what marks the
+              interruption, so it has to be wider than the text. */}
+          <div className="col-field movement__band" />
+          <aside className="col-main chapter__aside">
+            {/* The global `.label` carries the type; `movement__label` adds
+                only its rule, and is the reveal's hook. */}
+            {m.heading && <h3 className="label movement__label">{m.heading}</h3>}
+            {m.body.map((p, j) => (
+              <p className="movement__p" key={j}>
+                {p}
+              </p>
+            ))}
+            {m.note && <p className="movement__note">{m.note}</p>}
+          </aside>
+        </section>
+      )
+    }
+
+    if (m.kind === 'diagram') {
+      const D = DIAGRAMS[m.diagram ?? '']
+      return (
+        <section className="grid movement movement--diagram" key={key}>
+          {/* A diagram is a picture, so it takes the field and the heading
+              answers it below — the same shape as a figure. */}
+          <div className="col-field movement__diagram">{D ? <D /> : null}</div>
+          {m.heading && <MovementHeading text={m.heading} />}
+          {copy}
+        </section>
+      )
+    }
+
+    return (
+      <section className="grid movement movement--prose" key={key}>
+        {m.heading && <MovementHeading text={m.heading} />}
+        {copy}
+      </section>
+    )
+  }
+
+  /**
+   * The same movement as a panel on a horizontal rail.
+   *
+   * Deliberately NOT `.movement`: the per-movement scroll reveal finds its
+   * targets by that class, and a reveal keyed to a vertical trigger line is
+   * meaningless for a block that arrives sideways — all four would fire at
+   * once the moment the section pinned. Travelling into view IS the reveal
+   * here.
+   */
+  const panel = (m: Movement, i: number) => {
+    const key = `${chapter.slug}-${i}`
+
+    if (m.kind === 'figure') {
+      const fig = byslug.get(m.figure ?? '')
+      if (!fig) return null
+      figN += 1
+      const n = figN
+      return (
+        <figure className="track__panel track__panel--figure" key={key}>
+          <a href={`/${chapter.slug}/${fig.slug}`} className="movement__figlink">
+            <Shared id={`plate:${fig.slug}`}>
+              <img src={`/plates/${fig.slug}.jpg`} alt={fig.title} loading="lazy" />
+            </Shared>
+          </a>
+          <figcaption className="movement__cap figref">
+            Abb. {n} · {fig.year}. {fig.title}
+          </figcaption>
+        </figure>
+      )
+    }
+
+    return (
+      <div className="track__panel track__panel--prose" key={key}>
+        {m.heading && <MovementHeading text={m.heading} className="movement__h" />}
+        {m.body.map((p, j) => (
+          <p className="movement__p" key={j}>
+            {p}
+          </p>
+        ))}
+      </div>
+    )
+  }
+
   return (
     <article className="chapter" data-page={chapter.slug}>
       {/* The landing zone. Each title word carries the SAME <Shared> id as
@@ -225,92 +374,16 @@ export function ChapterView({
       </header>
 
       <div className="chapter__body">
-        {chapter.movements.map((m, i) => {
-          const key = `${chapter.slug}-${i}`
-
-          // Whatever prose a movement carries always sits in the right half,
-          // whole. It used to be split across a pair of columns that changed
-          // with the movement's index — which made the same kind of block
-          // look like two different kinds depending on where it fell.
-          const copy = m.body.length ? (
-            <div className="col-main">
-              {m.body.map((p, j) => (
-                <p className="movement__p" key={j}>
-                  {p}
-                </p>
-              ))}
-            </div>
-          ) : null
-
-          if (m.kind === 'figure') {
-            const fig = byslug.get(m.figure ?? '')
-            if (!fig) return null
-            figN += 1
-            const n = figN
-            return (
-              <section className="grid movement movement--figure" key={key}>
-                <figure className="col-field">
-                  {/* FLIP target: this exact element morphs into the plate
-                      inspector at /<chapter>/<figure>. */}
-                  <a href={`/${chapter.slug}/${fig.slug}`} className="movement__figlink">
-                    <Shared id={`plate:${fig.slug}`}>
-                      <img src={`/plates/${fig.slug}.jpg`} alt={fig.title} loading="lazy" />
-                    </Shared>
-                  </a>
-                  {/* One line. Number, date and title used to stack, which
-                      gave a two-line block the weight of a caption proper —
-                      this is a label on a picture, not a paragraph. */}
-                  <figcaption className="movement__cap figref">
-                    Abb. {n} · {fig.year}. {fig.title}
-                  </figcaption>
-                </figure>
-                {copy}
-              </section>
-            )
-          }
-
-          if (m.kind === 'aside') {
-            return (
-              <section className="grid movement movement--aside" key={key}>
-                {/* The rule runs the full field while the aside itself keeps
-                    to the right half — the width of the line is what marks
-                    the interruption, so it has to be wider than the text. */}
-                <div className="col-field movement__band" />
-                <aside className="col-main chapter__aside">
-                  {/* The global `.label` carries the type; `movement__label`
-                      adds only its rule, and is the reveal's hook. */}
-                  {m.heading && <h3 className="label movement__label">{m.heading}</h3>}
-                  {m.body.map((p, j) => (
-                    <p className="movement__p" key={j}>
-                      {p}
-                    </p>
-                  ))}
-                  {m.note && <p className="movement__note">{m.note}</p>}
-                </aside>
-              </section>
-            )
-          }
-
-          if (m.kind === 'diagram') {
-            const D = DIAGRAMS[m.diagram ?? '']
-            return (
-              <section className="grid movement movement--diagram" key={key}>
-                {/* A diagram is a picture, so it takes the field and the
-                    heading answers it below — the same shape as a figure. */}
-                <div className="col-field movement__diagram">{D ? <D /> : null}</div>
-                {m.heading && <MovementHeading text={m.heading} />}
-                {copy}
-              </section>
-            )
-          }
-
-          return (
-            <section className="grid movement movement--prose" key={key}>
-              {m.heading && <MovementHeading text={m.heading} />}
-              {copy}
-            </section>
-          )
-        })}
+        {runs(chapter.movements).map((run, r) =>
+          run.track ? (
+            <Track key={run.track}>{run.items.map(([m, i]) => panel(m, i))}</Track>
+          ) : (
+            // A fragment, not a wrapper: these are the chapter's own sections
+            // and inserting an element around them would break the flow they
+            // are laid out in.
+            <Fragment key={`run-${r}`}>{run.items.map(([m, i]) => movement(m, i))}</Fragment>
+          ),
+        )}
       </div>
 
       {/* The apparatus, on its own surface. A white band rather than a rule:

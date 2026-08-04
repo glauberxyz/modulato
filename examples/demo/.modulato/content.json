@@ -100,7 +100,8 @@
         {
           "kind": "figure",
           "figure": "ives-portrait",
-          "body": []
+          "body": [],
+          "track": "makers"
         },
         {
           "kind": "prose",
@@ -109,12 +110,14 @@
             "Frederic Eugene Ives ran Cornell's photographic laboratory from 1874 to 1878, then moved to Philadelphia. In 1881 he patented the first commercially successful halftone method.",
             "Here is the detail most accounts flatten: that 1881 process used no screen at all. It worked by swelling gelatin into a relief, casting it in plaster, and pressing the cast against an inked rubber grid — the dots came from the grid, not from a screen over the negative. Ives only adopted the crossline screen he is now remembered for later.",
             "Frederic Eugene Ives, 1856–1937, in a portrait issued by the Ives Process Company of New York. The signature is his."
-          ]
+          ],
+          "track": "makers"
         },
         {
           "kind": "figure",
           "figure": "screen-holder",
-          "body": []
+          "body": [],
+          "track": "makers"
         },
         {
           "kind": "prose",
@@ -123,7 +126,8 @@
             "The screen that industrialised the process came from two brothers in Philadelphia. Louis Levy and Max Levy coated optical glass with lacquer, ruled it with a diamond point, etched the grooves in hydrofluoric acid, filled them with something opaque, then cemented two such plates together with their lines crossing at right angles.",
             "Max Levy's patent for the screen was filed in March 1894. The Science Museum in London holds an eighty-five-line Levy screen dating from 1893 — a piece of glass, ruled to a precision that made photographs printable.",
             "The apparatus, from a 1904 manual: the holder that carries the glass screen in clips at a measured distance from the plate. The gap matters — it is what turns a ruled grid into round dots."
-          ]
+          ],
+          "track": "makers"
         },
         {
           "kind": "prose",

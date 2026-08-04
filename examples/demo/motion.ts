@@ -199,6 +199,25 @@ export default motion({
   },
 
   /**
+   * The horizontal track: a run of blocks laid end to end, pulled sideways
+   * while the section holds the fold.
+   *
+   * There is no distance here on purpose. The travel is the rail's OVERHANG,
+   * measured at refresh — a number would have the rail arriving early on a
+   * wide screen and still moving on a narrow one. `length` scales the scroll
+   * it takes to cover that overhang: 1 is one pixel down per pixel across,
+   * above 1 is slower and more deliberate.
+   */
+  track: {
+    /** Seconds of catch-up behind the scroll. 0 removes the pin entirely and
+     *  leaves an ordinary side-scrolling strip — which is what `reduced` wants. */
+    scrub: 0.8,
+    length: 1.15,
+    phone: { scrub: 0.5, length: 1 },
+    reduced: { scrub: 0 },
+  },
+
+  /**
    * A figure under the pointer — it swells a little, and settles back.
    *
    * CSS owns this one: a `scale` transition on the image itself, which keeps

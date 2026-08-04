@@ -14,6 +14,12 @@ export interface Movement {
   /** diagram id, when kind === 'diagram' */
   diagram?: string
   note?: string
+  /**
+   * Consecutive movements sharing an id ride one horizontal track — laid end
+   * to end and pulled sideways while the section is pinned. The id is only an
+   * adjacency key; nothing looks it up.
+   */
+  track?: string
 }
 
 export interface Chapter {
