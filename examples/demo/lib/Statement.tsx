@@ -6,18 +6,30 @@ import './statement.scss'
 const useIsomorphicLayoutEffect = typeof window === 'undefined' ? useEffect : useLayoutEffect
 
 /**
- * Type set to the largest size that still fits its column — measured, not
- * guessed.
+ * Type set so its longest line lands exactly on the column edge — measured,
+ * not guessed.
  *
  * A `vw` size (or a clamp of one) is a guess with the text's own widths left
  * out of it: the same number is too small for "How" and too wide for a longer
- * heading, and it drifts as soon as the face or the tracking changes. This
- * binary-searches the font size against the real rendered line boxes, so the
- * longest line lands on the column edge at ANY width, including a phone.
+ * heading, and it drifts as soon as the face or the tracking changes.
  *
- * Height is a ceiling rather than a target. Fitting to both would mean a short
- * viewport quietly deciding the type size; this way width is what the size
- * answers to, and height only ever prevents an overflow.
+ * The LINE BREAKS ARE THE AUTHOR'S — split the text on newlines and each part
+ * is set on its own line, unwrappable. That is a typographic decision, not
+ * something to be derived: "How / coarse / is coarse" is three lines because
+ * it reads that way, and letting the browser choose put "How coarse" together
+ * whenever the column happened to allow it.
+ *
+ * Given breaks, the fit stops being a search. Each line is `nowrap`, so its
+ * width is simply proportional to the size — measure once and scale by the
+ * ratio. The longest line fills the column; the others fall where they fall,
+ * centred and ragged, which is the shape the block is after.
+ *
+ * Width is the ONLY constraint, and that is a real trade. Three fixed lines
+ * filling a 1376px column want about 950px of height, which a 900px-tall
+ * laptop has not got — so a height ceiling would have to shrink the type and
+ * stop it reaching the edge, which it did, by 484px at that width. "Always
+ * fills the width" and "always inside the fold" cannot both hold for a fixed
+ * number of lines on a short screen. Width wins here; the section grows.
  */
 export function FluidHeading({ text, className = '' }: { text: string; className?: string }) {
   const ref = useRef<HTMLHeadingElement>(null)
@@ -26,16 +38,19 @@ export function FluidHeading({ text, className = '' }: { text: string; className
     const el = ref.current
     if (!el) return undefined
 
-    const measure = (size: number) => {
-      el.style.fontSize = `${size}px`
-      const range = document.createRange()
-      range.selectNodeContents(el)
-      const rects = Array.from(range.getClientRects())
-      return {
-        lines: rects.length,
-        widest: rects.length ? Math.max(...rects.map((r) => r.width)) : 0,
-        height: el.scrollHeight,
+    // The widest line's TYPE, not its box. Each line is `display: block`, so
+    // its box is the column and measuring it reports the column width back at
+    // every size — a ratio of exactly 1, and a fit that never moves off its
+    // reference. A Range over the line's contents measures the glyphs.
+    const range = document.createRange()
+    const widest = () => {
+      let max = 0
+      for (const line of Array.from(el.children)) {
+        range.selectNodeContents(line)
+        const w = range.getBoundingClientRect().width
+        if (w > max) max = w
       }
+      return max
     }
 
     const fit = () => {
@@ -43,46 +58,22 @@ export function FluidHeading({ text, className = '' }: { text: string; className
       // includes the parent's padding, so the target comes out wider than the
       // space the lines actually have.
       const width = el.clientWidth
-      const ceiling = window.innerHeight * 0.72
-      if (!width) return
+      if (!width || !el.children.length) return
 
-      // Filling the width is NOT the same as being as large as possible, and
-      // conflating them is the trap here. Wrapping guarantees no line ever
-      // exceeds its container, so "widest <= width" is true at every size and
-      // constrains nothing; searching on it just maximises the size until the
-      // height stops it, and where the type lands across the column is then
-      // luck. Measured, that luck ran out by 68px at one width and 181 at
-      // another.
-      //
-      // Width against size is a sawtooth: the longest line grows as the type
-      // does, then collapses each time a word falls to a new line. The peaks —
-      // the best fills — sit just below each of those breaks. So this asks, for
-      // each plausible line count, how big the type can be while still wrapping
-      // to that many lines, and keeps whichever answer covers the most column.
-      const candidates: Array<{ size: number; widest: number }> = []
-      for (let lines = 1; lines <= 6; lines += 1) {
-        let lo = 8
-        let hi = 900
-        for (let i = 0; i < 14; i += 1) {
-          const mid = (lo + hi) / 2
-          const m = measure(mid)
-          if (m.lines <= lines && m.widest <= width && m.height <= ceiling) lo = mid
-          else hi = mid
-        }
-        candidates.push({ size: lo, widest: measure(lo).widest })
-      }
+      // The lines are given, and each one is `nowrap`, so a line's width is
+      // simply proportional to the size — no search. Measure once at a
+      // reference size and scale by the ratio.
+      const REFERENCE = 100
+      el.style.fontSize = `${REFERENCE}px`
+      const at100 = widest()
+      if (!at100) return
+      let size = REFERENCE * (width / at100)
 
-      // Several line counts usually reach the edge — one line always can, by
-      // simply being small enough. So filling is the FILTER and size is the
-      // choice: take every arrangement that lands flush, then the largest of
-      // them. Ranking on fill alone quietly preferred a single small line to a
-      // stack of big ones, both flush and one of them not what "big" means.
-      // If nothing reaches the edge, fall back to whatever covers most.
-      const flush = candidates.filter((c) => c.widest >= width - 1)
-      const best = flush.length
-        ? flush.reduce((a, b) => (b.size > a.size ? b : a))
-        : candidates.reduce((a, b) => (b.widest > a.widest ? b : a))
-      el.style.fontSize = `${best.size}px`
+      // Hinting and sub-pixel rounding make that proportion very slightly
+      // inexact, so one correction pass off the real measurement lands it.
+      el.style.fontSize = `${size}px`
+      size *= width / widest()
+      el.style.fontSize = `${size}px`
     }
 
     fit()
@@ -97,7 +88,14 @@ export function FluidHeading({ text, className = '' }: { text: string; className
 
   return (
     <h2 className={`statement__title ${className}`.trim()} ref={ref}>
-      {text}
+      {text.split('\n').map((line, i) => (
+        // A span per line rather than <br>, so each one has a box the fit can
+        // measure. Newlines in the content string, not markup — the heading is
+        // data, and data that carries tags has to be trusted to render.
+        <span className="statement__line" key={i}>
+          {line}
+        </span>
+      ))}
     </h2>
   )
 }

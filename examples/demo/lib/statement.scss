@@ -25,11 +25,15 @@
   line-height: 0.92;
   text-align: center;
   margin: 0;
-  // Greedy wrapping, deliberately. `balance` evens the lines out, which fights
-  // a fit whose whole purpose is to put the LONGEST line on the column edge —
-  // the two would keep answering each other. Overrides the type system's
-  // default; see styles/typography.scss.
-  text-wrap: normal;
+}
+
+// One line, and it does not re-wrap. The breaks are the author's — see
+// Statement.tsx — so the browser is not choosing here, which is also what
+// makes a line's width proportional to the size and the fit a measurement
+// rather than a search. `nowrap` supersedes the type system's `balance`.
+.statement__line {
+  display: block;
+  white-space: nowrap;
 }
 
 .statement__copy {
