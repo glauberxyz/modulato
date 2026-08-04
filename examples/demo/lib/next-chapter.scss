@@ -20,8 +20,12 @@
   align-items: center;
   justify-content: center;
   text-align: center;
+  // No top margin: the card butts straight onto the sources band above it.
+  // That margin predates the band — it was holding the card off the paper the
+  // chapter was printed on. Now the thing above is a surface of its own, with
+  // its own bottom padding, and a gap between the two only exposed a strip of
+  // paper between two blocks that should meet.
   padding: 12vh var(--margin);
-  margin-top: 12vh;
 }
 
 .next__entry {
@@ -38,6 +42,5 @@
   .next {
     min-height: 62vh;
     padding: 9vh var(--margin);
-    margin-top: 9vh;
   }
 }

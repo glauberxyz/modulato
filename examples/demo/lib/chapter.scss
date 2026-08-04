@@ -85,7 +85,13 @@
 
 // Tighter than the other movements: the band is the aside's own top edge, so
 // it should sit close to the text it opens rather than float above it.
+//
+// And no vertical padding of its own. Every movement carries 6vh, so the
+// prose above and the figure below already stand it off by that much on each
+// side — its own band would have been adding a third and fourth helping of
+// the same space.
 .movement--aside {
+  padding-block: 0;
   row-gap: 10px;
 }
 
