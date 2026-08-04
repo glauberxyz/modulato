@@ -323,35 +323,32 @@ export function ChapterView({
    */
   const panel = (m: Movement, i: number) => {
     const key = `${chapter.slug}-${i}`
-
-    if (m.kind === 'figure') {
-      const fig = byslug.get(m.figure ?? '')
-      if (!fig) return null
-      figN += 1
-      const n = figN
-      return (
-        <figure className="track__panel track__panel--figure" key={key}>
-          <a href={`/${chapter.slug}/${fig.slug}`} className="movement__figlink">
-            <Shared id={`plate:${fig.slug}`}>
-              <img src={`/plates/${fig.slug}.jpg`} alt={fig.title} loading="lazy" />
-            </Shared>
-          </a>
-          <figcaption className="movement__cap figref">
-            Abb. {n} · {fig.year}. {fig.title}
-          </figcaption>
-        </figure>
-      )
-    }
+    const fig = m.figure ? byslug.get(m.figure) : undefined
 
     return (
-      <div className="track__panel track__panel--prose" key={key}>
-        {m.heading && <MovementHeading text={m.heading} className="movement__h" />}
-        {m.body.map((p, j) => (
-          <p className="movement__p" key={j}>
-            {p}
-          </p>
-        ))}
-      </div>
+      <section className="track__panel grid" key={key}>
+        {fig && (
+          // No caption and no Abb. number here, unlike a figure down the page:
+          // the panel's own last paragraph already says what the plate is and
+          // who issued it, so a caption would be the same sentence twice. The
+          // running count stays with the figures in the column.
+          <figure className="track__figure">
+            <a href={`/${chapter.slug}/${fig.slug}`} className="movement__figlink">
+              <Shared id={`plate:${fig.slug}`}>
+                <img src={`/plates/${fig.slug}.jpg`} alt={fig.title} loading="lazy" />
+              </Shared>
+            </a>
+          </figure>
+        )}
+        <div className="track__text">
+          {m.heading && <MovementHeading text={m.heading} className="movement__h" />}
+          {m.body.map((p, j) => (
+            <p className="movement__p" key={j}>
+              {p}
+            </p>
+          ))}
+        </div>
+      </section>
     )
   }
 

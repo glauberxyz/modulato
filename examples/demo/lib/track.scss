@@ -1,55 +1,61 @@
 @use '../styles/typography' as type;
 
-// The horizontal track. Full-bleed and a screen tall, so that when the pin
-// takes hold the rail is the only thing in view — a pinned section shorter
-// than the fold would show the page above and below it holding still, which
-// reads as a stuck page rather than a deliberate stop.
+// The horizontal track: a run of full-viewport panels laid end to end and
+// pulled sideways while the section holds the fold.
+//
+// On its own surface, the brighter sheet the sources band uses. The change of
+// paper is what tells the reader this is a different KIND of stretch — they
+// stop descending and start travelling — without spending a rule or a heading
+// on saying so.
 .track {
   height: 100vh;
   overflow: hidden;
-  display: flex;
-  align-items: center;
+  background: var(--paper-bright);
 }
 
+// No gap and no end padding: each panel IS the viewport, so the rail is
+// exactly as many screens wide as there are panels, and the overhang the pin
+// travels is a whole number of screens.
 .track__rail {
   display: flex;
-  align-items: center;
-  gap: var(--gutter);
-  // The rail starts and ends inset, so the first panel is not jammed against
-  // the edge at rest and the last is not still touching it when the pin ends.
-  padding-inline: 8vw;
+  height: 100%;
   will-change: transform;
 }
 
+// A panel carries the site's own 12 columns (it wears `.grid` too), so the
+// picture and its prose are placed by column exactly like everything else on
+// the page — and centred against each other rather than sitting on a shared
+// top edge.
 .track__panel {
   flex: 0 0 auto;
+  width: 100vw;
+  height: 100%;
+  align-items: center;
 }
 
-// Pictures lead, so they take the larger measure.
-.track__panel--figure {
-  width: 42vw;
+.track__figure {
+  grid-column: 2 / 7;
+  margin: 0;
 
   img {
-    // Capped against the fold rather than the panel: a tall plate would
-    // otherwise decide the height of the whole rail.
-    max-height: 62vh;
+    // Against the fold, so a tall plate cannot outgrow the panel holding it.
+    max-height: 74vh;
     object-fit: contain;
   }
 }
 
-.track__panel--prose {
-  width: 32vw;
+.track__text {
+  grid-column: 8 / 12;
 
   .movement__h {
     margin-bottom: 0.7em;
   }
 }
 
-// Reduced motion, or the pin switched off in the tokens: no pin, no transform
-// — just a strip you can scroll yourself.
+// Reduced motion, or the pin switched off in the tokens: no pin and no
+// transform, just a strip the reader scrolls themselves.
 .track[data-static='true'] {
   height: auto;
-  padding-block: 9vh;
 
   .track__rail {
     overflow-x: auto;
@@ -57,8 +63,8 @@
   }
 }
 
-// Below a large screen the sideways move has nothing to show — two panels do
-// not fit side by side — so it becomes a column again.
+// Below a large screen the sideways move has nothing to show — a panel would
+// be narrower than its own two columns — so it becomes a column again.
 //
 // 1279px deliberately, the config's `tablet` ceiling and not a number of its
 // own: `useMotion` re-runs on a BREAKPOINT change, so Track.tsx only gets the
@@ -74,18 +80,33 @@
 
   .track__rail {
     flex-direction: column;
-    align-items: stretch;
-    gap: 6vh;
-    padding-inline: var(--margin);
+    height: auto;
+    gap: 9vh;
     transform: none !important;
   }
 
-  .track__panel--figure,
-  .track__panel--prose {
-    width: auto;
+  .track__panel {
+    width: 100%;
+    height: auto;
+    row-gap: 24px;
   }
 
-  .track__panel--figure img {
+  .track__figure {
+    grid-column: 2 / 12;
+  }
+
+  .track__text {
+    grid-column: 2 / 12;
+  }
+
+  .track__figure img {
     max-height: none;
+  }
+}
+
+@media (max-width: 767px) {
+  .track__figure,
+  .track__text {
+    grid-column: 1 / -1;
   }
 }
