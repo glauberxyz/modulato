@@ -198,6 +198,31 @@ export default motion({
     reduced: { y: 0, duration: 0, stagger: 0 },
   },
 
+  /**
+   * A figure under the pointer — it swells a little, and settles back.
+   *
+   * CSS owns this one: a `scale` transition on the image itself, which keeps
+   * the hover on the compositor and needs no listeners for a gesture that may
+   * never happen. So the numbers arrive as custom properties, written on the
+   * page root by ChapterView, and the ease is spelled as a cubic-bezier —
+   * CSS cannot look up a named GSAP ease, the same reason the transitions
+   * below hold theirs that way.
+   *
+   * Deliberately the standalone `scale` property rather than a transform:
+   * this exact <img> is the FLIP target that morphs into the plate
+   * inspector, and a transform here would be contending for the channel
+   * that move needs.
+   */
+  figure: {
+    /** Rest is 1 — this is where it lands under the pointer. */
+    hover: 1.03,
+    /** SECONDS: it becomes a CSS transition-duration, not a GSAP tween. */
+    duration: 0.7,
+    ease: 'cubic-bezier(0.16, 1, 0.3, 1)',
+    phone: { hover: 1 },
+    reduced: { hover: 1, duration: 0 },
+  },
+
   /** Chapter → plate inspector: the figure FLIPs into the full-bleed plate. */
   flip: {
     duration: 820,

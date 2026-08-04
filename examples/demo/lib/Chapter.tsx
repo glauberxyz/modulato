@@ -60,10 +60,20 @@ export function ChapterView({
   // Scroll choreography: every movement rises as it enters. gsap.context() is
   // page-scoped and reverts on unmount, so nothing leaks into the next
   // chapter mid-transition.
-  useMotion(({ q, gsap }) => {
+  useMotion(({ element: root, q, gsap }) => {
     const t = resolveTokens(tokens as never) as {
       reveal: { y: number; duration: number; stagger: number; ease: string; start: number }
     }
+
+    // The figure hover is a CSS `scale` transition (see chapter.scss) — it
+    // needs no JS to RUN, only its numbers. Written on the page root, so they
+    // leave with the page, and rewritten whenever this effect re-runs: that
+    // is what carries a breakpoint change, a reduced-motion change or a
+    // Tweak edit through to a gesture CSS is holding.
+    const { figure } = resolveTokens(site)
+    root.style.setProperty('--fig-hover', String(figure.hover))
+    root.style.setProperty('--fig-hover-duration', `${figure.duration}s`)
+    root.style.setProperty('--fig-hover-ease', figure.ease)
 
     // Each movement rises as it enters. `start` is a line down the viewport,
     // which is right for everything you scroll to — and wrong for whatever is
