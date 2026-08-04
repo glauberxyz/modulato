@@ -42,11 +42,11 @@ declare module 'modulato/config' {
       lede: string
       movements: Array<{
         kind: string
-        heading: string
-        body: string[]
+        figure: string
+        body: unknown[]
       } | {
         kind: string
-        figure: string
+        heading: string
         body: string[]
       } | {
         kind: string
