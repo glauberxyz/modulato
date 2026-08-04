@@ -28,10 +28,10 @@ body {
   margin: 0;
   background: var(--paper);
   color: var(--ink);
+  // `text-wrap: balance` arrives with this include rather than being declared
+  // here — the type system owns it now, and it still inherits from <body> to
+  // any text that is not wearing a type style of its own.
   @include type.body;
-  // text-wrap inherits, so this reaches every text node on the site.
-  // Browsers cap balancing at a few lines and fall back on long prose.
-  text-wrap: balance;
   -webkit-font-smoothing: antialiased;
   text-rendering: optimizeLegibility;
   // Surface changes belong to the page, but the body backstops the gap

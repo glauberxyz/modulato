@@ -1,5 +1,14 @@
 // The type system. Pages @use this file and @include; they never declare
 // font properties directly, so changing type here changes it everywhere.
+//
+// Every style below carries `text-wrap: balance`. Three of them say so —
+// `title`, `body` and `small` — and the other three get it by composition:
+// `display` includes `title`, `body-large` includes `body`, `label` includes
+// `small`. Declaring it in the type system rather than leaning on inheritance
+// from <body> means a style keeps its wrapping wherever it is used, including
+// inside anything that sets `text-wrap` for its own reasons. Browsers cap
+// balancing at a few lines and fall back on long prose, so this is a setting
+// for headings and short blocks that costs paragraphs nothing.
 
 // Franklin Gothic, heavy. Chapter titles, numerals, pull quotes.
 @mixin title {
@@ -27,6 +36,7 @@
   font-size: var(--type-body);
   line-height: 1.32;
   letter-spacing: -0.01em;
+  text-wrap: balance;
 }
 
 // Garamond, larger. Ledes and opening paragraphs — the step between a title
@@ -45,6 +55,7 @@
   font-size: 14px;
   line-height: 1.5;
   letter-spacing: 0;
+  text-wrap: balance;
 }
 
 // Small uppercase copy — labels and running heads only. Set solid: the caps
