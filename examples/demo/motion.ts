@@ -199,6 +199,25 @@ export default motion({
   },
 
   /**
+   * The statement's entrance: its lines rise and fade, one after another, as
+   * the block crosses `start` down the viewport. SECONDS (GSAP).
+   *
+   * `y` is in PIXELS and stays small on purpose. The type here is measured to
+   * the column, so it can be 350px tall on a laptop and 620 on a wall — a
+   * distance in em would scale with it and turn a lift into a launch.
+   */
+  statement: {
+    y: 44,
+    duration: 1,
+    stagger: 0.12,
+    ease: 'press',
+    /** A line down the viewport, as a fraction of its height. */
+    start: 0.85,
+    phone: { y: 26, duration: 0.8, stagger: 0.09 },
+    reduced: { y: 0, duration: 0, stagger: 0 },
+  },
+
+  /**
    * The horizontal track: a run of blocks laid end to end, pulled sideways
    * while the section holds the fold.
    *

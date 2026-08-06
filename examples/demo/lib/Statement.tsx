@@ -1,4 +1,7 @@
 import { useEffect, useLayoutEffect, useRef, type ReactNode } from 'react'
+import { resolveTokens } from 'modulato'
+import { useMotion } from '@modulato/gsap'
+import site from '../motion'
 import './statement.scss'
 
 /** useLayoutEffect on the client, useEffect on the server — the fit has to
@@ -108,8 +111,36 @@ export function FluidHeading({ text, className = '' }: { text: string; className
  * string and children and knows nothing about movements.
  */
 export function Statement({ text, children }: { text: string; children?: ReactNode }) {
+  const section = useRef<HTMLElement>(null)
+
+  // The lines rise and fade, one after another, as the block comes up.
+  //
+  // Scoped to THIS section by ref rather than by useMotion's page-wide `q`,
+  // so a page carrying two statements does not animate both off whichever one
+  // scrolled into view first.
+  useMotion(({ gsap }) => {
+    const el = section.current
+    if (!el) return
+    const { statement } = resolveTokens(site)
+    const lines = el.querySelectorAll('.statement__line')
+    if (!statement.duration || !lines.length) return
+
+    gsap.from(lines, {
+      y: statement.y,
+      opacity: 0,
+      duration: statement.duration,
+      stagger: statement.stagger,
+      ease: statement.ease,
+      scrollTrigger: {
+        trigger: el,
+        start: `top ${statement.start * 100}%`,
+        once: true,
+      },
+    })
+  })
+
   return (
-    <section className="statement">
+    <section className="statement" ref={section}>
       <FluidHeading text={text} />
       {children && <div className="statement__copy">{children}</div>}
     </section>
