@@ -175,9 +175,10 @@ that file is gitignored, and without it the CLI names the project after the
 FOLDER and silently creates a stray `demo` project. Run `vercel link` first if
 the directory is not linked.
 
-Without Git integration the site does not redeploy on push, and nothing says
-so: it once served a build 37 days stale while `main` moved on. If the
-integration is off, add "redeploy the demo" to the release ritual above.
+Git integration is ON for both projects, so a push to `main` touching either
+site rebuilds it. Before that it once served a build 37 days stale while `main`
+moved on, and nothing said so — if you ever find yourself deploying by hand,
+check the integration rather than making a habit of the manual path.
 
 ## Style
 
