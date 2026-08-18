@@ -7,7 +7,7 @@ const COMMAND = 'npm create modulato@latest my-site'
 const LINKS = [
   { href: 'https://github.com/glauberxyz/modulato', label: 'Github' },
   { href: 'https://www.npmjs.com/package/modulato', label: 'NPM' },
-  { href: 'https://modulato-demo.vercel.app', label: 'Demo' },
+  { href: 'https://halftone.modulato.org', label: 'Demo' },
 ]
 
 export default function Home() {

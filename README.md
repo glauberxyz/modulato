@@ -26,7 +26,7 @@ npm create modulato@latest my-site
   from a prebuilt Build Output.
 
 ## Demo
-- [Example](https://modulato-demo.vercel.app)
+- [Halftone](https://halftone.modulato.org) — a mini-site about the halftone shader, built with Modulato
 - [Glauber.org](https://glauber.org)
 
 Full reference: [docs/MODULATO.md](./docs/MODULATO.md) (ships inside every scaffolded project).
