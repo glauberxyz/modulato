@@ -19,6 +19,18 @@ export interface HeadLink {
   [attr: string]: string | boolean | undefined
 }
 
+/**
+ * The content snapshot, or a function that fetches it.
+ *
+ * A function lets the snapshot live in its own chunk: it is not needed to
+ * render the first page — SSR sends that page's props already — only to run a
+ * `load()` during a client navigation. `@modulato/vite` passes a loader, so
+ * the snapshot leaves the entry bundle and arrives on the first link click.
+ */
+export type ContentSource =
+  | Record<string, unknown>
+  | (() => Promise<Record<string, unknown>>)
+
 /** A `<meta>` tag: `name` OR `property`, plus `content`. */
 export interface HeadMeta {
   name?: string

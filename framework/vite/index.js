@@ -170,7 +170,13 @@ export default function modulato(options = {}) {
             `import * as transitions from '${VIRTUAL.transitions}'`,
             `import * as intros from '${VIRTUAL.intros}'`,
             `import * as behaviors from '${VIRTUAL.behaviors}'`,
-            `import content from '${VIRTUAL.content}'`,
+            // A LOADER, not an import: the snapshot is only needed to run a
+            // `load()` during a client navigation — the first page is
+            // hydrated from props SSR already sent. Imported eagerly it sat
+            // in the entry chunk, so every visitor downloaded every route's
+            // content before seeing one. As a dynamic import it becomes its
+            // own chunk, fetched on the first link click and cached after.
+            `const content = () => import('${VIRTUAL.content}').then((m) => m.default)`,
             `import breakpoints from '${VIRTUAL.breakpoints}'`,
             `import eases from '${VIRTUAL.eases}'`,
             `import App from '${VIRTUAL.app}'`,

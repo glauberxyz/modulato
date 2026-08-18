@@ -21,7 +21,7 @@ import {
   resolveTransition,
   type TransitionsManifest,
 } from './transitions'
-import type { Entry, NavPhase, RouteDef, RouteInfo, RouterState } from './types'
+import type { ContentSource, Entry, NavPhase, RouteDef, RouteInfo, RouterState } from './types'
 
 interface ModulatoRootProps {
   routes: RouteDef[]
@@ -29,7 +29,7 @@ interface ModulatoRootProps {
   initial: RouterState
   transitions?: TransitionsManifest
   enhancers?: EnhancerDef[]
-  content?: Record<string, unknown>
+  content?: ContentSource
 }
 
 const NO_ENHANCERS: EnhancerDef[] = []

@@ -15,7 +15,7 @@ import { resolveEntry } from './resolve'
 import { ModulatoRoot } from './root'
 import { ticker } from './ticker'
 import type { TransitionsManifest } from './transitions'
-import type { RouteDef } from './types'
+import type { ContentSource, RouteDef } from './types'
 import { forceBreakpoint, forceReducedMotion, initViewport, viewportStore } from './viewport'
 
 /** Dev-mode introspection handle — see §8 of the plan. */
@@ -66,7 +66,7 @@ export async function boot({
   transitions?: TransitionsManifest
   intros?: IntrosManifest
   behaviors?: BehaviorsManifest
-  content?: Record<string, unknown>
+  content?: ContentSource
   breakpoints?: Record<string, string> | null
   eases?: Record<string, string> | null
 }): Promise<void> {
