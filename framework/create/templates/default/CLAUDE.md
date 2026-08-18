@@ -18,6 +18,22 @@ registration); animation numbers live in `motion.ts` token modules;
 transitions are `transitions/<from>__<to>.ts`; the persistent shell lives in
 `app.tsx` outside `<PageOutlet/>`.
 
+When you author a token group, give it search terms. A group is named for what
+it IS in the code and people search the Tweak overlay for what it DOES on the
+page, so export a `keywords` map beside the default — three to six plain
+phrases per group, describing what the reader would see change:
+
+```ts
+export default motion({ /* … */ })
+
+export const keywords: Record<string, string[]> = {
+  'hero.title': ['headline', 'big type', 'first thing you see'],
+}
+```
+
+The overlay indexes them and never shows them. Update them when you rename or
+repurpose a group; `modulato check` warns when an entry names no group.
+
 Custom easing curves are declared ONCE in `modulato.config.ts` under `eases`
 (`swoosh: 'cubic-bezier(0.62, 0.05, 0.01, 0.99)'`) — never register a GSAP
 CustomEase by hand. Use them in tokens by name in GSAP files (`ease:

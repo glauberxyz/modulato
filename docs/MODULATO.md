@@ -325,6 +325,27 @@ export default motion({
   group; a tweaked row is dotted (click the dot to undo just that edit).
   **Save** writes only the changed values back into `motion.ts` with an
   AST-preserving edit (comments and formatting survive).
+- **Give each group its search terms.** A group is named for what it IS in the
+  code and people search the overlay for what it DOES on the page — "main
+  description" is the chapter lede at `flight.enter.lede`, and no substring of
+  that path reaches it. Export a `keywords` map beside the default and the
+  overlay indexes it without ever rendering it:
+
+  ```ts
+  export default motion({ /* … */ })
+
+  export const keywords: Record<string, string[]> = {
+    'flight.enter.lede': ['main description', 'subtitle'],
+    'track': ['horizontal scroll', 'sideways', 'pinned rail'],
+  }
+  ```
+
+  Write them when you author a group — three to six plain-English phrases for
+  what the reader would see change — and update them when you rename or
+  repurpose one. `modulato check` warns when an entry names no group, which is
+  what a rename leaves behind. A separate export, not a key inside `motion({…})`:
+  the token tree is numbers-and-eases and goes straight to animation code, so a
+  `keywords` key would become a row in the panel and widen the resolved type.
 - Non-token animation code still works — it just doesn't appear in the
   overlay. Convention nudges toward tokens.
 - Breakpoints are defined ONCE in `modulato.config.ts` (literal strings —

@@ -35,3 +35,8 @@ real JS that arrives for free.
 `modulato check` warns when a keywords entry names no group in its file, which
 is what a rename leaves behind. A warning, not an error — a stale keyword costs
 discoverability, never correctness.
+
+The other half of this is a convention, so it is written down where both people
+and coding agents will meet it: MODULATO.md's motion-token section, and the
+`CLAUDE.md` that `create-modulato` scaffolds into every new project. Authoring a
+token group now means naming it AND saying what a reader would call it.

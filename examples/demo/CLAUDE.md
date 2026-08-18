@@ -24,6 +24,12 @@ non-interactive and JSON-friendly — prefer it over doing things by hand:
 - Animation numbers belong in `motion.ts` token modules (`motion({...})`),
   not hardcoded in animation code — that's what makes them tweakable live
   (dev overlay ✦ motion) and editable via `set_motion_tokens` (MCP).
+- A token group gets **search keywords**, exported as `keywords` beside the
+  default — three to six plain phrases for what the reader would see change
+  ("main description", "horizontal scroll"). A group is named for what it IS
+  in the code; people search the overlay for what it DOES. Keep them honest
+  when a group is renamed: `npx modulato check` warns on an entry that names
+  no group. See the map at the foot of `motion.ts`.
 - A **custom easing curve** is declared ONCE in `modulato.config.ts` under
   `eases` (a `cubic-bezier()` string), then used in tokens by name in GSAP
   files (`ease: 'swoosh'`) and as the cubic-bezier in transition files (WAAPI
