@@ -531,6 +531,7 @@ function GroupSection({
   group,
   dirtySet,
   query,
+  fileHit,
   declared,
   onChange,
   onReset,
@@ -538,6 +539,11 @@ function GroupSection({
   group: TokenGroup
   dirtySet: Set<string>
   query: string
+  /** The query matched this group's FILE PATH rather than any row in it. The
+   *  reader asked for a place, not a value, so every row shows — narrowing
+   *  them would answer a question nobody asked and leave the card standing
+   *  with most of its contents missing. */
+  fileHit: boolean
   declared: DeclaredEase[]
   onChange: (leaf: TokenLeaf, value: TokenValue) => void
   onReset: (leaf: TokenLeaf) => void
@@ -546,7 +552,7 @@ function GroupSection({
   // Dirty rows stay visible even when the filter excludes them — what Save
   // will write must never be off-screen.
   const rowsOf = (block: TokenBlock) =>
-    query
+    query && !fileHit
       ? block.leaves.filter(
           (l) => rowMatches(query, group.path, l) || dirtySet.has(l.path.join('.')),
         )
@@ -921,8 +927,15 @@ function Overlay() {
               const leaves = handle.tokens.leaves(file)
               const dirtySet = new Set(handle.tokens.dirty(file).map((l) => l.path.join('.')))
               const query = filter.trim().toLowerCase()
+              // The file path is rendered directly above these rows but was
+              // not searchable, so in a project with many motion files you
+              // could find `duration` and not "everything in the transitions
+              // folder" — and typing `transitions` returned nothing at all.
+              // A hit here shows the whole file, rows and all.
+              const fileHit = !!query && file.toLowerCase().includes(query)
               const groups = groupLeaves(leaves, overrideKeys, blockOrder)
               const groupVisible = (g: TokenGroup) =>
+                fileHit ||
                 g.blocks.some((b) =>
                   b.leaves.some(
                     (l) =>
@@ -953,6 +966,7 @@ function Overlay() {
                         group={group}
                         dirtySet={dirtySet}
                         query={query}
+                        fileHit={fileHit}
                         declared={declaredEases}
                         onChange={(leaf, value) => {
                           handle.tokens.set(file, leaf.path, value)
