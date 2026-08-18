@@ -21,3 +21,13 @@ await, so a frame can land between them.
 declares, for one navigation — how a detail view returns the reader to the
 exact place in the list it was opened from, even when that list opens at the
 top by default.
+
+**Reach for `restore: false` less often than it sounds.** A traversal already
+carries the position that history entry was left at, and `restore: false`
+outranks it — so a page that opens a child view (a detail, a lightbox, an
+inspector) sends the reader back to its head when they press Back, discarding a
+position the router was holding for them. Omitting `restore` is usually what a
+choreographed opening actually wants: link navigations still start at the top,
+while a traversal restores, and an entry the reader has never left carries no
+position to restore anyway. `restore: false` is for the narrower case where the
+top is right even when the reader is coming back to somewhere they had been.
