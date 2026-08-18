@@ -66,8 +66,11 @@ interface ScrollTriggerApi {
     pin?: Element | null
     /** The scrub setting the trigger was created with, when it has one. */
     vars?: { scrub?: number | boolean }
-    /** The scrubbed tween, when there is one. */
-    animation?: { progress: (value: number, suppressEvents?: boolean) => unknown }
+    /** The animation the trigger drives, when it drives one. */
+    animation?: {
+      progress: (value: number, suppressEvents?: boolean) => unknown
+      pause: () => unknown
+    }
     progress: number
   }>
 }
@@ -145,6 +148,34 @@ if (typeof window !== 'undefined') {
   })
 }
 
+/**
+ * Nothing a page creates may run before that page is on screen.
+ *
+ * A scroll-triggered tween fires the INSTANT its trigger is built, if the
+ * start line is already crossed — and building happens at mount, which is
+ * mid-transition. Whether a page noticed was an accident of its own height:
+ * in the demo, a chapter whose head was short enough to put the first section
+ * above the line played its whole reveal behind the flight, while a taller one
+ * missed the line and looked correct for no better reason.
+ *
+ * So anything the trigger has already started is wound back and paused, and
+ * the triggers are disabled until `active` — pins excepted, since those are
+ * layout, and scrubs excepted, since they were just seated deliberately at
+ * PREPARE and winding them back would undo that.
+ */
+function holdUntilActive(el: HTMLElement): void {
+  const ST = scrollTrigger()
+  if (!ST) return
+  for (const t of ST.getAll()) {
+    if (!t.trigger || !el.contains(t.trigger)) continue
+    if (!t.vars?.scrub && t.animation) {
+      t.animation.progress(0)
+      t.animation.pause()
+    }
+    if (!t.pin) t.disable(false)
+  }
+}
+
 export function useMotion(
   create: (scope: MotionScope) => void | (() => void),
   deps: unknown[] = [],
@@ -152,6 +183,10 @@ export function useMotion(
   const { element, lenis, phase } = usePage()
   const createRef = useRef(create)
   createRef.current = create
+  // `build` can be called from PREPARE, outside this component's render, so
+  // the phase it checks has to come from a ref rather than the closure.
+  const phaseRef = useRef(phase)
+  phaseRef.current = phase
 
   // Sync ScrollTrigger to this page's Lenis when both are present (idempotent).
   useEffect(() => {
@@ -195,6 +230,7 @@ export function useMotion(
       userCleanup = createRef.current({ element: el, q: gsap.utils.selector(el), gsap })
     }, el)
     built.current = { el, ctx, userCleanup }
+    if (phaseRef.current !== 'active') holdUntilActive(el)
   }
   const teardown = () => {
     const b = built.current

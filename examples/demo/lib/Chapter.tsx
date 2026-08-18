@@ -117,9 +117,6 @@ export function ChapterView({
   // after mount — so it has to be a dependency below: the reveals do not
   // exist until useMotion has run against a real element.
   const { phase, element } = usePage()
-  // Read inside useMotion's callback, which is not re-run on phase changes.
-  const phaseRef = useRef(phase)
-  phaseRef.current = phase
 
   /**
    * Is this arrival a RETURN from one of this chapter's own plates?
@@ -197,17 +194,10 @@ export function ChapterView({
       return { section, tween }
     })
 
-    // A page that is still ARRIVING reveals nothing yet. A movement sitting
-    // above the trigger line fires the instant its trigger is built — and
-    // that is here, at mount, mid-transition — so the prose faded up behind
-    // the flight on exactly the chapters whose head is short enough to put
-    // it there: /press starts at 715 against a 791 line, while /angles at
-    // 800 missed the line and only looked correct by accident. Held at their
-    // start; the arrival effect below owns when they play.
-    if (phaseRef.current !== 'active') {
-      for (const { tween } of reveals.current) tween.progress(0).pause()
-    }
-
+    // Nothing here holds these back for the arrival: useMotion does it, for
+    // any page, since a scroll-triggered tween fires the instant its trigger
+    // is built and building happens mid-transition. The arrival effect below
+    // still owns WHEN they play, which is this chapter's own choreography.
     return () => {
       reveals.current = []
     }
