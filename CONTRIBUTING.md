@@ -106,10 +106,19 @@ Gotchas: scoped packages under this org have landed PRIVATE despite
 `access: public` — fix with `npm access set status=public @modulato/<pkg>`;
 stale npm tokens surface as 404 on PUT — `npm logout && npm login`.
 
-**Docs are not part of the npm release** — `npm run sync:docs` after any docs
-edit, and the reference only reaches users via a `create-modulato` publish
-(add a changeset for it) plus a modulato.org redeploy:
-`cd docs/site && VERCEL=1 npx modulato build && vercel deploy --prebuilt --prod --scope glauber-house`.
+**Docs are not part of the npm release, and they now LEAD it.** Run
+`npm run sync:docs` after any docs edit. Both sites deploy from `main`
+automatically (see Vercel projects below), so a docs commit is live on
+modulato.org within a minute — before the release that implements what it
+describes. That window is real: `onPrepare` was on the site for some time
+before `modulato@0.5.0` existed.
+
+Write the reference in the present tense anyway — the alternative is holding
+docs commits back, which is how they rot — but if a gap would actively
+mislead, land the doc with the release rather than ahead of it.
+
+Scaffolded projects are a separate path: they get the reference only via a
+`create-modulato` publish (add a changeset for it), which does not auto-deploy.
 
 Verify from the registry (`npm view`, `npm pack` spot-checks), not just locally.
 
@@ -139,46 +148,26 @@ reviewable in git rather than dashboard-only. Root Directory and the
 include-outside toggle cannot be pinned — check the dashboard if a deploy
 behaves oddly.
 
-## The demo's deploy
+`modulato-demo` must stay in **glauber-house**: that scope owns `modulato.org`,
+and a subdomain cannot attach from anywhere else.
 
-`examples/demo` is the Halftone site at **halftone.modulato.org**, Vercel
-project `modulato-demo` under the **glauber-house** scope (the scope that owns
-`modulato.org` — a subdomain cannot attach from anywhere else).
+Git integration is ON for both, so a push to `main` touching either site
+rebuilds it. Before that the demo once served a build 37 days stale while
+`main` moved on, and nothing said so — if you find yourself deploying by hand,
+check the integration rather than making a habit of the manual path.
 
-The demo builds for Vercel on its own: `@modulato/vite` emits
-`.vercel/output` (Build Output API v3) whenever `process.env.VERCEL` is set,
-which Vercel does during its own builds. So the project needs no special
-pipeline — only the right project settings, which live in the dashboard and
-are therefore invisible from here:
-
-- **Root Directory** `examples/demo`
-- **Include source files outside of the Root Directory** ON — the demo is an
-  npm workspace and `"modulato": "*"` only resolves from a root install
-- **Framework Preset** Other. "Vite" makes Vercel look for `dist/` and apply
-  its own routing, which loses the SSR function
-- **Output Directory** blank — `.vercel/output` is auto-detected and wins
-
-`examples/demo/vercel.json` pins the framework and build command so those two
-are reviewable in git rather than dashboard-only. The rest is not, so check the
-dashboard if a deploy behaves oddly.
-
-**Manual deploy**, which is also the escape hatch:
+**Manual deploy**, the escape hatch when a build is broken:
 
 ```sh
-cd examples/demo && VERCEL=1 npm run build
+cd examples/demo && VERCEL=1 npm run build      # or docs/site
 vercel deploy --prebuilt --prod --scope glauber-house
 ```
 
-That path ignores the project settings entirely, which is why it kept working
-while the settings were wrong. It also needs `.vercel/project.json` present —
-that file is gitignored, and without it the CLI names the project after the
-FOLDER and silently creates a stray `demo` project. Run `vercel link` first if
-the directory is not linked.
-
-Git integration is ON for both projects, so a push to `main` touching either
-site rebuilds it. Before that it once served a build 37 days stale while `main`
-moved on, and nothing said so — if you ever find yourself deploying by hand,
-check the integration rather than making a habit of the manual path.
+It ignores the project settings entirely, which is why it kept working while
+they were wrong. It needs `.vercel/project.json` present — that file is
+gitignored, and without it the CLI names the project after the FOLDER and
+silently creates a stray one. `vercel link` first if the directory is not
+linked.
 
 ## Style
 
