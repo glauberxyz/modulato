@@ -279,3 +279,31 @@ export default motion({
     reduced: { duration: 0 },
   },
 })
+
+/**
+ * Hidden search terms, for the Tweak overlay's filter.
+ *
+ * A group is named for what it IS in the code — `flight.enter.lede` — and
+ * whoever comes looking types what it DOES on the page: "main description",
+ * "subtitle". No substring of the code name reaches those. The overlay indexes
+ * this map and never renders it.
+ *
+ * Kept honest by hand: rename or repurpose a group and these have to follow.
+ * A separate export rather than a key inside `motion({...})` — the token tree
+ * is numbers-and-eases and `resolveTokens` hands it straight to animation code.
+ */
+export const keywords: Record<string, string[]> = {
+  'flight.enter.lede': ['main description', 'subtitle', 'chapter intro copy'],
+  'flight.enter.abstract': ['index summary', 'card description'],
+  'flight.back.contents': ['index list', 'table of contents', 'chapter list'],
+  'body': ['chapter prose', 'reveal delay', 'arrival beat'],
+  'opening': ['cold load', 'first visit', 'chapter title'],
+  'handoff': ['next chapter', 'end card', 'footer card'],
+  'statement': ['pull quote', 'big type', 'full screen heading'],
+  'track': ['horizontal scroll', 'sideways', 'pinned rail'],
+  'figure': ['picture hover', 'image swell', 'zoom'],
+  'flip': ['plate inspector', 'image morph', 'open picture'],
+  'bleed': ['default transition', 'fallback', 'page fade'],
+  'progress': ['reading bar', 'scroll indicator'],
+  'runhead': ['header', 'site mark', 'top bar'],
+}

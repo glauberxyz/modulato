@@ -31,6 +31,8 @@ interface TokenEntry {
   tokens: Record<string, unknown>
   /** Snapshot of the last saved state, for dirty-tracking and reset. */
   original: Record<string, unknown>
+  /** Search terms per group, from the file's optional `keywords` export. */
+  keywords: Record<string, string[]>
 }
 
 const registry = new Map<string, TokenEntry>()
@@ -106,15 +108,17 @@ function assignInPlace(target: Record<string, unknown>, next: Record<string, unk
  * existing live object IN PLACE — consumers hold that object by reference,
  * so file edits reach already-mounted animations without a reload.
  */
-export function __registerMotion(file: string, tokens: unknown): void {
+export function __registerMotion(file: string, tokens: unknown, keywords?: unknown): void {
   if (!DEV || typeof window === 'undefined') return
   if (!tokens || typeof tokens !== 'object') return
+  const words = normalizeKeywords(keywords)
   const existing = registry.get(file)
   if (existing) {
     if (existing.tokens !== tokens) {
       assignInPlace(existing.tokens, tokens as Record<string, unknown>)
       existing.original = clone(tokens) as Record<string, unknown>
     }
+    existing.keywords = words
     emit()
     return
   }
@@ -122,8 +126,35 @@ export function __registerMotion(file: string, tokens: unknown): void {
     file,
     tokens: tokens as Record<string, unknown>,
     original: clone(tokens) as Record<string, unknown>,
+    keywords: words,
   })
   emit()
+}
+
+/**
+ * A motion file may export `keywords` beside its default: a map from a dotted
+ * group path to the words someone would search for to find it.
+ *
+ *     export const keywords = { 'flight.enter.lede': ['subtitle', 'main copy'] }
+ *
+ * A group is named for what it IS in the code and people search for what it
+ * DOES on the page — "main description" is the chapter lede, governed by
+ * `flight.enter.lede`, and no substring of that query reaches it. The overlay
+ * indexes these; it never shows them.
+ *
+ * A separate EXPORT rather than a key inside `motion({...})`: the token tree is
+ * numbers-and-eases, `resolveTokens` hands it straight to animation code, and a
+ * `keywords` key would become a row in the panel, widen the resolved type, and
+ * need special-casing at every consumer.
+ */
+function normalizeKeywords(input: unknown): Record<string, string[]> {
+  if (!input || typeof input !== 'object') return {}
+  const out: Record<string, string[]> = {}
+  for (const [path, words] of Object.entries(input as Record<string, unknown>)) {
+    if (Array.isArray(words)) out[path] = words.filter((w): w is string => typeof w === 'string')
+    else if (typeof words === 'string') out[path] = [words]
+  }
+  return out
 }
 
 /**
@@ -142,6 +173,10 @@ export const motionRegistry = {
   leaves(file: string): TokenLeaf[] {
     const entry = registry.get(file)
     return entry ? collectLeaves(entry.tokens) : []
+  },
+  /** Search terms per dotted group path — see `normalizeKeywords`. */
+  keywords(file: string): Record<string, string[]> {
+    return registry.get(file)?.keywords ?? {}
   },
   set(file: string, path: string[], value: TokenValue): void {
     const entry = registry.get(file)

@@ -531,7 +531,7 @@ function GroupSection({
   group,
   dirtySet,
   query,
-  fileHit,
+  groupHit,
   declared,
   onChange,
   onReset,
@@ -539,11 +539,12 @@ function GroupSection({
   group: TokenGroup
   dirtySet: Set<string>
   query: string
-  /** The query matched this group's FILE PATH rather than any row in it. The
-   *  reader asked for a place, not a value, so every row shows — narrowing
-   *  them would answer a question nobody asked and leave the card standing
-   *  with most of its contents missing. */
-  fileHit: boolean
+  /** The query matched the GROUP — its file path, or one of its hidden
+   *  keywords — rather than any row inside it. The reader named a place or a
+   *  purpose, not a value, so every row shows: narrowing them would answer a
+   *  question nobody asked and leave the card standing with most of its
+   *  contents missing. */
+  groupHit: boolean
   declared: DeclaredEase[]
   onChange: (leaf: TokenLeaf, value: TokenValue) => void
   onReset: (leaf: TokenLeaf) => void
@@ -552,7 +553,7 @@ function GroupSection({
   // Dirty rows stay visible even when the filter excludes them — what Save
   // will write must never be off-screen.
   const rowsOf = (block: TokenBlock) =>
-    query && !fileHit
+    query && !groupHit
       ? block.leaves.filter(
           (l) => rowMatches(query, group.path, l) || dirtySet.has(l.path.join('.')),
         )
@@ -933,9 +934,19 @@ function Overlay() {
               // folder" — and typing `transitions` returned nothing at all.
               // A hit here shows the whole file, rows and all.
               const fileHit = !!query && file.toLowerCase().includes(query)
+              // A group is named for what it IS in the code; people search for
+              // what it DOES on the page. `keywords` lets a file say so —
+              // indexed here, shown nowhere.
+              const fileKeywords = handle.tokens.keywords(file)
+              const keywordHit = (g: TokenGroup) =>
+                !!query &&
+                (fileKeywords[g.path.join('.')] ?? []).some((w) =>
+                  w.toLowerCase().includes(query),
+                )
               const groups = groupLeaves(leaves, overrideKeys, blockOrder)
               const groupVisible = (g: TokenGroup) =>
                 fileHit ||
+                keywordHit(g) ||
                 g.blocks.some((b) =>
                   b.leaves.some(
                     (l) =>
@@ -966,7 +977,7 @@ function Overlay() {
                         group={group}
                         dirtySet={dirtySet}
                         query={query}
-                        fileHit={fileHit}
+                        groupHit={fileHit || keywordHit(group)}
                         declared={declaredEases}
                         onChange={(leaf, value) => {
                           handle.tokens.set(file, leaf.path, value)

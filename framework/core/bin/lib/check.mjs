@@ -181,6 +181,87 @@ function checkEases(root, error) {
  * Validate the project's contracts. Every message says how to fix the
  * problem — errors teach, they don't just point.
  */
+
+/**
+ * Every dotted path in a motion file's `keywords` export must name a real
+ * group in that file's `motion({...})`.
+ *
+ * The keywords are what someone searching the Tweak overlay actually types —
+ * a group is named for what it IS in the code, they search for what it DOES.
+ * Nothing enforces the link at runtime: the overlay looks the path up, finds
+ * nothing, and the group is simply unfindable by the word that was supposed
+ * to find it. Renaming a group is exactly when that happens, and it happens
+ * silently. A warning, not an error: a stale keyword costs discoverability,
+ * never correctness.
+ */
+function groupPathsIn(body, prefix = [], out = new Set()) {
+  for (const entry of splitEntries(body)) {
+    const m = entry.match(/^\s*(?:(['"])([^'"]+)\1|([\w$]+))\s*:\s*\{/)
+    if (!m) continue
+    const name = m[2] ?? m[3]
+    const nested = objectBody(entry, name)
+    const here = [...prefix, name]
+    out.add(here.join('.'))
+    if (nested !== null) groupPathsIn(nested, here, out)
+  }
+  return out
+}
+
+function checkMotionKeywords(root, warn) {
+  const files = []
+  const walk = (dir) => {
+    if (!fs.existsSync(dir)) return
+    for (const e of fs.readdirSync(dir, { withFileTypes: true })) {
+      const abs = path.join(dir, e.name)
+      if (e.isDirectory()) {
+        if (e.name !== 'node_modules' && !e.name.startsWith('.')) walk(abs)
+      } else if (e.name === 'motion.ts' || e.name.endsWith('.motion.ts')) files.push(abs)
+    }
+  }
+  walk(root)
+
+  for (const abs of files) {
+    const src = stripComments(fs.readFileSync(abs, 'utf8'))
+    // `export const keywords: Record<string, string[]> = {` — the annotation
+    // sits between the name and the brace, so this cannot use objectBody(),
+    // which looks for `name: {`.
+    const kwAt = src.search(/export\s+const\s+keywords\b/)
+    if (kwAt === -1) continue
+    const kw = sliceBraces(src, src.indexOf('{', kwAt))
+    if (kw === null) continue
+    const callAt = src.search(/\bmotion\s*\(/)
+    if (callAt === -1) continue
+    const tokenBody = sliceBraces(src, src.indexOf('{', callAt))
+    if (tokenBody === null) continue
+    const groups = groupPathsIn(tokenBody)
+    const rel = path.relative(root, abs)
+    for (const entry of splitEntries(kw)) {
+      const m = entry.match(/^\s*(?:(['"])([^'"]+)\1|([\w$]+))\s*:/)
+      if (!m) continue
+      const dotted = m[2] ?? m[3]
+      if (!groups.has(dotted))
+        warn(
+          rel,
+          `keywords entry "${dotted}" names no group in this file — a rename left it dangling, so nothing it lists will find anything in the Tweak overlay. Point it at a real group or drop it.`,
+        )
+    }
+  }
+}
+
+/** The object literal starting at `open`, body only. */
+function sliceBraces(source, open) {
+  if (open === -1) return null
+  let depth = 0
+  for (let i = open; i < source.length; i += 1) {
+    if (source[i] === '{') depth += 1
+    else if (source[i] === '}') {
+      depth -= 1
+      if (depth === 0) return source.slice(open + 1, i)
+    }
+  }
+  return null
+}
+
 export function check(root) {
   const errors = []
   const warnings = []
@@ -290,6 +371,7 @@ export function check(root) {
     )
 
   checkEases(root, error)
+  checkMotionKeywords(root, warn)
 
   return { ok: errors.length === 0, errors, warnings }
 }

@@ -288,7 +288,11 @@ export default function modulato(options = {}) {
             code,
             `;import { __registerMotion as __modulatoRegister } from 'modulato'`,
             `;import * as __modulatoSelf from ${JSON.stringify(rel)}`,
-            `;__modulatoRegister(${JSON.stringify(rel)}, __modulatoSelf.default)`,
+            // `keywords` is optional and usually absent — passing undefined
+            // costs nothing, and reading it off the namespace means a file
+            // gains searchability by exporting one const, with no build step
+            // and nothing to keep in sync.
+            `;__modulatoRegister(${JSON.stringify(rel)}, __modulatoSelf.default, __modulatoSelf.keywords)`,
             `;if (import.meta.hot) import.meta.hot.accept()`,
           ].join('\n'),
           map: null,
