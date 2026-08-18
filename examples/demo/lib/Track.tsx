@@ -33,45 +33,6 @@ import './track.scss'
  */
 const HORIZONTAL = '(min-width: 1024px)'
 
-/**
- * Where an element inside the rail will SIT once the section is pinned and the
- * rail translated — as an offset from wherever it is measured right now, with
- * neither applied yet.
- *
- * This exists for one reason: a page mounts during its own transition, and a
- * transitioning page's ScrollTriggers are disabled, so the pin has not been
- * built and the rail is still at x=0. Anything measuring a panel at that
- * moment — the shared-element collector, above all — reads a position the
- * panel will never occupy. The second panel is a whole viewport out.
- *
- * The geometry lives HERE, beside the tween it describes, so the two cannot
- * drift: `end` is `overhang * length` and the tween runs `x` to `-overhang`
- * across exactly that, which is all this reimplements.
- *
- *   dy  while pinned the section is held at the top of the viewport, so it
- *       sits lower than its document position by however far the reader has
- *       travelled into the pinned range — and past the end it keeps that
- *       offset, because the pin released there.
- *   dx  the rail's own translation at that progress.
- *
- * Null when there is nothing to correct: not in a track, stacked rather than
- * pinned, or a rail short enough that it never moves.
- */
-export function trackSeat(el: Element): { dx: number; dy: number } | null {
-  const section = el.closest<HTMLElement>('.track')
-  if (!section || section.dataset.static === 'true') return null
-  const rail = section.firstElementChild as HTMLElement | null
-  if (!rail) return null
-
-  const { track } = resolveTokens(site)
-  const overhang = Math.max(0, rail.scrollWidth - window.innerWidth)
-  const distance = overhang * track.length
-  if (!distance) return null
-
-  const top = section.getBoundingClientRect().top + window.scrollY
-  const travelled = Math.min(Math.max(window.scrollY - top, 0), distance)
-  return { dx: -overhang * (travelled / distance), dy: travelled }
-}
 
 export function Track({ children }: { children: ReactNode }) {
   const ref = useRef<HTMLElement>(null)

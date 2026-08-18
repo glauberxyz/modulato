@@ -39,6 +39,7 @@ export {
   resolveTransition,
 } from './transitions'
 export { flipShared, collectSharedPairs } from './flip'
+export { onPrepare } from './settle'
 export { intro, defaultIntro, resolveIntro } from './intro'
 export {
   motion,

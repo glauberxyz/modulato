@@ -11,6 +11,7 @@ import { RouterContext, type RouterApi } from './context'
 import { checkDuplicateSharedIds, DEV } from './dev'
 import type { EnhancerDef } from './enhance'
 import { collectSharedPairs } from './flip'
+import { runPrepare } from './settle'
 import { syncWaapiSpeed } from './motion'
 import { EnhancersContext } from './page'
 import { resolveEntry } from './resolve'
@@ -163,6 +164,12 @@ export function ModulatoRoot({
     if (fromEl && toEl) {
       // PREPARE — synchronous, before this frame paints.
       prepareOutgoing(fromEl, targetScroll.current)
+      // The window is now at the incoming page's scroll. Let motion layers
+      // establish scroll-driven layout (pins, scrubbed transforms) BEFORE the
+      // shared pairs are measured — their triggers otherwise live in passive
+      // effects, which have not run yet, so anything they position would be
+      // measured where it will never sit. See settle.ts.
+      runPrepare(toEl)
       shared = collectSharedPairs(fromEl, toEl)
       if (DEV) {
         checkDuplicateSharedIds(fromEl, from.routeId)

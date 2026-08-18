@@ -1,7 +1,7 @@
 import gsap from 'gsap'
 import { CustomEase } from 'gsap/CustomEase'
-import { useEffect, useRef, useState } from 'react'
-import { easeRegistry, getMotionSpeed, usePage, useViewport } from 'modulato'
+import { useEffect, useLayoutEffect, useRef, useState } from 'react'
+import { easeRegistry, getMotionSpeed, usePage, useViewport, onPrepare } from 'modulato'
 
 const DEV: boolean =
   typeof import.meta !== 'undefined' &&
@@ -62,6 +62,11 @@ interface ScrollTriggerApi {
     trigger?: Element | null
     disable: (revert?: boolean) => void
     enable: (reset?: boolean) => void
+    /** The scrub setting the trigger was created with, when it has one. */
+    vars?: { scrub?: number | boolean }
+    /** The scrubbed tween, when there is one. */
+    animation?: { progress: (value: number, suppressEvents?: boolean) => unknown }
+    progress: number
   }>
 }
 
@@ -104,6 +109,40 @@ function wireScrollTrigger(lenis: { on: (e: 'scroll', cb: () => void) => void })
  * Return a function for extra teardown (observers, listeners); it runs before
  * the context reverts.
  */
+/**
+ * Motions that have MOUNTED but whose create effect has not run yet.
+ *
+ * A page mounts during its own transition, and `useMotion` creates in a
+ * passive effect — which React runs after every layout effect, including the
+ * router's PREPARE, where shared elements are measured. So at measure time
+ * this page's ScrollTriggers do not exist and anything they position (a
+ * pinned rail, a scrubbed transform) is measured somewhere it will never
+ * sit. The router's `onPrepare` hook runs after the window reaches the
+ * incoming page's scroll and before that measurement: draining the pending
+ * builds there means scroll-driven layout exists, at the right scroll, in
+ * time to be measured.
+ *
+ * Only instances that mounted in the current commit can be here un-built —
+ * anything older had its passive effect run — so draining with the incoming
+ * page's element is safe: they ARE the incoming page's motions. The passive
+ * effect then adopts what was built instead of building twice.
+ */
+const pendingBuilds = new Set<(pageEl: HTMLElement) => void>()
+if (typeof window !== 'undefined') {
+  onPrepare((incoming) => {
+    for (const build of [...pendingBuilds]) build(incoming)
+    // A scrubbed trigger built with its start already crossed may LERP toward
+    // its position rather than snap (that is what scrub smoothing is). The
+    // measurement needs the destination, not the journey — force each
+    // scrubbed animation to its trigger's progress before anyone measures.
+    const ST = scrollTrigger()
+    if (ST)
+      for (const t of ST.getAll())
+        if (t.vars?.scrub && t.animation && incoming.contains(t.trigger as Node))
+          t.animation.progress(t.progress, true)
+  })
+}
+
 export function useMotion(
   create: (scope: MotionScope) => void | (() => void),
   deps: unknown[] = [],
@@ -132,20 +171,60 @@ export function useMotion(
     return () => window.removeEventListener('modulato:replay-motions', onReplay)
   }, [])
 
+  // One build, two callers. The passive effect below is the ordinary path;
+  // the PREPARE drain (pendingBuilds, above) is the early one, used only for
+  // the mount that happens mid-transition. `built` is the handshake between
+  // them: whoever runs first builds, the other adopts.
+  //
+  // The element comes as a PARAMETER because the two callers know it
+  // differently: the effect reads it from page context, but at PREPARE time
+  // the context still holds null — PageScope registers its element in a ref
+  // callback and re-renders, and that render has not happened when the
+  // router's layout effect runs. The router knows the element anyway (its own
+  // ref map), and hands it through onPrepare.
+  const built = useRef<{
+    el: HTMLElement
+    ctx: gsap.Context
+    userCleanup: void | (() => void)
+  } | null>(null)
+  const build = (el: HTMLElement) => {
+    let userCleanup: void | (() => void) = undefined
+    const ctx = gsap.context(() => {
+      userCleanup = createRef.current({ element: el, q: gsap.utils.selector(el), gsap })
+    }, el)
+    built.current = { el, ctx, userCleanup }
+  }
+  const teardown = () => {
+    const b = built.current
+    if (!b) return
+    if (typeof b.userCleanup === 'function') b.userCleanup()
+    b.ctx.revert()
+    built.current = null
+  }
+
+  // Pending from mount until the passive create first runs. A LAYOUT effect,
+  // because it must precede the router's own layout effect in the mounting
+  // commit — child layout effects run before the parent's, which is the same
+  // ordering PageScope's Lenis handoff already relies on.
+  useLayoutEffect(() => {
+    const entry = (pageEl: HTMLElement) => {
+      if (!built.current) build(pageEl)
+    }
+    pendingBuilds.add(entry)
+    return () => {
+      pendingBuilds.delete(entry)
+    }
+  }, [])
+
   useEffect(() => {
     if (!element) return undefined
-    let userCleanup: void | (() => void)
-    const ctx = gsap.context(() => {
-      userCleanup = createRef.current({
-        element,
-        q: gsap.utils.selector(element),
-        gsap,
-      })
-    }, element)
-    return () => {
-      if (typeof userCleanup === 'function') userCleanup()
-      ctx.revert()
+    // Already built at PREPARE — adopt it: this effect's cleanup owns the
+    // teardown from here (dep changes, replay, unmount).
+    if (built.current?.el !== element) {
+      teardown()
+      build(element)
     }
+    return teardown
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [element, replayTick, breakpoint, reducedMotion, ...deps])
 

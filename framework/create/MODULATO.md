@@ -285,6 +285,13 @@ animations synchronously in `run()` (before the first await) so the reveal
 frame is animation frame zero. Colocate tokens as
 `transitions/<pair>.motion.ts`.
 
+`shared` rects are honest even for targets positioned by scroll-driven motion
+(a pinned rail, a scrubbed transform): before measuring, the router runs
+`onPrepare` callbacks with the incoming page at its final scroll, and
+`@modulato/gsap` uses that moment to build the page's pending motions early.
+`onPrepare(fn)` is exported for motion layers that need the same hook — sites
+using `useMotion` get it without doing anything.
+
 ## 7. Motion tokens & Tweak Mode
 
 ```ts
