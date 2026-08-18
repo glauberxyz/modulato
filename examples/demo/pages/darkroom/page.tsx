@@ -1,9 +1,21 @@
 import { useRef, useState } from 'react'
-import { resolveTokens, useSearchParam } from 'modulato'
-import { HalftoneScene } from '../../lib/HalftoneCanvas'
-import { DEFAULTS, type HalftoneUniforms, type SceneUniforms } from '../../lib/halftone'
+import { useSearchParam } from 'modulato'
+import { HalftoneImage } from '../../lib/HalftoneCanvas'
+import { DEFAULTS, type HalftoneUniforms } from '../../lib/halftone'
 import { Choice, Slider } from '../../lib/Control'
-import tokens from './motion'
+
+/**
+ * A photograph rather than the live raymarched scene.
+ *
+ * The scene cost a full render every frame for as long as the page was open —
+ * `HalftoneScene` has no dirty check, because a moving scene is never clean —
+ * and it was very nearly neutral, so three of the four plates had almost
+ * nothing to carry and the darkroom demonstrated a press with one screen in
+ * it. This has real hues in three directions, so every control here changes
+ * something visible. Screened stills only redraw when a uniform moves, which
+ * means the page is idle whenever nobody is dragging.
+ */
+const SOURCE = '/plates/prager-eve-2008.jpg'
 
 const PRESETS: Record<string, Partial<HalftoneUniforms>> = {
   newsprint: { size: 0.66, contrast: 1.5, softness: 0.05, type: 0, gridNoise: 0.18, grainOverlay: 0.3 },
@@ -13,18 +25,20 @@ const PRESETS: Record<string, Partial<HalftoneUniforms>> = {
 }
 
 export default function Darkroom() {
-  const t = resolveTokens(tokens)
   // The preset lives in the URL — shareable shader state, no remount.
   const [preset, setPreset] = useSearchParam('preset')
+  // The site's real inks on its real paper. The dark inverted palette this
+  // used to run belonged to the raymarched scene, which needed to sit inside a
+  // dark page; a photograph screened through actual cyan, magenta, yellow and
+  // black is the thing the whole site is about, and it cannot show that in
+  // negative.
   const [u, setU] = useState<HalftoneUniforms>(() => ({
     ...DEFAULTS,
     ...(PRESETS[preset ?? 'magazine'] ?? {}),
-    paper: '#14110f',
-    inks: ['#2d4a52', '#4a2d3d', '#4a4530', '#f4f1ea'],
+    cover: true,
   }))
 
   const uniforms = useRef<HalftoneUniforms>(u)
-  const scene = useRef<SceneUniforms>({ ...t.scene })
 
   const patch = (next: Partial<HalftoneUniforms>) => {
     const merged = { ...uniforms.current, ...next }
@@ -40,18 +54,6 @@ export default function Darkroom() {
   return (
     <main className="dark-room is-dark" data-page="darkroom">
       <div className="dark-room__panel" data-lenis-prevent="">
-        <header className="dark-room__head">
-          <span className="label">Darkroom</span>
-          <a className="dark-room__back" href="/">
-            ← Index
-          </a>
-        </header>
-
-        <p className="dark-room__intro">
-          The press, with every stop open. This is the same shader running behind
-          the index — and behind modulato.org.
-        </p>
-
         <Choice
           label="Preset"
           value={preset ?? 'magazine'}
@@ -109,14 +111,18 @@ export default function Darkroom() {
         </div>
 
         <p className="dark-room__foot">
-          Every value here is a motion token in <code>motion.ts</code> — the same
-          numbers the dev overlay edits and an agent can set over MCP. The preset
-          is in the URL, so this exact screen is a link.
+          Photograph: “Eve” (2008) by Alex Prager. Halftone shader: Paper
+          Design’s HalftoneCmyk, Apache-2.0, extended here.
         </p>
       </div>
 
       <div className="dark-room__stage">
-        <HalftoneScene uniforms={uniforms} scene={scene} className="dark-room__scene" />
+        <HalftoneImage
+          src={SOURCE}
+          alt="A figure on an open road with pigeons scattering around them, screened at the current settings"
+          uniforms={uniforms}
+          className="dark-room__scene"
+        />
       </div>
     </main>
   )

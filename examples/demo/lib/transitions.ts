@@ -11,12 +11,12 @@ gsap.registerPlugin(SplitText)
  *   ① hold      — nothing. Every clone sits exactly over the word it replaced.
  *   ② clear+tint— the outgoing page fades out, which is what turns the surface
  *                 over, and the title takes the arriving page's ink IN PLACE.
- *                 Colour is the whole event; nothing moves.
- *   ③ gap       — breathing room. The words sit in their new colour on the
+ *                 Color is the whole event; nothing moves.
+ *   ③ gap       — breathing room. The words sit in their new color on the
  *                 new surface, alone.
  *   ④ flight    — only now do they travel.
  *
- * Colour and movement used to happen together, which read as one hurried
+ * Color and movement used to happen together, which read as one hurried
  * gesture. Separated, each gets to be seen.
  */
 export interface FlightActs {
@@ -30,7 +30,7 @@ export interface FlightActs {
   /** Act ②, on the flying title only: the words cross-fade from the outgoing
    *  page's ink to the arriving one's, without moving. */
   tint: { duration: number; ease: string }
-  /** Act ③: the beat between the colour landing and the flight setting off. */
+  /** Act ③: the beat between the color landing and the flight setting off. */
   gap: number
   /** Act ①: a beat before anything happens at all, with every clone sitting
    *  exactly over the word it replaced. Lets the swap settle first. */
@@ -407,8 +407,8 @@ export async function wordFlight(
 
       // Act ②: the ink changes, and nothing else. This runs with the index's
       // own fade, so the word darkens at the same moment the surface under it
-      // turns from the index's black to the chapter's paper — one colour event
-      // the reader can actually follow, rather than a colour shift smuggled
+      // turns from the index's black to the chapter's paper — one color event
+      // the reader can actually follow, rather than a color shift smuggled
       // inside a flight.
       clone.animate([{ color: fromStyle.color }, { color: toStyle.color }], {
         duration: t.tint.duration,
@@ -417,7 +417,7 @@ export async function wordFlight(
         fill: 'both',
       })
 
-      // Act ④: the travel. No colour here — it landed an act ago.
+      // Act ④: the travel. No color here — it landed an act ago.
       return clone
         .animate(
           [

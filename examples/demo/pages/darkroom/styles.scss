@@ -34,31 +34,6 @@
   display: block;
 }
 
-.dark-room__head {
-  display: flex;
-  justify-content: space-between;
-  align-items: baseline;
-  padding-bottom: 12px;
-  border-bottom: 1px solid var(--ink);
-}
-
-.dark-room__back {
-  @include type.small;
-  text-decoration: none;
-  color: var(--muted);
-
-  &:hover {
-    color: var(--ink);
-  }
-}
-
-.dark-room__intro {
-  @include type.small;
-  color: var(--muted);
-  max-width: 40ch;
-  margin: 16px 0 22px;
-}
-
 .dark-room__angles {
   margin-top: 22px;
   padding-top: 12px;

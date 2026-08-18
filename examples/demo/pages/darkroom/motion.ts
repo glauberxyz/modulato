@@ -1,19 +1,11 @@
 import { motion } from 'modulato'
 
-/** Darkroom — the scene behind the controls. */
+/** Darkroom — the panel beside the print.
+ *
+ * The `scene` group is gone with the raymarched scene it drove: the stage is a
+ * screened photograph now, and every number that shapes it is a shader uniform
+ * the reader drives directly, not a motion token. */
 export default motion({
-  scene: {
-    speed: 1,
-    radius: 2.1,
-    height: 1.2,
-    count: 26,
-    camHeight: 0.25,
-    camDist: 4.4,
-    band: 0,
-    cap: 0.95,
-    phone: { radius: 1.6, count: 18, camDist: 5.4 },
-    reduced: { speed: 0 },
-  },
   panel: {
     x: 40,
     duration: 0.9,

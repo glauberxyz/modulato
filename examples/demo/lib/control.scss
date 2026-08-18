@@ -8,8 +8,21 @@
   padding: 7px 0;
   border-bottom: 1px solid var(--rule);
 
+  // Label on its own line with the set beneath it, rather than squeezed into
+  // the column a slider's readout occupies. A choice is the one control whose
+  // width is set by its CONTENT — three or four words that cannot be
+  // abbreviated — so it gets the panel's full width to lay them in.
+  //
+  // And no rule under it. The hairline that separates one slider from the next
+  // is doing real work in a stack of identical rows; under a block of pills it
+  // reads as a box drawn round them, and the pills already have borders of
+  // their own. Space does the separating instead — more of it than a slider
+  // needs, because what sits below is a different kind of control.
   &--choice {
-    grid-template-columns: 1fr auto;
+    grid-template-columns: 1fr;
+    gap: 8px;
+    border-bottom: 0;
+    padding-bottom: 22px;
   }
 }
 
@@ -54,9 +67,16 @@
 }
 
 .ctrl__options {
-  display: flex;
-  gap: 4px;
-  flex-wrap: wrap;
+  display: grid;
+  // `--opt-cols` comes from the option count (Control.tsx). Equal cells, so
+  // the set reads as one control rather than a row of separate buttons.
+  //
+  // NOT `--cols`: that is a global token — `:root` sets it to 12, phones to 6,
+  // and `.grid` builds the page off it. A control naming its own variable the
+  // same thing would inherit 12 columns anywhere the inline value was missing,
+  // and would leak its own count down into any grid nested inside it.
+  grid-template-columns: repeat(var(--opt-cols, 3), 1fr);
+  gap: 6px;
 }
 
 .ctrl__opt {
@@ -65,7 +85,10 @@
   border: 1px solid var(--rule);
   background: transparent;
   color: var(--muted);
-  padding: 4px 10px;
+  // Taller than the text needs. These are the only things on the panel meant
+  // to be hit rather than read, and at a slider's row height they were reading
+  // as labels that happened to have an outline.
+  padding: 8px 12px;
   border-radius: 100px;
   cursor: pointer;
   transition:
@@ -119,6 +142,39 @@
   }
 }
 
+// A comparison rather than an instrument: the container keeps the full field
+// and splits it into two equal columns, head above and caption below. No
+// controls, so there is no panel — the whole width goes to the pictures.
+.diagram--pair {
+  display: grid;
+  grid-template-columns: 1fr;
+  row-gap: 14px;
+}
+
+.diagram__plates {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--gutter);
+}
+
+.diagram__plate {
+  margin: 0;
+  min-width: 0; // a grid item's `auto` minimum is its content — without this
+                // a wide canvas refuses to shrink and the columns go unequal.
+}
+
+.diagram__platecap {
+  margin-top: 6px;
+}
+
+// Set here rather than inheriting the frame's 4/3: the source is a portrait,
+// and a landscape box would letterbox both halves identically — wasting the
+// height the fine plate needs most, since it is the one whose structure has
+// to stay under the eye's resolution to make its point.
+.diagram--pair .diagram__stage {
+  aspect-ratio: 7 / 8;
+}
+
 .diagram__head {
   display: flex;
   align-items: baseline;
@@ -130,7 +186,6 @@
 
 .diagram__title {
   @include type.small;
-  font-weight: 700;
 }
 
 .diagram__caption {
@@ -139,35 +194,108 @@
   margin-top: 12px;
 }
 
-// On a large screen an interactive module is the whole viewport: it breaks the
-// field (see chapter.scss) and lays its own 12 columns across 100vw, one clear
-// on each side. 1 + 7 of stage + 3 of controls + 1 = 12.
+// Below the caption and set off from it by a rule: a credit is a different
+// kind of statement from a remark about the picture, and on these diagrams the
+// caption rewrites itself per state while this does not.
+.diagram__credit {
+  margin-top: 10px;
+  padding-top: 10px;
+  border-top: 1px solid var(--rule);
+}
+
+// On a large screen a diagram is the whole viewport: it breaks the field (see
+// chapter.scss) and lays its own 12 columns across 100vw.
 //
-// The stage stretches to the full height while the panel centres against it —
-// the canvas takes its resolution from `clientWidth * dpr` under a
-// ResizeObserver (halftone.ts), so dropping the 4/3 ratio re-renders the
-// scene at the new shape rather than stretching a 4/3 image to fit.
+// The inset is a MARGIN, not clear columns — the one place on the site where
+// that is true, and it holds for both layouts. Everywhere else a block's inset
+// is its column span (see grid.scss), which is right when a block shares the
+// field with its neighbors. A diagram does not: it has the full width of the
+// viewport to itself, and a clear column each side would be an inset measured
+// in twelfths of the screen — it grows as the monitor does, so the instrument
+// never actually reaches the size the screen is offering. A margin holds the
+// same 32px at any width.
+// The inset applies from the width where a diagram first lays out side by
+// side, NOT from 1280 where it gains its 12 columns. Between the two it was
+// falling back to the field's clear column — a 70px inset against the 32px
+// the running head keeps — so the module looked narrower than the page it
+// sits on at exactly the width where it has least room to spare.
+@media (min-width: 1024px) {
+  .diagram {
+    padding-inline: var(--margin);
+  }
+}
+
 @media (min-width: 1280px) {
   .diagram {
     grid-template-columns: repeat(12, 1fr);
     column-gap: var(--gutter);
     height: 100vh;
-    align-items: center;
   }
 
-  .diagram__stage {
-    grid-column: 2 / 9;
+  // `:not(--pair)` throughout the panel rules: a pair has no panel to sit
+  // beside, and its stages are not grid items of the diagram at all — they are
+  // nested two deep, so these would only reach them to strip the aspect-ratio
+  // that gives them their height.
+  //
+  // 9 of stage + 3 of controls = 12, with no column spent on an inset.
+  //
+  // THE CONTROL COLUMN STAYS NARROW — house rule, and the width freed by
+  // going full-bleed belongs to the picture, not to the instrument. A panel
+  // is labels and sliders: it reads fine at three columns, and every column
+  // it takes is one the demonstration loses. When a control will not fit, the
+  // CONTROL changes shape — see `.ctrl--choice`, which stacks its label and
+  // lays its options in equal cells — rather than the column growing for it.
+  //
+  // The stage stretches to the full height and the panel starts at the top
+  // beside it, so the two share a top edge. Centered, the panel floated at a
+  // height set by how many controls it happened to carry — so the head moved
+  // from diagram to diagram, and the reading order started somewhere down the
+  // screen instead of at the corner where the figure number is.
+  //
+  // The stage keeps its own `align-self: stretch` below: the canvas takes its
+  // resolution from `clientWidth * dpr` under a ResizeObserver (halftone.ts),
+  // so dropping the 4/3 ratio re-renders the scene at the new shape rather
+  // than stretching a 4/3 image to fit.
+  .diagram:not(.diagram--pair) {
+    align-items: start;
+  }
+
+  .diagram:not(.diagram--pair) .diagram__stage {
+    grid-column: 1 / 10;
     align-self: stretch;
     aspect-ratio: auto;
   }
 
   .diagram__panel {
-    grid-column: 9 / 12;
+    grid-column: 10 / -1;
+  }
+
+  // The pair takes the same full screen, but centered as a block rather than
+  // stretched: two portraits at a fixed ratio, with the head over them.
+  .diagram--pair {
+    align-content: center;
+    align-items: start;
+    row-gap: 16px;
+  }
+
+  // Everything the pair holds — the head and the two plates. There is no
+  // caption row: see the note on `Diagram`'s `pair` layout.
+  .diagram--pair > * {
+    grid-column: 1 / -1;
   }
 }
 
 @media (max-width: 1023px) {
   .diagram {
+    grid-template-columns: 1fr;
+  }
+}
+
+// Two coarse/fine columns side by side stop being a comparison once each one
+// is narrower than its own screen is coarse — the fine plate grays out and
+// the argument inverts. Stacked, both stay legible.
+@media (max-width: 767px) {
+  .diagram__plates {
     grid-template-columns: 1fr;
   }
 }

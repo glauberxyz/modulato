@@ -109,7 +109,7 @@
 
 // No fill behind the picture. It was a placeholder for the moment before an
 // image loads, and it cost more than it bought: on a track panel the image is
-// letterboxed inside its column, so the rule colour showed as a band down
+// letterboxed inside its column, so the rule color showed as a band down
 // each side of the plate.
 .movement__figlink {
   display: block;
@@ -136,8 +136,38 @@
 }
 
 // ── diagrams ─────────────────────────────────────────────────────────
+// Bottom only. The frame inside is 100vh on a large screen and centers its
+// own contents (control.scss), so a top padding was pushing a module that
+// asks for exactly one screen down past the fold — it could never sit
+// against the top of the viewport, which is the one position that makes a
+// full-height module read as full-height.
+//
+// Nothing is lost by removing it: whatever precedes a diagram carries its own
+// bottom padding — 6vh from an ordinary movement, 10vh from a statement — so
+// the gap above is set by the neighbor, the same way `.movement--aside`
+// leans on both of its.
 .movement--diagram {
-  padding-block: 9vh;
+  padding-block: 0 9vh;
+
+  // Far more than the 24px a movement's rows normally take. What sits above
+  // is a full screen of instrument — the reader has been operating something,
+  // not reading — and the prose underneath is a change of activity, not the
+  // next paragraph of the same one. At the ordinary gap the copy read as a
+  // caption that had slipped its picture.
+  //
+  // In vh like the padding around it, so the break scales with the screen the
+  // diagram just filled rather than staying a fixed number under it.
+  row-gap: 8vh;
+}
+
+// No rule above the note here. In an aside it sits directly under that aside's
+// own paragraphs, and the hairline is what marks the change of register; on a
+// diagram it is already alone on its row with a screen's width of white above
+// it, so the line was drawing a boundary the layout had drawn twice over. The
+// padding goes with it — it only ever existed to hold the text off the rule.
+.movement--diagram .movement__note {
+  border-top: 0;
+  padding-top: 0;
 }
 
 // On a large screen the interactive modules leave the field and take the whole
@@ -147,9 +177,33 @@
 // Two classes deep so it beats `.col-field` on specificity rather than on
 // stylesheet order, which is not ours to depend on: both are single-class
 // selectors, and which file Vite emits last is an implementation detail.
-@media (min-width: 1280px) {
+// From 1024, not 1280 — the width where these blocks stop sharing the field
+// with anything. Gated at 1280 they spent the range between the two sitting
+// inside `col-field`'s clear column, which is a WIDER inset than the page's
+// own margin: the module read as narrower than the running head above it,
+// and it read that way precisely where the screen had least to give.
+@media (min-width: 1024px) {
   .movement--diagram .movement__diagram {
     grid-column: 1 / -1;
+  }
+
+  // A plate can take the whole width, on the same terms as a diagram: every
+  // column, with a MARGIN for its inset rather than clear columns. The
+  // pictures are the chapter's evidence — the scans you are meant to look
+  // into and see dots in — and at eight columns some were being shown at
+  // less than the screen could give them.
+  //
+  // OPT-IN, from the figure's own `width` in the content, so the plate that
+  // does not want it simply says nothing and keeps `col-field`. Written the
+  // other way round — bleed by default with an override to pull it back —
+  // the override would have to restate col-field's spans at every breakpoint,
+  // and grid.scss exists precisely so those numbers live in one place.
+  //
+  // The caption and the prose stay where they were either way. Only the
+  // picture grows; the reader's column does not move.
+  .movement--figure figure.is-bleed {
+    grid-column: 1 / -1;
+    padding-inline: var(--margin);
   }
 }
 
@@ -215,11 +269,21 @@
     line-clamp: 1;
     overflow: hidden;
     color: var(--ink);
-    text-decoration: underline;
-    text-underline-offset: 3px;
+    // No underline. The rule above each row already draws the horizontals in
+    // this block, and a second line under every title made the list read as
+    // hatching rather than as rows. Nothing global changes: `global.scss` only
+    // sets `a { color: inherit }` — the underline was declared right here.
+    //
+    // Which leaves hover as the affordance. That is thin for a link, but the
+    // numbered rows under a "Sources" label are already legible AS references,
+    // and each one carries `data-native` so it leaves the site the way an
+    // external reference should.
+    text-decoration: none;
   }
   a:hover {
     color: var(--muted);
+    text-decoration: underline;
+    text-underline-offset: 3px;
   }
 }
 

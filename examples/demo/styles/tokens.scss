@@ -1,4 +1,4 @@
-// Design tokens — the single source for colour, type and the grid.
+// Design tokens — the single source for color, type and the grid.
 // CSS custom properties on :root: readable at runtime (from JS/WebGL),
 // usable from any stylesheet without an import.
 :root {
@@ -9,7 +9,7 @@
   --muted: #7a7a75;
   --rule: #d6d1c6;
   // A second, brighter sheet for apparatus laid UNDER the argument — the
-  // chapter's sources band. Paper is warm and slightly grey; this is the
+  // chapter's sources band. Paper is warm and slightly gray; this is the
   // white it would be printed on, so the change of surface reads as a
   // change of register rather than as a panel.
   --paper-bright: #ffffff;
@@ -20,8 +20,8 @@
   --dark-rule: #332e29;
 
   // The four plates. Used ONLY where CMYK is the subject (chapter III and
-  // the plate-coloured link dots) — everywhere else the site is monochrome,
-  // so the colour arrives as an argument, not as decoration.
+  // the plate-colored link dots) — everywhere else the site is monochrome,
+  // so the color arrives as an argument, not as decoration.
   --plate-c: #00a0c6;
   --plate-m: #d81e78;
   --plate-y: #f5c400;

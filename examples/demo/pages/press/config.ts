@@ -17,10 +17,23 @@ export function meta({ props }: LoadArgs & { props: ReturnType<typeof load> }) {
   }
 }
 
-// A chapter always opens at its title — Back and Forward included. Its
-// opening is choreographed (the title flies in from the index), and a
-// restored scroll position puts that choreography somewhere nobody can see,
-// with the router and the transition then fighting over the scroll mid-flight.
-// The one exception is closing a plate inspector, which asks for the reader's
-// place back explicitly — see lib/PlateView.tsx.
-export const scroll = { restore: false }
+// No `scroll` declaration, and that is the considered answer rather than an
+// omission — it is the only setting that serves all three ways in.
+//
+//   link from the index     the top. The title flies into place, so the head
+//                           has to be on screen. Omitting `restore` already
+//                           starts every LINK navigation at the top.
+//   Back from a plate       the reader's place. The router wrote their
+//                           position onto this chapter's history entry when
+//                           they clicked into the plate, and a traversal
+//                           hands it back as the navigation's own target.
+//   Forward from the index  the top, because that entry never recorded one.
+//
+// `restore: false` looked right and was not. It means "the top, Back and
+// Forward included", which threw away the position the history entry was
+// already holding — so returning from a plate landed at the head, and the
+// FLIP flew the picture to a target thousands of pixels off screen.
+//
+// This carries the whole return path now — a plate has no back link of its
+// own, so browser Back IS how a reader comes home from one. Setting
+// `restore: false` here would silently strand them at the chapter's head.

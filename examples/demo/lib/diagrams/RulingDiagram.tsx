@@ -1,54 +1,61 @@
-import { useRef, useState } from 'react'
+import { useRef } from 'react'
 import { HalftoneImage } from '../HalftoneCanvas'
 import { DEFAULTS, type HalftoneUniforms } from '../halftone'
-import { Diagram, Slider } from '../Control'
+import { Diagram, Plate } from '../Control'
 
 /**
- * 1904 and now, side by side. The manual's own plates show the Flatiron
- * Building through six Levy screens; the slider runs our shader across the
- * same range. Same argument, 120 years apart.
+ * One photograph, screened twice — coarse on the left, fine on the right.
+ *
+ * There is no slider, and that is the design. The argument is a COMPARISON,
+ * and a comparison wants both terms on screen at once: a single stage on a
+ * slider shows one ruling at a time and asks the reader to hold the other in
+ * their head, which is exactly the work the picture is supposed to do for
+ * them. It also let them drag to any value, most of which say nothing —
+ * whereas these two are chosen, and are the two the prose names.
+ *
+ * The source is a continuous-tone-ish scan rather than one of the 1904 ruling
+ * plates. Screening an already-screened plate puts our dots on top of Levy's
+ * and the two lattices beat against each other, so the structure on screen
+ * belonged to neither press — the previous version of this diagram was doing
+ * exactly that, against the very plate it displayed beside itself.
  */
-export function RulingDiagram() {
-  const [size, setSize] = useState(0.3)
-  const uniforms = useRef<HalftoneUniforms>({ ...DEFAULTS, size: 0.3, contrast: 1.3 })
-  const cells = Math.round(400 - size ** 0.7 * 393)
 
+/** The shader's own mapping, inverted: `cellsPerSide = mix(400, 7, size^0.7)`
+ *  (halftone.glsl.ts). Written this way round so the numbers below are the
+ *  ones the caption quotes, rather than opaque 0–1 uniforms that have to be
+ *  kept in sync with it by hand. */
+const sizeFor = (cells: number) => ((400 - cells) / 393) ** (1 / 0.7)
+
+/** Newsprint's problem: dots you can count. */
+const COARSE = 28
+/** Coated stock: the structure drops below what the eye resolves. */
+const FINE = 180
+
+export function RulingDiagram() {
+  // Static uniforms, so HalftoneImage's dirty check draws each canvas once
+  // and then idles — nothing here is animated.
+  const coarse = useRef<HalftoneUniforms>({ ...DEFAULTS, size: sizeFor(COARSE), contrast: 1.3 })
+  const fine = useRef<HalftoneUniforms>({ ...DEFAULTS, size: sizeFor(FINE), contrast: 1.3 })
+
+  // No caption: the remark that used to hang here is the movement's own note
+  // now, set between these plates and the prose (content/chapters.json →
+  // Chapter.tsx).
   return (
-    <Diagram
-      n="Fig. E"
-      title="How coarse is coarse"
-      controls={
-        <>
-          <Slider
-            label="Ruling"
-            value={size}
-            min={0.05}
-            max={0.95}
-            onChange={(v) => {
-              setSize(v)
-              uniforms.current.size = v
-            }}
-            format={() => `${cells} cells`}
-          />
-          <div className="ruling__plates">
-            <figure>
-              <img src="/plates/ruling-coarse.jpg" alt="60, 75 and 85 line screens" />
-              <figcaption className="figref">1904 · 60 / 75 / 85 lines</figcaption>
-            </figure>
-            <figure>
-              <img src="/plates/ruling-fine.jpg" alt="175, 200 and 400 line screens" />
-              <figcaption className="figref">1904 · 175 / 200 / 400 lines</figcaption>
-            </figure>
-          </div>
-        </>
-      }
-      caption="Coarse screens survive newsprint, where absorbent paper spreads every dot. Fine screens need coated stock — and past about 300 lines the structure leaves human vision entirely, which was always the objective."
-    >
-      <HalftoneImage
-        src="/plates/ruling-fine.jpg"
-        alt="A halftone at the selected ruling"
-        uniforms={uniforms}
-      />
+    <Diagram layout="pair" n="Fig. A" title="How coarse is coarse">
+      <Plate n="Fig. A1" label={`Coarse · ${COARSE} cells across`}>
+        <HalftoneImage
+          src="/plates/meisenbach-portrait.jpg"
+          alt="A portrait screened at a coarse ruling — the dots are individually visible"
+          uniforms={coarse}
+        />
+      </Plate>
+      <Plate n="Fig. A2" label={`Fine · ${FINE} cells across`}>
+        <HalftoneImage
+          src="/plates/meisenbach-portrait.jpg"
+          alt="The same portrait screened at a fine ruling — the dots resolve into tone"
+          uniforms={fine}
+        />
+      </Plate>
     </Diagram>
   )
 }

@@ -2,7 +2,7 @@
 //
 // It wears the next-chapter card's own surface, and sits where that card's
 // top edge will be: at 100% the bar is a full-width band of exactly the
-// card's colour along the fold, and the card then rises into it. The bar
+// card's color along the fold, and the card then rises into it. The bar
 // reads as the card's leading edge arriving rather than as a separate
 // widget — which is why the fill has to complete BEFORE the card scrolls in,
 // not at the document's end.
@@ -25,7 +25,7 @@
 // Only where there is a card to be the edge OF. On the index, the darkroom
 // and the plate inspectors the bar would be a progress readout for a page
 // with nowhere to hand off to — and on the dark ones it would vanish into
-// its own colour anyway. Shown by the ticker when a card is present.
+// its own color anyway. Shown by the ticker when a card is present.
 .scrollbar {
   display: none;
 }

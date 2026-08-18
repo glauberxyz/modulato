@@ -5,7 +5,7 @@
 //
 // On its own surface, the brighter sheet the sources band uses. The change of
 // paper is what tells the reader this is a different KIND of stretch — they
-// stop descending and start travelling — without spending a rule or a heading
+// stop descending and start traveling — without spending a rule or a heading
 // on saying so.
 .track {
   height: 100vh;
@@ -24,7 +24,7 @@
 
 // A panel carries the site's own 12 columns (it wears `.grid` too), so the
 // picture and its prose are placed by column exactly like everything else on
-// the page — and centred against each other rather than sitting on a shared
+// the page — and centered against each other rather than sitting on a shared
 // top edge.
 .track__panel {
   flex: 0 0 auto;
@@ -50,6 +50,14 @@
   .movement__h {
     margin-bottom: 0.7em;
   }
+}
+
+// Further off the prose than a caption sits from its picture: under an image
+// 10px reads as attachment, but following a paragraph the same gap reads as
+// another line of the paragraph. This is a different register — small, muted,
+// tabular — and it needs the space to say so.
+.track__cap {
+  margin-top: 1.6em;
 }
 
 // Reduced motion, or the pin switched off in the tokens: no pin and no

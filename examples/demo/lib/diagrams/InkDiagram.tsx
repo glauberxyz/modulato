@@ -65,8 +65,8 @@ export function InkDiagram() {
         type === 0
           ? 'Separate dots: each cell’s mask is thresholded on its own, so dots stay discrete even where they overlap.'
           : type === 1
-            ? 'Ink: the four masks are summed before thresholding, so neighbouring dots merge the way wet ink does.'
-            : 'Sharp: colour is sampled per pixel rather than per cell — closer to a modern imagesetter than to a glass screen.'
+            ? 'Ink: the four masks are summed before thresholding, so neighboring dots merge the way wet ink does.'
+            : 'Sharp: color is sampled per pixel rather than per cell — closer to a modern imagesetter than to a glass screen.'
       }
     >
       <HalftoneImage

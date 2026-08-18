@@ -2,6 +2,7 @@ import { useRef, useState } from 'react'
 import { HalftoneImage } from '../HalftoneCanvas'
 import { DEFAULTS, type HalftoneUniforms } from '../halftone'
 import { Choice, Diagram, Slider } from '../Control'
+import './diagrams.scss'
 
 const WINDOWS = [
   { value: 0, label: '1×1' },
@@ -14,7 +15,7 @@ const WINDOWS = [
  * 1×1 and push coverage: the dots hit their cell walls and square off, and
  * the image can never reach solid black.
  */
-export function NeighbourDiagram() {
+export function NeighborDiagram() {
   const [win, setWin] = useState(1)
   const [flood, setFlood] = useState(0.18)
   const uniforms = useRef<HalftoneUniforms>({
@@ -31,8 +32,8 @@ export function NeighbourDiagram() {
 
   return (
     <Diagram
-      n="Fig. C"
-      title="Kill the neighbour loop"
+      n="Fig. E"
+      title="Kill the neighbor loop"
       controls={
         <>
           <Choice
@@ -63,12 +64,12 @@ export function NeighbourDiagram() {
       caption={
         win === 0
           ? 'At 1×1 each pixel only asks its own cell. Dots that grow past the cell wall are chopped off square — and the darkest the image can get is a grid of touching squares, never solid ink.'
-          : 'Asking the neighbours costs more fetches, but a dot is allowed to overlap the cells around it — which is what ink actually does on paper.'
+          : 'Asking the neighbors costs more fetches, but a dot is allowed to overlap the cells around it — which is what ink actually does on paper.'
       }
     >
       <HalftoneImage
         src="/plates/ramp-shadows.jpg"
-        alt="A tonal ramp screened with the current neighbour window"
+        alt="A tonal ramp screened with the current neighbor window"
         uniforms={uniforms}
       />
     </Diagram>

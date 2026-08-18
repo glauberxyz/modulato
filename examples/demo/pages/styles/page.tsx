@@ -40,7 +40,7 @@ const TYPE_ROLES = [
     key: 'small',
     name: 'Small',
     use: 'Captions, figure refs, running heads, metadata, footnotes, nav.',
-    sample: 'Abb. 3 · 1904 · The Half-Tone Process, Iliffe & Sons',
+    sample: 'Fig. 3 · 1904 · The Half-Tone Process, Iliffe & Sons',
   },
 ] as const
 
@@ -112,7 +112,7 @@ export default function Styles() {
           <span className="label">Specimen</span>
           <span className="label">Halftone</span>
         </div>
-        <h1 className="styles__title col-full">Type &amp; Colour</h1>
+        <h1 className="styles__title col-full">Type &amp; Color</h1>
         <p className="styles__lede col-stack-b">
           Four type styles and two surfaces. Everything on this site is built
           from what is on this page — the values below are read from the live
@@ -169,12 +169,12 @@ export default function Styles() {
         </section>
       ))}
 
-      {/* ── colour ───────────────────────────────────────────────────── */}
+      {/* ── color ───────────────────────────────────────────────────── */}
       <section className="grid styles__section">
-        <h2 className="col-aside styles__h">Colour</h2>
+        <h2 className="col-aside styles__h">Color</h2>
         <p className="col-text styles__note">
           Two surfaces: chapters print dark on paper, the index and the darkroom
-          invert. The four plate colours appear only where CMYK is the subject —
+          invert. The four plate colors appear only where CMYK is the subject —
           they are an argument, not decoration.
         </p>
       </section>
@@ -243,7 +243,7 @@ export default function Styles() {
 
       <footer className="styles__foot grid">
         <p className="col-text styles__note">
-          Colours are CSS custom properties in <code>styles/tokens.scss</code>;
+          Colors are CSS custom properties in <code>styles/tokens.scss</code>;
           type styles are mixins in <code>styles/typography.scss</code>. Motion
           numbers live separately, in <code>motion.ts</code> token modules —
           editable live in the dev overlay.

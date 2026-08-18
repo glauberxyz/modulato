@@ -18,7 +18,7 @@ export default function Home({ chapters }: { chapters: Chapter[] }) {
   const smile = useRef<HalftoneUniforms>({
     ...DEFAULTS,
     // Coarse on purpose: at 100px a fine screen puts the dots under a pixel
-    // and the whole thing greys out. ~30 cells reads as dots.
+    // and the whole thing grays out. ~30 cells reads as dots.
     size: 0.88,
     contrast: 1.5,
     softness: 0.1,
@@ -29,7 +29,7 @@ export default function Home({ chapters }: { chapters: Chapter[] }) {
     inks: ['#00a0c6', '#d81e78', '#f5c400', '#14110f'],
   })
 
-  // A reading head down the lede: each word takes the ink colour and hands
+  // A reading head down the lede: each word takes the ink color and hands
   // it back, so the highlight travels rather than accumulating. Scrubbed, so
   // the scroll position IS the playhead — scroll back up and it runs in
   // reverse. Numbers in ./motion.ts under `read`.
@@ -78,7 +78,7 @@ export default function Home({ chapters }: { chapters: Chapter[] }) {
         <h1 className="home__claim">
           There is no
           <br />
-          grey in
+          gray in
           <br />
           a printed
           <br />
@@ -87,7 +87,7 @@ export default function Home({ chapters }: { chapters: Chapter[] }) {
 
         <p className="home__lede">
           Look closely at any photograph ever printed on paper — a newspaper, a
-          magazine, a book. The greys are not there. What is there is dots:
+          magazine, a book. The grays are not there. What is there is dots:
           thousands of them, larger where the picture is dark, small enough that
           your eye gives up and averages them into tone.
         </p>
@@ -112,15 +112,15 @@ export default function Home({ chapters }: { chapters: Chapter[] }) {
       </nav>
 
       <footer className="home__foot">
-        <p className="home__by">Built with Modulato. Designed by Glauber</p>
+        <p className="home__by">Built with Modulato</p>
         <p className="home__colophon">
-          The halftone shader is Paper Design's HalftoneCmyk, Apache-2.0.
+          The halftone shader is Paper Design’s HalftoneCmyk, Apache-2.0.
           Historical images are public domain — sources are credited on each
           plate.
         </p>
         <p className="home__colophon">
           Every number on this site is a motion token: editable live in the dev
-          overlay, or by an agent over MCP. The type and colour it is built from
+          overlay, or by an agent over MCP. The type and color it is built from
           are set out in the <a href="/styles">specimen</a>.
         </p>
       </footer>

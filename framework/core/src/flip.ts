@@ -34,9 +34,25 @@ export function collectSharedPairs(
 }
 
 /**
+ * How the element renders its CONTENT inside its box. Carried onto the clone
+ * explicitly because the clone is reparented to <body>: it keeps its own class
+ * names, but any rule that reached it through an ANCESTOR — `.figure img
+ * { object-fit: contain }`, the common way to style an image — stops matching
+ * the moment it leaves that ancestor.
+ *
+ * `object-fit` is the one that shows. A FLIP animates width and height
+ * independently, so unless the two rects share an aspect ratio the box passes
+ * through shapes the image never has; at the default `fill` the picture
+ * visibly stretches on the way across, and lands correct, which reads as a
+ * glitch rather than a setting.
+ */
+const CONTENT_STYLES = ['objectFit', 'objectPosition', 'borderRadius'] as const
+
+/**
  * FLIP a shared pair: clone the outgoing element into a fixed overlay, hide
  * both originals, fly the clone from rect to rect, then reveal the target.
- * The clone keeps its class names, so CSS (object-fit, border-radius) applies.
+ * The clone keeps its class names, and the content properties above are
+ * copied across so inherited-by-descendant CSS survives the reparenting.
  *
  * `delay` postpones the FLIGHT, not the hiding: the clone is created and both
  * originals are hidden SYNCHRONOUSLY (before the reveal frame paints), so the
@@ -51,6 +67,10 @@ export async function flipShared(
   const clone = pair.from.cloneNode(true) as HTMLElement
   clone.removeAttribute('data-shared')
   clone.setAttribute('data-modulato-clone', '')
+  // Read from the SOURCE, before it is hidden — computed style is what the
+  // element actually resolved to, whichever selector got there.
+  const computed = getComputedStyle(pair.from)
+  for (const prop of CONTENT_STYLES) clone.style[prop] = computed[prop]
   Object.assign(clone.style, {
     position: 'fixed',
     margin: '0',

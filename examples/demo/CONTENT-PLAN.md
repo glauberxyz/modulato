@@ -56,7 +56,7 @@ Reading comfort comes from **measure and leading**, not more sizes. Small copy
 does a lot of work: `ABB. 3 · S. 94`-style figure refs, running heads, plate
 labels, marginal dates — exactly the density in the references.
 
-### Colour — two worlds
+### Color — two worlds
 
 ```
 Index / darkroom :  bg #14110f   fg #f4f1ea   (dark, white type)
@@ -64,8 +64,8 @@ Chapters         :  bg #f4f1ea   fg #231f20   (off-white, dark type)
 Ink accents      :  C #00a0c6  M #d81e78  Y #f5c400  K #231f20
 ```
 
-The plate colours appear *only* where a plate is being discussed — the site is
-monochrome until CMYK becomes the subject, then it earns colour.
+The plate colors appear *only* where a plate is being discussed — the site is
+monochrome until CMYK becomes the subject, then it earns color.
 
 ---
 
@@ -103,12 +103,12 @@ monochrome until CMYK becomes the subject, then it earns colour.
 Short. Three movements:
 
 1. **The claim.** "Look closely at any photograph ever printed on paper. There
-   is no grey in it." — over the live shader, which is the site's own subject.
+   is no gray in it." — over the live shader, which is the site's own subject.
 2. **The problem, in one paragraph.** A press lays ink or leaves paper bare;
-   it has no dial for 40% grey. Everything that follows is one workaround,
+   it has no dial for 40% gray. Everything that follows is one workaround,
    refined for 140 years.
 3. **The index itself.** Four chapters as an editorial contents list — roman
-   numeral, title, one-line abstract, a plate-coloured dot. Plus the origin
+   numeral, title, one-line abstract, a plate-colored dot. Plus the origin
    teaser: Talbot 1852 → Ives 1881 → Levy 1893 → the newspaper, 1880.
 
 Interaction: the background shader responds to pointer; scrolling the index
@@ -132,7 +132,7 @@ instead for fifty years.
   took a week; a full-page block ran about **$500** — two to four months of a
   skilled engraver's wages, for one picture in one issue. *(flagged
   single-source: Housatonic Museum — present as "one account records")*
-- **Chromolithography** was worse: eight to forty stones, one per colour, each
+- **Chromolithography** was worse: eight to forty stones, one per color, each
   drawn by a specialist "chromist." *(American Antiquarian Society)*
 - The real point: **every printed image was a translation by a human hand.**
   Even photographs were printed onto the block and then cut by an engraver,
@@ -143,8 +143,8 @@ instead for fifty years.
 **Figures.** Stradanus *Impressio Librorum* (ca. 1600 printing shop, Met CC0);
 *Sculptura in Aes* (engraving workshop, Met CC0).
 
-**Diagram — "Ink or nothing."** A grey slider the reader drags. Above: the
-requested continuous grey. Below: what a press can actually deposit — it snaps
+**Diagram — "Ink or nothing."** A gray slider the reader drags. Above: the
+requested continuous gray. Below: what a press can actually deposit — it snaps
 to black or white. The gap between the two bars *is* the problem the rest of
 the site solves.
 
@@ -193,7 +193,7 @@ halftones→shadows) showing dots inverting as they join up.
 
 ### III. `/angles` — Four Screens, One Sheet
 
-**What it covers.** Colour, and the geometry that makes it possible. This is
+**What it covers.** Color, and the geometry that makes it possible. This is
 the chapter with the site's best interaction.
 
 - Four plates: cyan, magenta, yellow, black. Each is its own screen.
@@ -213,7 +213,7 @@ plus a magnified rosette inset and a computed beat-wavelength readout. Set any
 pair 2° apart and the beat jumps to ~28.6 cells — the screen erupts into
 bands. *The concept failing is the lesson.*
 
-**Diagram B — grey collapses to K.** A colour picker. Drag toward neutral and
+**Diagram B — gray collapses to K.** A color picker. Drag toward neutral and
 watch C, M, Y drop to zero live. Then hit "warm the shadows" — the exact
 `mix(vec3(0.17,0.13,0.10), white, lum)` line from our own scene — and three
 plates light up. Explains a real decision in the shipped site.
@@ -230,7 +230,7 @@ result side by side, scroll-scrubbed so each paragraph highlights its lines.
 - Rotation per plate = the Levy screens' physical angles, as a `mat2`.
 - Coverage → radius → `dist = length(pos − cellCenter)` → `smoothstep`. A dot
   is a distance test.
-- **The 3×3 neighbour loop.** Why sample neighbours at all? Because a dot at
+- **The 3×3 neighbor loop.** Why sample neighbors at all? Because a dot at
   high coverage grows past its own cell. At 1×1 the dots get chopped into
   squares and the image can never reach solid black.
 - **The half-radius surprise.** `1 − smoothstep(0, radius, dist)` is a blob,
@@ -239,7 +239,7 @@ result side by side, scroll-scrubbed so each paragraph highlights its lines.
 - **Ink multiplies.** `applyInk` multiplies because ink is subtractive — each
   plate removes light. Additive blending would give you a screen, not a page.
 
-**Diagram — "Kill the neighbour loop."** Radio: 1×1 / 3×3 / 5×5, plus a
+**Diagram — "Kill the neighbor loop."** Radio: 1×1 / 3×3 / 5×5, plus a
 coverage slider and a fetch counter (4 / 36 / 100). Crank coverage at 1×1 and
 watch dots square off against their cell walls; switch to 3×3 and it heals.
 
@@ -265,7 +265,7 @@ over MCP. The demo explains its own tweakability.
 
 ## 4. Verified asset manifest
 
-16 assets, every URL fetched and licence-checked (0 rejected).
+16 assets, every URL fetched and license-checked (0 rejected).
 
 | Asset | Year | Licence | Where |
 |---|---|---|---|
@@ -297,7 +297,7 @@ worth visiting.
 | Feature | Where it shows up |
 |---|---|
 | Coexisting-page transitions | index↔chapter plate registration; chapter↔chapter paper feed |
-| `trigger` (clicked element) | dot floods from the exact click point, in the link's plate colour |
+| `trigger` (clicked element) | dot floods from the exact click point, in the link's plate color |
 | `<Shared>` + `flipShared` | chapter figure → level-3 inspector |
 | `transitions/default.ts` | ink-bleed fallback (current demo ships none) |
 | Persistent shell | running head + plate-progress marker that survives navigation |
@@ -323,7 +323,7 @@ the shader crossfades instead.
 
 1. **Scope check.** 4 chapters + index + darkroom + level-3 inspectors is the
    full plan. Trim to 3 chapters if it's too much for a demo?
-2. **Colour.** Plate colours only where CMYK is the subject — or let the whole
+2. **Color.** Plate colors only where CMYK is the subject — or let the whole
    site use ink accents?
 3. **The `/darkroom` playground** — worth building the "load your own image"
    path, or keep it to the live scene + a couple of the historical scans?

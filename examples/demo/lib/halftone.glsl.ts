@@ -2,14 +2,26 @@
  * The shaders behind this site.
  *
  * HALFTONE_FRAG is Paper Design's HalftoneCmyk fragment shader
- * (github.com/paper-design/shaders, Apache-2.0, (c) Paper Design), with ONE
- * documented change: their four screen angles were compile-time constants —
+ * (github.com/paper-design/shaders, Apache-2.0, (c) Paper Design). Their
+ * separation, their masks, their ink model; the additions below are ours and
+ * every one is marked MODIFIED at the line it touches.
  *
- *     const float cosC = 0.9659258; const float sinC = 0.2588190;  // 15deg
+ *   u_angles                  their four screen angles were compile-time
+ *                             constants (const float cosC = 0.9659258 …) and
+ *                             chapter III has to turn them, so they became a
+ *                             uniform in degrees with sin/cos per frame
+ *   u_window                  neighbor search radius, so chapter IV can break
+ *                             the 3x3 loop and show what happens
+ *   u_plates                  per-plate mute
+ *   u_noBlack                 separate with no black plate at all — not the
+ *                             same as muting K, since the normal separation
+ *                             divides each color by max(r,g,b) precisely
+ *                             BECAUSE black carries the common part
+ *   u_warm / u_cool           split-tone before separating, so a monochrome
+ *                             source has something for the color screens
+ *   u_cover / u_sourceAspect  fill the frame and crop rather than stretch
  *
- * — and chapter III needs to turn them. The constants are promoted to a
- * `u_angles` uniform (four angles, in degrees) and the sin/cos computed per
- * frame. Everything else is theirs, unedited.
+ * Everything else is theirs, unedited.
  *
  * SCENE_FRAG raymarches the ring of cuboids that the halftone screens on the
  * index and in the darkroom: SDF box, one directional light, soft shadows,
@@ -142,8 +154,27 @@ uniform float u_gainY;
 uniform float u_gainK;
 uniform float u_type;
 uniform vec4 u_angles;   /* MODIFIED: C, M, Y, K screen angles in degrees */
-uniform float u_window;  /* MODIFIED: neighbour radius — 0 = 1x1, 1 = 3x3, 2 = 5x5 */
+uniform float u_window;  /* MODIFIED: neighbor radius — 0 = 1x1, 1 = 3x3, 2 = 5x5 */
 uniform vec4 u_plates;   /* MODIFIED: per-plate on/off for the separation diagram */
+/* MODIFIED: 1 = separate with NO black plate, the naive three-ink way.
+   Not the same as muting K with u_plates: the normal separation is gray
+   component removal, where each color plate is divided by max(r,g,b) —
+   precisely BECAUSE black is carrying the common part. Take K away and
+   leave the division in and you get a washed-out picture, not the muddy
+   one printers actually got. Each ink has to carry its whole channel. */
+uniform float u_noBlack;
+/* MODIFIED: rgb = the color shadows are pulled toward, a = how far. */
+uniform vec4 u_warm;
+/* MODIFIED: the color highlights are pulled toward. */
+uniform vec3 u_cool;
+/* MODIFIED: 1 = fill the frame and crop, keeping the source's proportions.
+   0 keeps the original behavior, which stretches the source over the frame
+   whatever shape either of them is. */
+uniform float u_cover;
+/* MODIFIED: the source's OWN aspect, for that crop. Distinct from
+   u_imageAspectRatio, which sets cell geometry and is the frame's aspect
+   whenever covering — that is what keeps the dots round. */
+uniform float u_sourceAspect;
 uniform sampler2D u_noiseTexture;
 
 in vec2 v_uv;
@@ -179,23 +210,48 @@ float getUvFrame(vec2 uv, vec2 pad) {
        * smoothstep(-pad.y, 0., uv.y) * smoothstep(1. + pad.y, 1., uv.y);
 }
 
-vec3 applyContrast(vec3 rgb) { return clamp((rgb - 0.5) * u_contrast + 0.5, 0.0, 1.0); }
+/* MODIFIED: split-tone before separating — shadows toward u_warm.rgb,
+   highlights toward u_cool, by u_warm.a. Default 0 = untouched.
+
+   NOTE: no backticks anywhere below. This whole shader is a JS template
+   literal, so one in a comment ends the string and the file stops being
+   valid TypeScript several hundred lines later.
+
+   This is not a look, it is what makes a monochrome source printable in
+   color at all. The separation gives C = M = Y = (max − channel) / max,
+   which is exactly zero when r = g = b — so a neutral photograph puts
+   everything on the black plate and the other three screens have nothing to
+   carry. Chapter III says exactly that in prose; a diagram about rotating
+   four screens has to have four screens to rotate.
+
+   TWO colors and not one, and the reason is the separation itself: whichever
+   channel is largest gets a plate of zero, so a single tint kills the same
+   plate at every pixel — warm everything and cyan is gone from the whole
+   image. Warm shadows against cool highlights put the maximum in a different
+   channel at each end of the range, so the dead plate moves: yellow drops out
+   of the highlights, cyan out of the shadows, and all four screens have
+   somewhere to print. Split toning is a darkroom technique, not a trick. */
+vec3 applyContrast(vec3 rgb) {
+  vec3 c = clamp((rgb - 0.5) * u_contrast + 0.5, 0.0, 1.0);
+  float lum = dot(c, vec3(0.2126, 0.7152, 0.0722));
+  return mix(c, mix(u_warm.rgb, u_cool, lum), u_warm.a);
+}
 
 float getCyan(vec4 c4) {
   vec3 c = applyContrast(c4.rgb); float m = max(max(c.r, c.g), c.b);
-  return (m > 1e-5 ? (m - c.r) / m : 0.) * c4.a;
+  return mix((m > 1e-5 ? (m - c.r) / m : 0.), 1. - c.r, u_noBlack) * c4.a;
 }
 float getMagenta(vec4 c4) {
   vec3 c = applyContrast(c4.rgb); float m = max(max(c.r, c.g), c.b);
-  return (m > 1e-5 ? (m - c.g) / m : 0.) * c4.a;
+  return mix((m > 1e-5 ? (m - c.g) / m : 0.), 1. - c.g, u_noBlack) * c4.a;
 }
 float getYellow(vec4 c4) {
   vec3 c = applyContrast(c4.rgb); float m = max(max(c.r, c.g), c.b);
-  return (m > 1e-5 ? (m - c.b) / m : 0.) * c4.a;
+  return mix((m > 1e-5 ? (m - c.b) / m : 0.), 1. - c.b, u_noBlack) * c4.a;
 }
 float getBlack(vec4 c4) {
   vec3 c = applyContrast(c4.rgb);
-  return (1. - max(max(c.r, c.g), c.b)) * c4.a;
+  return (1. - max(max(c.r, c.g), c.b)) * c4.a * (1. - u_noBlack);
 }
 
 vec2 cellCenterPos(vec2 uv, vec2 cellOffset, float channelIdx) {
@@ -203,7 +259,14 @@ vec2 cellCenterPos(vec2 uv, vec2 cellOffset, float channelIdx) {
   return cellCenter + (randomRG(cellCenter + channelIdx * 50.) - .5) * u_gridNoise;
 }
 vec2 gridToImageUV(vec2 cellCenter, float cosA, float sinA, float shift, vec2 pad) {
-  return (mat2(cosA, -sinA, sinA, cosA) * (cellCenter - shift)) * pad + 0.5;
+  vec2 uv = (mat2(cosA, -sinA, sinA, cosA) * (cellCenter - shift)) * pad + 0.5;
+  /* Cover: sample a centered window of the source whose shape matches the
+     frame, so the source fills it and the overflow is cropped rather than
+     squashed. Every plate goes through here, so one place does all four. */
+  vec2 win = u_imageAspectRatio > u_sourceAspect
+    ? vec2(1.0, u_sourceAspect / u_imageAspectRatio)
+    : vec2(u_imageAspectRatio / u_sourceAspect, 1.0);
+  return mix(uv, (uv - 0.5) * win + 0.5, u_cover);
 }
 
 void colorMask(vec2 pos, vec2 cellCenter, float rad, float transparency, float channelAddon,

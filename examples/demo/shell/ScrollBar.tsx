@@ -10,7 +10,7 @@ import './scroll-bar.scss'
  * full-height next-chapter card, and counting that as content would both
  * slow the fill and leave it short at the moment the reader has in fact
  * finished. So the bar completes as the card's top reaches the fold — and
- * because it sits exactly there, wearing the card's own colour, the finished
+ * because it sits exactly there, wearing the card's own color, the finished
  * bar reads as the card's leading edge, which then rises into it.
  *
  * Lives in the shell, outside <PageOutlet/>, so it survives every page swap:

@@ -1,7 +1,7 @@
 @use '../styles/typography' as type;
 
 // A statement holds the fold on its own: one heading at the largest size its
-// column allows, and the copy centred beneath it.
+// column allows, and the copy centered beneath it.
 .statement {
   min-height: 100vh;
   display: flex;

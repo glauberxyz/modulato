@@ -25,7 +25,7 @@ const useIsomorphicLayoutEffect = typeof window === 'undefined' ? useEffect : us
  * Given breaks, the fit stops being a search. Each line is `nowrap`, so its
  * width is simply proportional to the size — measure once and scale by the
  * ratio. The longest line fills the column; the others fall where they fall,
- * centred and ragged, which is the shape the block is after.
+ * centered and ragged, which is the shape the block is after.
  *
  * Width is the ONLY constraint, and that is a real trade. Three fixed lines
  * filling a 1376px column want about 950px of height, which a 900px-tall
@@ -105,7 +105,7 @@ export function FluidHeading({ text, className = '' }: { text: string; className
 
 /**
  * A full-screen statement: one heading set as large as its column allows, with
- * its copy centred beneath.
+ * its copy centered beneath.
  *
  * Kept apart from the chapter so it can be dropped anywhere — it takes a
  * string and children and knows nothing about movements.

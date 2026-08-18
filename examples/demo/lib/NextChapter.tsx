@@ -17,7 +17,7 @@ import './next-chapter.scss'
  *
  * The dark panel is what makes the surface turn read as one gesture — by the
  * time the flight begins, the reader is already looking at the next
- * chapter's colour, and the outgoing page's fade dissolves it into the
+ * chapter's color, and the outgoing page's fade dissolves it into the
  * arriving paper.
  */
 export function NextChapter({ chapter }: { chapter: Chapter }) {

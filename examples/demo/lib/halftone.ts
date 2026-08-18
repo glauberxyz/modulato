@@ -10,7 +10,7 @@ export interface HalftoneUniforms {
   type: number
   /** Screen angles in degrees: C, M, Y, K. Standard is 15 / 75 / 0 / 45. */
   angles: [number, number, number, number]
-  /** Neighbour search radius: 0 = 1x1, 1 = 3x3 (correct), 2 = 5x5. */
+  /** Neighbor search radius: 0 = 1x1, 1 = 3x3 (correct), 2 = 5x5. */
   window: number
   /** Per-plate mute, 0 or 1. */
   plates: [number, number, number, number]
@@ -18,6 +18,20 @@ export interface HalftoneUniforms {
   gains: [number, number, number, number]
   inks: [string, string, string, string]
   paper: string
+  /** The field to screen, for a `color` press — an even wash of one color
+   *  instead of a photograph. Ignored by the other two sources. */
+  flat?: string
+  /** Separate with no black plate: each color ink carries its whole channel.
+   *  Not the same as muting K — see `u_noBlack` in the shader. */
+  noBlack?: boolean
+  /** Split-tone applied BEFORE the separation: `[shadow, highlight, amount]`.
+   *  A monochrome source separates onto the black plate alone, so this is what
+   *  gives the color screens anything to carry. See `u_warm` in the shader
+   *  for why it takes two colors rather than one. */
+  tone?: [string, string, number]
+  /** Fill the frame and crop, keeping the source's proportions. Default is the
+   *  original behavior: stretch the source over the frame. */
+  cover?: boolean
 }
 
 export const DEFAULTS: HalftoneUniforms = {
@@ -81,7 +95,7 @@ function compile(gl: WebGL2RenderingContext, vertSrc: string, fragSrc: string) {
  */
 export function createHalftone(
   canvas: HTMLCanvasElement,
-  opts: { source: 'scene' | 'image'; image?: HTMLImageElement } = { source: 'scene' },
+  opts: { source: 'scene' | 'image' | 'color'; image?: HTMLImageElement } = { source: 'scene' },
 ) {
   const gl = canvas.getContext('webgl2', { antialias: false, alpha: true })
   if (!gl) return null
@@ -130,6 +144,24 @@ export function createHalftone(
     imageAspect = opts.image.naturalWidth / opts.image.naturalHeight
   }
 
+  // A flat field is a ONE-PIXEL texture, stretched. Every sample returns the
+  // same color, so there is nothing an image of any other size could add —
+  // and it means changing the color is a four-byte upload rather than
+  // rebuilding the press, which is what lets a slider drive it per frame.
+  if (opts.source === 'color') {
+    gl.activeTexture(gl.TEXTURE0)
+    gl.bindTexture(gl.TEXTURE_2D, sourceTex)
+    gl.texImage2D(
+      gl.TEXTURE_2D, 0, gl.RGBA, 1, 1, 0, gl.RGBA, gl.UNSIGNED_BYTE,
+      new Uint8Array([255, 255, 255, 255]),
+    )
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST)
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST)
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE)
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE)
+  }
+  let lastFlat = ''
+
   const dpr = Math.min(window.devicePixelRatio || 1, 2)
   const resize = () => {
     const w = Math.max(1, Math.round(canvas.clientWidth * dpr))
@@ -150,6 +182,11 @@ export function createHalftone(
       gl.bindFramebuffer(gl.FRAMEBUFFER, null)
       imageAspect = w / h
     }
+    // Same for a flat field, and for the same reason: there is no picture
+    // whose shape could set this, so the CANVAS is the shape. Take the 1x1
+    // texture's own aspect of 1 instead and the cell grid comes out stretched
+    // — round dots become ovals on any stage that is not square.
+    if (opts.source === 'color') imageAspect = w / h
   }
   resize()
   const observer = new ResizeObserver(resize)
@@ -158,6 +195,22 @@ export function createHalftone(
   return {
     render(timeMs: number, h: HalftoneUniforms, scene?: SceneUniforms) {
       resize()
+      // Four bytes, and only when the color actually moved.
+      if (opts.source === 'color' && h.flat && h.flat !== lastFlat) {
+        lastFlat = h.flat
+        const [r, g, b] = rgba(h.flat)
+        gl.activeTexture(gl.TEXTURE0)
+        gl.bindTexture(gl.TEXTURE_2D, sourceTex)
+        gl.texImage2D(
+          gl.TEXTURE_2D, 0, gl.RGBA, 1, 1, 0, gl.RGBA, gl.UNSIGNED_BYTE,
+          new Uint8Array([
+            Math.round(r * 255),
+            Math.round(g * 255),
+            Math.round(b * 255),
+            255,
+          ]),
+        )
+      }
       if (opts.source === 'scene' && sceneProg && scene) {
         gl.bindFramebuffer(gl.FRAMEBUFFER, fbo)
         gl.viewport(0, 0, canvas.width, canvas.height)
@@ -182,7 +235,20 @@ export function createHalftone(
       gl.activeTexture(gl.TEXTURE1)
       gl.bindTexture(gl.TEXTURE_2D, noiseTex)
       gl.uniform1i(u(halftoneProg, 'u_noiseTexture'), 1)
-      gl.uniform1f(u(halftoneProg, 'u_imageAspectRatio'), imageAspect)
+      // Covering means the CELLS are laid out against the frame, not the
+      // source — which is what keeps a dot round when the two shapes differ.
+      // The source's own aspect goes in separately, for the crop window.
+      const frameAspect = canvas.width / canvas.height
+      gl.uniform1f(
+        u(halftoneProg, 'u_imageAspectRatio'),
+        h.cover ? frameAspect : imageAspect,
+      )
+      gl.uniform1f(u(halftoneProg, 'u_sourceAspect'), imageAspect)
+      gl.uniform1f(u(halftoneProg, 'u_cover'), h.cover ? 1 : 0)
+      const [sr, sg, sb] = rgba(h.tone?.[0] ?? '#000000')
+      const [hr, hg, hb] = rgba(h.tone?.[1] ?? '#ffffff')
+      gl.uniform4f(u(halftoneProg, 'u_warm'), sr, sg, sb, h.tone?.[2] ?? 0)
+      gl.uniform3f(u(halftoneProg, 'u_cool'), hr, hg, hb)
       gl.uniform4f(u(halftoneProg, 'u_colorBack'), ...rgba(h.paper))
       gl.uniform4f(u(halftoneProg, 'u_colorC'), ...rgba(h.inks[0]))
       gl.uniform4f(u(halftoneProg, 'u_colorM'), ...rgba(h.inks[1]))
@@ -197,6 +263,7 @@ export function createHalftone(
       gl.uniform4f(u(halftoneProg, 'u_angles'), ...h.angles)
       gl.uniform1f(u(halftoneProg, 'u_window'), h.window)
       gl.uniform4f(u(halftoneProg, 'u_plates'), ...h.plates)
+      gl.uniform1f(u(halftoneProg, 'u_noBlack'), h.noBlack ? 1 : 0)
       gl.uniform1f(u(halftoneProg, 'u_floodC'), 0)
       gl.uniform1f(u(halftoneProg, 'u_floodM'), 0)
       gl.uniform1f(u(halftoneProg, 'u_floodY'), 0)

@@ -7,12 +7,22 @@ export interface Source {
 
 export interface Movement {
   /** `statement` is a prose movement given the whole fold: its heading set as
-   *  large as the column allows, its body centred beneath. */
+   *  large as the column allows, its body centered beneath. */
   kind: 'prose' | 'figure' | 'aside' | 'diagram' | 'statement'
   heading?: string
   body: string[]
   /** figure slug, when kind === 'figure' */
   figure?: string
+  /**
+   * How wide a figure is set. Default is the field — the same centered eight
+   * columns the prose is measured against. `bleed` breaks out to the full
+   * width of the screen, inset only by the page margin.
+   *
+   * Per FIGURE and not per page, because it is a property of the picture: a
+   * wide engraving earns the whole screen, and a scan of a newspaper page —
+   * which is already a page — reads better held inside one.
+   */
+  width?: 'field' | 'bleed'
   /** diagram id, when kind === 'diagram' */
   diagram?: string
   note?: string

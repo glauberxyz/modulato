@@ -40,7 +40,7 @@ export default motion({
    *   2 clear + tint  the page fades out (which is what turns the surface
    *                   over) and the title takes the arriving page's ink,
    *                   where it stands
-   *   3 gap           breathing room: the words alone, recoloured
+   *   3 gap           breathing room: the words alone, recolored
    *   4 duration      only now do they fly
    *
    * Each direction gets its own acts, because they are not the same move.

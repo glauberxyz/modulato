@@ -1,11 +1,11 @@
 @use '../styles/typography' as type;
 
 // The chapter's tail: the index's dark surface, full bleed, so the reader
-// arrives at the next chapter's colour before its type. `.is-dark` flips the
+// arrives at the next chapter's color before its type. `.is-dark` flips the
 // surface variables, so everything inside reads --paper/--ink as usual.
 //
-// Full-bleed out of a padded page: the article is centred within the
-// viewport, so 50vw either side of the element's own centre reaches the
+// Full-bleed out of a padded page: the article is centered within the
+// viewport, so 50vw either side of the element's own center reaches the
 // edges without depending on the page's padding.
 .next {
   margin-left: calc(50% - 50vw);

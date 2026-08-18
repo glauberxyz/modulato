@@ -66,7 +66,7 @@ export default motion({
     rise: 0.6,
     fall: 2.2,
     // `rise: 0` switches the whole effect off — the lede just sits in its
-    // resting colour.
+    // resting color.
     reduced: { rise: 0 },
   },
 })

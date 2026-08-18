@@ -1,7 +1,7 @@
 import gsap from 'gsap'
 import { ScrollTrigger } from 'gsap/ScrollTrigger'
 import { Fragment, useEffect, useRef } from 'react'
-import { resolveTokens, Shared, usePage } from 'modulato'
+import { resolveTokens, Shared, useNavigation, usePage } from 'modulato'
 import { useMotion } from '@modulato/gsap'
 import site from '../motion'
 import { NextChapter } from './NextChapter'
@@ -15,7 +15,7 @@ import type { Chapter, Figure, Movement } from './content'
 gsap.registerPlugin(ScrollTrigger)
 import { AnglesDiagram } from './diagrams/AnglesDiagram'
 import { SeparationDiagram } from './diagrams/SeparationDiagram'
-import { NeighbourDiagram } from './diagrams/NeighbourDiagram'
+import { NeighborDiagram } from './diagrams/NeighborDiagram'
 import { InkDiagram } from './diagrams/InkDiagram'
 import { RulingDiagram } from './diagrams/RulingDiagram'
 import './chapter.scss'
@@ -23,7 +23,7 @@ import './chapter.scss'
 const DIAGRAMS: Record<string, () => React.JSX.Element> = {
   angles: AnglesDiagram,
   separation: SeparationDiagram,
-  neighbours: NeighbourDiagram,
+  neighbors: NeighborDiagram,
   ink: InkDiagram,
   ruling: RulingDiagram,
 }
@@ -39,7 +39,7 @@ const DIAGRAMS: Record<string, () => React.JSX.Element> = {
  * decided here rather than discovered at layout time.
  *
  * The break goes at the word boundary that leaves the halves closest in
- * length. That is what `text-wrap: balance` optimises for, but balance cannot
+ * length. That is what `text-wrap: balance` optimizes for, but balance cannot
  * be told HOW MANY lines to balance across — it takes the count the width
  * gives it. Choosing the split makes the count the constant and lets the
  * width vary, which is the way round we want.
@@ -48,7 +48,7 @@ const DIAGRAMS: Record<string, () => React.JSX.Element> = {
  * Consecutive movements sharing a `track` id, gathered into one run. Anything
  * without a track is its own run of ordinary sections, so the page is a list
  * of runs rather than a list of movements — which is what lets a group of
- * them be wrapped without the wrapper leaking around their neighbours.
+ * them be wrapped without the wrapper leaking around their neighbors.
  */
 function runs(movements: Movement[]): Array<{ track?: string; items: Array<[Movement, number]> }> {
   const out: Array<{ track?: string; items: Array<[Movement, number]> }> = []
@@ -121,6 +121,23 @@ export function ChapterView({
   const phaseRef = useRef(phase)
   phaseRef.current = phase
 
+  /**
+   * Is this arrival a RETURN from one of this chapter's own plates?
+   *
+   * A chapter unmounts when a plate opens, so coming back it mounts from
+   * nothing and every reveal is built again — and the arrival effect below
+   * then rewinds whatever is on screen to opacity 0 and plays it. The reader
+   * is looking at the exact passage they left a second ago, and it fades in
+   * underneath them. It reads as the page replaying its own opening.
+   *
+   * `useNavigation().from` is only populated while a navigation is in flight,
+   * and a page mounts DURING its own — so this is captured in a ref on the
+   * first render, when `from` still names where we came from. Reading it
+   * later would give null.
+   */
+  const nav = useNavigation()
+  const returning = useRef(nav.from?.id.startsWith(`${chapter.slug}/`) ?? false)
+
   // Scroll choreography: every movement rises as it enters. gsap.context() is
   // page-scoped and reverts on unmount, so nothing leaks into the next
   // chapter mid-transition.
@@ -147,12 +164,27 @@ export function ChapterView({
     // 76px and reveals on arrival, /angles misses it by 10 and sat blank
     // until the reader nudged the page. So anything in view on arrival is
     // played outright.
+    // Returning from a plate: no reveals at all. Not "reveal them instantly"
+    // — building them and completing them still writes opacity 0 for the
+    // frames between mount and arrival, which is the flicker itself. The page
+    // has been read; it does not perform for the reader twice.
+    //
+    // The flag is cleared once the chapter settles, so a Tweak replay (which
+    // re-runs this effect through `replayTick`) gets the reveals back.
+    if (returning.current) return undefined
+
     reveals.current = q<HTMLElement>('.movement').map((section) => {
       // `.movement__label` and not a bare `.label`: a diagram's controls
       // carry labels of their own ("Tightest beat", "Texture fetches / pixel")
       // that belong to the instrument, not to the reveal.
+      //
+      // `figure:not(.diagram figure)` because a diagram is itself a <figure>
+      // and may contain more — the pair layout holds one per column. Matched
+      // both ways, a plate took the frame's rise AND its own: twice the
+      // distance, and a fade multiplied by the fade behind it. The frame
+      // moves; what is inside it rides along.
       const targets = section.querySelectorAll(
-        '.movement__p, .movement__h, .movement__label, figure, .diagram',
+        '.movement__p, .movement__h, .movement__label, .movement__note, figure:not(.diagram figure), .diagram',
       )
       const tween = gsap.from(targets, {
         y: t.reveal.y,
@@ -192,6 +224,14 @@ export function ChapterView({
   // — see the group's note in /motion.ts.
   useEffect(() => {
     if (!element || phase !== 'active') return undefined
+    // A return has no reveals to play — none were built. Cleared here rather
+    // than at mount so the flag survives the whole arrival, and so the next
+    // run of the create effect (a breakpoint change, a Tweak replay) builds
+    // them again for a page that is now just a page.
+    if (returning.current) {
+      returning.current = false
+      return undefined
+    }
     const { body } = resolveTokens(site)
     const onScreen = reveals.current.filter(
       ({ section }) => section.getBoundingClientRect().top < window.innerHeight,
@@ -250,7 +290,7 @@ export function ChapterView({
       const n = figN
       return (
         <section className="grid movement movement--figure" key={key}>
-          <figure className="col-field">
+          <figure className={`col-field${m.width === 'bleed' ? ' is-bleed' : ''}`}>
             {/* FLIP target: this exact element morphs into the plate
                 inspector at /<chapter>/<figure>. */}
             <a href={`/${chapter.slug}/${fig.slug}`} className="movement__figlink">
@@ -262,7 +302,7 @@ export function ChapterView({
                 two-line block the weight of a caption proper — this is a
                 label on a picture, not a paragraph. */}
             <figcaption className="movement__cap figref">
-              Abb. {n} · {fig.year}. {fig.title}
+              Fig. {n} · {fig.year}. {fig.title}
             </figcaption>
           </figure>
           {copy}
@@ -314,6 +354,14 @@ export function ChapterView({
           {/* A diagram is a picture, so it takes the field and the heading
               answers it below — the same shape as a figure. */}
           <div className="col-field movement__diagram">{D ? <D /> : null}</div>
+          {/* A remark on its own row between the instrument and the prose,
+              rather than a figcaption inside the frame. A caption belongs to
+              the picture and is read with it; this is an aside about what the
+              picture means, and it earns a beat of its own — which a line
+              tucked under the plates could not have. Held to `col-main` so it
+              lands in the same column the prose below runs in: the reader's
+              column does not move, only what is in it. */}
+          {m.note && <p className="movement__note col-main">{m.note}</p>}
           {m.heading && <MovementHeading text={m.heading} />}
           {copy}
         </section>
@@ -340,14 +388,19 @@ export function ChapterView({
   const panel = (m: Movement, i: number) => {
     const key = `${chapter.slug}-${i}`
     const fig = m.figure ? byslug.get(m.figure) : undefined
+    // The rail's plates take their numbers from the SAME running count as the
+    // ones down the page — a chapter's figures are one sequence whether the
+    // reader met them descending or traveling, so /screen reads Fig. 1
+    // vertical, then 2 and 3 along the rail.
+    let n = 0
+    if (fig) {
+      figN += 1
+      n = figN
+    }
 
     return (
       <section className="track__panel grid" key={key}>
         {fig && (
-          // No caption and no Abb. number here, unlike a figure down the page:
-          // the panel's own last paragraph already says what the plate is and
-          // who issued it, so a caption would be the same sentence twice. The
-          // running count stays with the figures in the column.
           <figure className="track__figure">
             <a href={`/${chapter.slug}/${fig.slug}`} className="movement__figlink">
               <Shared id={`plate:${fig.slug}`}>
@@ -363,6 +416,22 @@ export function ChapterView({
               {p}
             </p>
           ))}
+          {/* The plate's line, under the PROSE rather than under the picture.
+              A panel is two columns side by side, so a caption hung beneath
+              the image sat alone at the bottom of the left column with the
+              text column running past it — the reference read as a stray
+              rather than as the close of the block. Ending the prose with it
+              gives the panel one bottom edge.
+
+              A <p> and not a <figcaption>: that element has to be a direct
+              child of its <figure>, and this one now lives in the text
+              column. The picture keeps its accessible name from the img's
+              `alt`, which is this same title. */}
+          {fig && (
+            <p className="track__cap figref">
+              Fig. {n} · {fig.year}. {fig.title}
+            </p>
+          )}
         </div>
       </section>
     )

@@ -15,6 +15,7 @@ declare module 'modulato/config' {
         kind: string
         figure: string
         body: unknown[]
+        width: string
       } | {
         kind: string
         heading: string
@@ -28,6 +29,7 @@ declare module 'modulato/config' {
         kind: string
         figure: string
         body: string[]
+        width: string
       }>
       sources: {
         text: string
@@ -58,6 +60,7 @@ declare module 'modulato/config' {
         kind: string
         diagram: string
         heading: string
+        note: string
         body: string[]
       }>
       sources: {
@@ -73,17 +76,18 @@ declare module 'modulato/config' {
       lede: string
       movements: Array<{
         kind: string
+        diagram: string
         heading: string
         body: string[]
       } | {
         kind: string
-        diagram: string
         heading: string
         body: string[]
       } | {
         kind: string
         figure: string
         body: string[]
+        width: string
       }>
       sources: {
         text: string
@@ -98,6 +102,11 @@ declare module 'modulato/config' {
       lede: string
       movements: Array<{
         kind: string
+        figure: string
+        body: string[]
+        width: string
+      } | {
+        kind: string
         heading: string
         body: string[]
       } | {
@@ -105,6 +114,12 @@ declare module 'modulato/config' {
         diagram: string
         heading: string
         body: string[]
+      } | {
+        kind: string
+        diagram: string
+        heading: string
+        body: string[]
+        note: string
       }>
       sources: {
         text: string
