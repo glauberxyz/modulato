@@ -39,5 +39,10 @@ that arrives with `active`. Their scrubs are seated during PREPARE and the
 window does not move again inside a transition, so leaving them enabled costs
 nothing.
 
-`@modulato/gsap` now requires `modulato >= 0.5.0` (peer), where `onPrepare`
-first exists.
+`onPrepare` arrives in `modulato@0.5.0`, and `@modulato/gsap` needs it for the
+seating above. The peer range stays wide (`>=0.1.0 <1.0.0`) — CONTRIBUTING keeps
+it that way so a core minor does not cascade the plugins to 1.0.0 — so npm will
+not enforce the pairing. Instead the hook is read off a namespace import rather
+than named: against an older core it is simply absent, the PREPARE seating is
+skipped, and everything else in the package still works. Upgrade both together
+to get it.

@@ -1,7 +1,15 @@
 import gsap from 'gsap'
 import { CustomEase } from 'gsap/CustomEase'
 import { useEffect, useLayoutEffect, useRef, useState } from 'react'
-import { easeRegistry, getMotionSpeed, usePage, useViewport, onPrepare } from 'modulato'
+import { easeRegistry, getMotionSpeed, usePage, useViewport } from 'modulato'
+// A NAMESPACE import, and deliberately so. `onPrepare` arrived in modulato
+// 0.5.0, and the peer range here is deliberately wide — CONTRIBUTING keeps it
+// at `>=0.1.0 <1.0.0` so a core minor does not cascade these plugins to 1.0.0.
+// Named-importing something an older core does not export is a link-time
+// error, which would turn a version skew into a blank page; read off the
+// namespace and it is simply absent, so the PREPARE seating is skipped and
+// everything else still works.
+import * as modulato from 'modulato'
 
 const DEV: boolean =
   typeof import.meta !== 'undefined' &&
@@ -134,7 +142,7 @@ function wireScrollTrigger(lenis: { on: (e: 'scroll', cb: () => void) => void })
  */
 const pendingBuilds = new Set<(pageEl: HTMLElement) => void>()
 if (typeof window !== 'undefined') {
-  onPrepare((incoming) => {
+  modulato.onPrepare?.((incoming: HTMLElement) => {
     for (const build of [...pendingBuilds]) build(incoming)
     // A scrubbed trigger built with its start already crossed may LERP toward
     // its position rather than snap (that is what scrub smoothing is). The
