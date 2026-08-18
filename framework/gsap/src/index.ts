@@ -62,6 +62,8 @@ interface ScrollTriggerApi {
     trigger?: Element | null
     disable: (revert?: boolean) => void
     enable: (reset?: boolean) => void
+    /** The element this trigger pins, when it pins one. */
+    pin?: Element | null
     /** The scrub setting the trigger was created with, when it has one. */
     vars?: { scrub?: number | boolean }
     /** The scrubbed tween, when there is one. */
@@ -243,12 +245,23 @@ export function useMotion(
   // jump as scrolling and fire: a chapter's whole body would reveal itself
   // in the moment before it flies away.
   //
+  // EXCEPT the ones that pin. A pin is not a reaction to scrolling, it is
+  // layout: it holds a section against the fold and gives the document the
+  // height that holding costs. Disabled, the section drops back into flow
+  // and everything below it slides up — so a page that pins spent its whole
+  // transition mis-laid-out and snapped into place on the refresh that lands
+  // with `active`. That is a second of wrongness to avoid firing an
+  // animation, and it is the wrong trade. Their scrubs are seated at PREPARE
+  // (see pendingBuilds) and the window does not move again inside a
+  // transition, so leaving them enabled costs nothing.
+  //
   // Declared after the create effect so it runs after it on the same commit.
   useEffect(() => {
     if (!element) return undefined
     const ST = scrollTrigger()
     if (!ST) return undefined
-    const mine = () => ST.getAll().filter((s) => s.trigger && element.contains(s.trigger))
+    const mine = () =>
+      ST.getAll().filter((s) => !s.pin && s.trigger && element.contains(s.trigger))
     if (phase === 'active') {
       ST.refresh()
       return undefined

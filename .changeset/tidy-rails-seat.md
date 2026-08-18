@@ -30,5 +30,14 @@ Two halves:
   twice. Scrubbed animations are then forced to their trigger's progress, so a
   scrub that would lerp toward its position cannot be measured mid-journey.
 
+Pinning triggers are also no longer disabled while a page transitions. A pin is
+not a reaction to scrolling, it is layout — it holds a section against the fold
+and gives the document the height that holding costs. Disabled, the section
+dropped back into flow and everything below it slid up, so a page that pins
+spent its entire transition mis-laid-out and snapped into place on the refresh
+that arrives with `active`. Their scrubs are seated during PREPARE and the
+window does not move again inside a transition, so leaving them enabled costs
+nothing.
+
 `@modulato/gsap` now requires `modulato >= 0.5.0` (peer), where `onPrepare`
 first exists.
