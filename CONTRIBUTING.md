@@ -113,6 +113,32 @@ edit, and the reference only reaches users via a `create-modulato` publish
 
 Verify from the registry (`npm view`, `npm pack` spot-checks), not just locally.
 
+## Vercel projects
+
+Both sites deploy the same way, and both were once configured the same wrong
+way — Root Directory at the repo root with Framework Preset "Vite", which no
+automatic build could have succeeded with.
+
+| | `modulato-org` | `modulato-demo` |
+|---|---|---|
+| serves | modulato.org | halftone.modulato.org |
+| Root Directory | `docs/site` | `examples/demo` |
+
+For both, in the Vercel dashboard (scope **glauber-house**):
+
+- **Include source files outside of the Root Directory** ON — each is an npm
+  workspace and `"modulato": "*"` only resolves from a root install
+- **Framework Preset** Other. "Vite" makes Vercel look for `dist/` and apply
+  its own routing, which loses the SSR function
+- **Output Directory** blank — `@modulato/vite` emits `.vercel/output`
+  (Build Output API v3) whenever `process.env.VERCEL` is set, which Vercel does
+  during its own builds, and that output takes precedence
+
+Each site's `vercel.json` pins framework and build command so those two are
+reviewable in git rather than dashboard-only. Root Directory and the
+include-outside toggle cannot be pinned — check the dashboard if a deploy
+behaves oddly.
+
 ## The demo's deploy
 
 `examples/demo` is the Halftone site at **halftone.modulato.org**, Vercel
