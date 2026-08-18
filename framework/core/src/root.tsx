@@ -266,7 +266,17 @@ export function ModulatoRoot({
       // A query/hash-only change on the SAME page (e.g. an overlay's ?param
       // pushed by useSearchParam) must not re-resolve or remount the page —
       // useSearchParam readers pick it up via their own popstate listener.
-      if (window.location.pathname === stateRef.current.current.path) return
+      //
+      // "The same page" is the one the URL is on, which DURING A TRANSITION is
+      // the pending entry, not the current one: the address bar was pushed to
+      // the destination when the navigation started, while `current` is still
+      // the page being animated away. Compared against `current`, a traversal
+      // back to it looked like a query-only change and was dropped — the URL
+      // became the old path while the app went on committing the new one, and
+      // the two disagreed until the next navigation. Easy to hit on a slow
+      // connection, or with a deliberately long transition.
+      const showing = stateRef.current.next?.path ?? stateRef.current.current.path
+      if (window.location.pathname === showing) return
       // A browser that natively restored the DESTINATION's scroll has just
       // moved the viewport while the OUTGOING page is still on screen — the
       // page visibly snaps to wherever the other page was left. Undone here,
@@ -275,6 +285,13 @@ export function ModulatoRoot({
       if (window.scrollY !== trueScroll.current)
         window.scrollTo(0, trueScroll.current)
       const scrollY = (event.state?.__modulatoScroll as number | undefined) ?? 0
+      // A traversal that arrives mid-transition CANCELS the one in flight and
+      // starts its own, rather than queueing behind it: the reader has asked
+      // for a different destination than the one being animated to, and
+      // finishing that first would show them a page they have already left.
+      // Nothing new is needed for it — `navigate` takes a fresh token, and the
+      // transition effect's cleanup marks the running one cancelled as soon as
+      // the pending entry changes.
       void navigate(window.location.pathname + window.location.search, {
         pop: true,
         scrollY,
