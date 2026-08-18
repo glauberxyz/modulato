@@ -113,6 +113,46 @@ edit, and the reference only reaches users via a `create-modulato` publish
 
 Verify from the registry (`npm view`, `npm pack` spot-checks), not just locally.
 
+## The demo's deploy
+
+`examples/demo` is the Halftone site at **halftone.modulato.org**, Vercel
+project `modulato-demo` under the **glauber-house** scope (the scope that owns
+`modulato.org` — a subdomain cannot attach from anywhere else).
+
+The demo builds for Vercel on its own: `@modulato/vite` emits
+`.vercel/output` (Build Output API v3) whenever `process.env.VERCEL` is set,
+which Vercel does during its own builds. So the project needs no special
+pipeline — only the right project settings, which live in the dashboard and
+are therefore invisible from here:
+
+- **Root Directory** `examples/demo`
+- **Include source files outside of the Root Directory** ON — the demo is an
+  npm workspace and `"modulato": "*"` only resolves from a root install
+- **Framework Preset** Other. "Vite" makes Vercel look for `dist/` and apply
+  its own routing, which loses the SSR function
+- **Output Directory** blank — `.vercel/output` is auto-detected and wins
+
+`examples/demo/vercel.json` pins the framework and build command so those two
+are reviewable in git rather than dashboard-only. The rest is not, so check the
+dashboard if a deploy behaves oddly.
+
+**Manual deploy**, which is also the escape hatch:
+
+```sh
+cd examples/demo && VERCEL=1 npm run build
+vercel deploy --prebuilt --prod --scope glauber-house
+```
+
+That path ignores the project settings entirely, which is why it kept working
+while the settings were wrong. It also needs `.vercel/project.json` present —
+that file is gitignored, and without it the CLI names the project after the
+FOLDER and silently creates a stray `demo` project. Run `vercel link` first if
+the directory is not linked.
+
+Without Git integration the site does not redeploy on push, and nothing says
+so: it once served a build 37 days stale while `main` moved on. If the
+integration is off, add "redeploy the demo" to the release ritual above.
+
 ## Style
 
 - Commit messages: imperative subject, body explains WHY (see `git log`).
