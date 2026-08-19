@@ -1,5 +1,5 @@
-import { useCallback, useEffect, useRef, useState } from 'react'
-import { setSearchParam, useSearchParams } from 'modulato'
+import { useRef, useState } from 'react'
+import { useSearchParam } from 'modulato'
 import { HalftoneImage } from '../../lib/HalftoneCanvas'
 import { DEFAULTS, type HalftoneUniforms } from '../../lib/halftone'
 import { Choice, Slider } from '../../lib/Control'
@@ -25,9 +25,8 @@ const PRESETS: Record<string, Partial<HalftoneUniforms>> = {
 }
 
 export default function Darkroom() {
-  // The preset lives in the URL — shareable shader state, read in render,
-  // written shallowly so nothing remounts and the canvas survives.
-  const { preset } = useSearchParams()
+  // The preset lives in the URL — shareable shader state, no remount.
+  const [preset, setPreset] = useSearchParam('preset')
   // The site's real inks on its real paper. The dark inverted palette this
   // used to run belonged to the raymarched scene, which needed to sit inside a
   // dark page; a photograph screened through actual cyan, magenta, yellow and
@@ -35,34 +34,22 @@ export default function Darkroom() {
   // negative.
   const [u, setU] = useState<HalftoneUniforms>(() => ({
     ...DEFAULTS,
-    ...PRESETS.magazine,
+    ...(PRESETS[preset ?? 'magazine'] ?? {}),
     cover: true,
   }))
 
   const uniforms = useRef<HalftoneUniforms>(u)
 
-  const patch = useCallback((next: Partial<HalftoneUniforms>) => {
+  const patch = (next: Partial<HalftoneUniforms>) => {
     const merged = { ...uniforms.current, ...next }
     uniforms.current = merged
     setU(merged)
-  }, [])
+  }
 
-  // The URL is the source of truth for the preset, and it arrives AFTER
-  // hydration: the query is client state (empty on the server and during
-  // hydration), so nothing a deep link asks for can be baked into the HTML.
-  // Reacting to it here — rather than seeding useState with it, which reads
-  // the SERVER's value and then never changes — is what makes
-  // /darkroom?preset=riso actually screen riso, and it makes Back and Forward
-  // move the plates instead of only the radio.
-  const applied = useRef<string | undefined>(undefined)
-  useEffect(() => {
-    if (preset === applied.current) return
-    applied.current = preset
-    const next = preset ? PRESETS[preset] : undefined
-    if (next) patch(next)
-  }, [preset, patch])
-
-  const applyPreset = (key: string) => setSearchParam('preset', key)
+  const applyPreset = (key: string) => {
+    setPreset(key)
+    patch(PRESETS[key] ?? {})
+  }
 
   return (
     <main className="dark-room is-dark" data-page="darkroom">
