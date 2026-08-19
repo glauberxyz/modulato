@@ -5,6 +5,22 @@ export interface SharedPair {
   to: HTMLElement
   fromRect: DOMRect
   toRect: DOMRect
+  /**
+   * The outgoing element sits inside the element that started the navigation.
+   *
+   * A shared id is a VALUE, so the same one legitimately appears on more than
+   * one surface — a list that names every item, and a "next item" card at the
+   * foot of each. Both then match on a single move, and the transition gets
+   * pairs for something the reader did not touch. That is worse than extra
+   * motion: anything measuring a bounding span across the set silently aims at
+   * the wrong region.
+   *
+   * This says which pairs the navigation is actually about, without the
+   * transition matching on the site's own class names. False for every pair
+   * when there is no trigger — a popstate, or a programmatic `navigate()` —
+   * so test it, do not assume it partitions the set.
+   */
+  withinTrigger: boolean
 }
 
 /**
@@ -15,6 +31,7 @@ export interface SharedPair {
 export function collectSharedPairs(
   fromRoot: HTMLElement,
   toRoot: HTMLElement,
+  trigger?: HTMLElement | null,
 ): SharedPair[] {
   const pairs: SharedPair[] = []
   fromRoot.querySelectorAll<HTMLElement>('[data-shared]').forEach((from) => {
@@ -28,9 +45,12 @@ export function collectSharedPairs(
       to,
       fromRect: from.getBoundingClientRect(),
       toRect: to.getBoundingClientRect(),
+      withinTrigger: !!trigger && trigger.contains(from),
     })
   })
-  return pairs
+  // Trigger-first, document order within each part. A transition that takes
+  // the first pair, or the first N, then gets the ones the reader touched.
+  return pairs.sort((a, b) => Number(b.withinTrigger) - Number(a.withinTrigger))
 }
 
 /**

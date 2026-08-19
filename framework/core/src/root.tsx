@@ -170,7 +170,7 @@ export function ModulatoRoot({
       // effects, which have not run yet, so anything they position would be
       // measured where it will never sit. See settle.ts.
       runPrepare(toEl)
-      shared = collectSharedPairs(fromEl, toEl)
+      shared = collectSharedPairs(fromEl, toEl, trigger.current)
       if (DEV) {
         checkDuplicateSharedIds(fromEl, from.routeId)
         checkDuplicateSharedIds(toEl, next.routeId)

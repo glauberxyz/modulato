@@ -269,6 +269,12 @@ export default transition({
     // (visually unmoved); `to.element` sits underneath at its final scroll.
     // `trigger` is the clicked link. `shared` are matched <Shared> pairs
     // with rects pre-measured — hand them to flipShared() to fly them.
+    // A shared id is a VALUE, so the same one can sit on more than one
+    // surface and more pairs can match than the reader touched. Each pair
+    // carries `withinTrigger` — the outgoing element is inside the clicked
+    // element — and the list is sorted with those first. It is false for
+    // every pair when there is no trigger (popstate, programmatic navigate),
+    // so test it rather than assuming it partitions the set.
     await Promise.all([
       ...shared.map((pair) => flipShared(pair, { duration: 700 })),
       from.element.animate([{ opacity: 1 }, { opacity: 0 }],

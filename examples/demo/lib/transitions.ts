@@ -273,20 +273,25 @@ export async function wordFlight(
   // of the document, `seatLanding` seated the BOTTOM of the page, and
   // `windToWords` saw something on screen and declined to wind at all.
   //
-  // Which end to test depends on the direction — entering, the chapter is the
-  // destination (`to`); leaving, it is the departure (`from`). The index side
-  // is never a card, so it is never the side to test. A card is the legitimate
-  // SOURCE of the chapter → chapter handoff, which is why only one end is
-  // constrained rather than both.
+  // Going IN, the framework already knows: the reader clicked one index entry
+  // and `withinTrigger` marks the pairs inside it, so no class name is needed
+  // and the surplus never arrives.
+  //
+  // Coming BACK there is no trigger — the running head's mark is a link, but it
+  // contains no shared elements, and a browser Back has nothing at all — so
+  // every pair reads `withinTrigger: false` and the site has to say which end
+  // it means. Here that is: the chapter's own head, not the card at its tail.
   //
   // No fallback for "nothing matched a head": the chapter end of a flight is
   // always a real head, because the one move that would land on a card — going
   // back along a handoff — deliberately isn't symmetric and never reaches
   // here. If one is ever made symmetric, the empty set below degrades to the
   // crossfade `default.ts` gives that pairing today.
-  const chapterEnd = entering ? 'to' : 'from'
+  const mine = entering
+    ? (p: SharedPair) => p.withinTrigger
+    : (p: SharedPair) => !p.from.closest('.next')
   const words = shared
-    .filter((p) => p.id.startsWith('w:') && !p[chapterEnd].closest('.next'))
+    .filter((p) => p.id.startsWith('w:') && mine(p))
     .sort((a, b) => Number(a.id.split(':')[2]) - Number(b.id.split(':')[2]))
 
   // The abstract the reader clicked. It is NOT shared — the chapter shows
