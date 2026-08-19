@@ -7,7 +7,7 @@
 Modulato projects are built for agents: scaffold with `npx modulato new`, edit
 files directly, always finish with `npx modulato check` (the contract
 validator). Every CLI command is non-interactive and takes `--json`. An MCP
-server (`npx modulato-mcp`) exposes routes, scaffolds, contracts and live
+server (`npx -y @modulato/mcp`) exposes routes, scaffolds, contracts and live
 motion tokens.
 
 Start a project:

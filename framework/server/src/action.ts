@@ -1,5 +1,7 @@
 import type { IncomingMessage, ServerResponse } from 'node:http'
 import type { Action } from 'modulato'
+import { createCookies, type CookieJar } from './cookies'
+import { nodeRequest } from './node'
 
 export interface ActionEntry {
   id: string
@@ -13,7 +15,24 @@ export interface ActionsManifest {
 
 export const ACTION_PREFIX = '/__modulato/action/'
 
-function respondJson(res: ServerResponse, status: number, body: unknown): void {
+/**
+ * Flush the handler's cookie writes, then respond.
+ *
+ * Every exit from a handler goes through here — including the throwing one.
+ * An action that clears a session and then rejects has to actually clear it,
+ * or a failed sign-out leaves the reader signed in.
+ */
+function flush(res: ServerResponse, cookies: CookieJar | null): void {
+  if (cookies?.pending.length) res.setHeader('set-cookie', [...cookies.pending])
+}
+
+function respondJson(
+  res: ServerResponse,
+  status: number,
+  body: unknown,
+  cookies: CookieJar | null = null,
+): void {
+  flush(res, cookies)
   res.statusCode = status
   res.setHeader('content-type', 'application/json')
   res.end(JSON.stringify(body))
@@ -55,33 +74,34 @@ export async function nodeAction({
       error: `"${entry.exportName}" is not an action() export`,
     })
 
-  // Parse the body through the web FormData machinery (urlencoded/multipart).
+  // Buffer the body, then build the real Request the handler receives. The
+  // form is parsed from a CLONE so the handler still gets an unread body —
+  // `form` is the convenient view, `request` the whole thing.
   const chunks: Buffer[] = []
   for await (const chunk of req) chunks.push(chunk as Buffer)
-  const headers = new Headers()
-  for (const [key, value] of Object.entries(req.headers)) {
-    if (typeof value === 'string') headers.set(key, value)
-  }
+  const request = nodeRequest(req, Buffer.concat(chunks))
   let form: FormData
   try {
-    form = await new Request('http://modulato.internal', {
-      method: 'POST',
-      headers,
-      body: Buffer.concat(chunks),
-    }).formData()
+    form = await request.clone().formData()
   } catch {
     return respondJson(res, 400, { ok: false, error: 'could not parse form data' })
   }
 
+  const cookies = createCookies(req.headers.cookie)
+
   try {
-    const data = (await def.handler({ form })) as { redirect?: string } | undefined
-    if (wantsJson) return respondJson(res, 200, { ok: true, data: data ?? null })
+    const data = (await def.handler({ form, request, cookies })) as
+      | { redirect?: string }
+      | undefined
+    if (wantsJson) return respondJson(res, 200, { ok: true, data: data ?? null }, cookies)
+    flush(res, cookies)
     res.statusCode = 303
     res.setHeader('location', data?.redirect ?? req.headers.referer ?? '/')
     res.end()
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error)
-    if (wantsJson) return respondJson(res, 400, { ok: false, error: message })
+    if (wantsJson) return respondJson(res, 400, { ok: false, error: message }, cookies)
+    flush(res, cookies)
     res.statusCode = 303
     res.setHeader('location', req.headers.referer ?? '/')
     res.end()

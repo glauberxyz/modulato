@@ -23,6 +23,21 @@ export interface HeadConfig {
   script?: import('./types').HeadScript[]
 }
 
+/**
+ * What a `response` hook is handed. Server-only, once per SSR request.
+ */
+export interface ResponseContext {
+  /** The incoming request — headers, cookies, url. */
+  request: Request
+  /**
+   * Response headers. Set or append anything; use `cookies` for `Set-Cookie`
+   * so multiple cookies don't overwrite each other.
+   */
+  headers: Headers
+  /** Read the request's cookies, and write cookies onto this response. */
+  cookies: import('./cookies').Cookies
+}
+
 export interface ModulatoConfig {
   /** Content source — e.g. localJson() from @modulato/content-local. */
   content?: ContentAdapter
@@ -52,6 +67,21 @@ export interface ModulatoConfig {
   eases?: Record<string, string>
   /** Site-wide <head> tags (favicon, manifest, fonts, default OG, analytics). */
   head?: HeadConfig
+  /**
+   * Run once per SSR request, BEFORE the page renders, to set response
+   * headers or cookies — a session refresh, a first-visit cookie, a security
+   * header. SERVER-ONLY: this file runs in Node, so it may hold secrets.
+   *
+   *   response({ request, cookies, headers }) {
+   *     headers.set('x-frame-options', 'DENY')
+   *     if (!cookies.get('visitor')) cookies.set('visitor', crypto.randomUUID(), { path: '/' })
+   *   }
+   *
+   * It does not affect what renders — it cannot see the matched route, and a
+   * cookie it sets is not visible to that request's own `load()`. Use it for
+   * the response, and `ctx.request` in `load()` for the page.
+   */
+  response?: (ctx: ResponseContext) => void | Promise<void>
   /**
    * Re-run the content adapter's `pull()` at the START of `modulato build`, so a
    * deploy ships freshly-pulled content instead of the committed

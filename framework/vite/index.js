@@ -5,6 +5,21 @@ import { transformWithEsbuild } from 'vite'
 
 const require = createRequire(import.meta.url)
 
+/**
+ * Does this URL look like something Vite's own middleware should have served?
+ *
+ * Only consulted by the SSR handler, which is mounted LAST — so anything
+ * reaching it that looks like an asset is an asset Vite could not find, and
+ * `next()` hands it Vite's 404 rather than a page with a 200.
+ */
+function isAssetRequest(url) {
+  const pathname = url.split('?')[0]
+  if (/^\/(?:@vite|@fs|@id|@react-refresh|node_modules)\b/.test(pathname)) return true
+  // An extension on the LAST segment only — /work/logo.png is an asset,
+  // /v1.2/about is a route.
+  return /\.[a-z0-9]+$/i.test(pathname.slice(pathname.lastIndexOf('/')))
+}
+
 function resolvable(dep) {
   try {
     require.resolve(dep)
@@ -234,11 +249,16 @@ export default function modulato(options = {}) {
           `import content from '${VIRTUAL.content}'`,
           `import * as actions from '${VIRTUAL.actions}'`,
           `import App from '${VIRTUAL.app}'`,
+          // Re-exported so the two callers — the dev middleware below and the
+          // Vercel launcher — build the request and write the headers the
+          // same way, without either needing @modulato/server as a dependency
+          // of its own.
+          `export { nodeRequest, applyHeaders } from '@modulato/server'`,
         ]
         if (hasConfig) lines.push(`import __config from '/modulato.config.ts'`)
-        const headArg = hasConfig ? `, head: __config?.head` : ''
+        const configArgs = hasConfig ? `, head: __config?.head, response: __config?.response` : ''
         lines.push(
-          `export const handle = (url) => render({ url, routes, App, content${headArg}, ${flags}${assetArgs} })`,
+          `export const handle = (url, request) => render({ url, request, routes, App, content${configArgs}, ${flags}${assetArgs} })`,
           `export const handleActionNode = (req, res) => nodeAction({ actions, req, res })`,
         )
         return lines.join('\n')
@@ -252,7 +272,8 @@ export default function modulato(options = {}) {
     writeBundle() {
       if (!isSsrBuild) return
       if (!process.env.VERCEL && !options.vercel) return
-      emitVercelOutput(root)
+      const config = typeof options.vercel === 'object' ? options.vercel : {}
+      emitVercelOutput(root, config, (message) => this.warn(message))
       this.info(`emitted .vercel/output (Build Output API v3)`)
     },
 
@@ -458,10 +479,28 @@ export default function modulato(options = {}) {
               return await entry.handleActionNode(req, res)
             }
             if (req.method !== 'GET') return next()
-            if (!(req.headers.accept ?? '').includes('text/html')) return next()
             const url = req.originalUrl ?? req.url ?? '/'
+            // Fall through for requests Vite's own middleware owns — assets,
+            // HMR, module transforms — and serve everything else as a page.
+            //
+            // This used to be `Accept: text/html` alone, which 404'd every
+            // client that does not name HTML: curl, wget, health checks,
+            // uptime monitors and most shell scripts all send `*/*`. The same
+            // URL answered 200 in production, so the first thing anyone does
+            // to check a dev server looked like a broken route.
+            //
+            // The path is the honest signal, but on its own it would 404 a
+            // real route with a dot in its last segment (/blog/v1.2-release),
+            // so an explicit `text/html` still wins: a browser navigating
+            // there is served, while a missing /logo.png keeps getting Vite's
+            // asset 404 instead of a page.
+            if (!(req.headers.accept ?? '').includes('text/html') && isAssetRequest(url))
+              return next()
             const entry = await server.ssrLoadModule(VIRTUAL.serverEntry)
-            const { html, status, routeId } = await entry.handle(url)
+            const { html, status, routeId, headers } = await entry.handle(
+              url,
+              entry.nodeRequest(req),
+            )
 
             // Inline the rendered page's CSS into the SSR head. In dev, Vite
             // ships CSS through JS modules, so without this the first paint
@@ -477,6 +516,10 @@ export default function modulato(options = {}) {
             }
 
             const transformed = await server.transformIndexHtml(url, withCss)
+            // Before statusCode/end — a cookie the config's `response` hook
+            // set has to reach the wire in dev exactly as it does in prod, or
+            // sign-in works in one and not the other.
+            entry.applyHeaders(res, headers)
             res.statusCode = status
             res.setHeader('Content-Type', 'text/html; charset=utf-8')
             res.end(transformed)
@@ -712,7 +755,16 @@ function generateJsxDevRuntime(root) {
     `    const file = source.fileName.startsWith(ROOT)`,
     `      ? source.fileName.slice(ROOT.length)`,
     `      : source.fileName`,
-    `    const at = file + ':' + source.lineNumber + ':' + source.columnNumber`,
+    // LINE ONLY, no column. Vite's client and SSR transforms disagree about
+    // where a parenthesised JSX expression starts (an arrow body, a ternary
+    // branch) — ~19% of host elements in a real project, by a delta that
+    // varies, so it cannot be corrected arithmetically. The attribute is the
+    // only thing that differs between the two renders, so every such element
+    // logged a React hydration mismatch. Lines always agreed, and the column
+    // bought nothing: /__modulato/open hands this to Vite's
+    // /__open-in-editor, which is happy with file:line, and an editor puts
+    // the cursor on the right line either way.
+    `    const at = file + ':' + source.lineNumber`,
     // Spread rather than assign: props may be frozen, and it is the caller's.
     `    if (!props || !props['data-modulato-source'])`,
     `      props = { ...props, 'data-modulato-source': at }`,
@@ -775,14 +827,15 @@ function clientAssets(root) {
   return { entry, styles: [...styles] }
 }
 
-const VERCEL_LAUNCHER = `import { handle, handleActionNode } from './server.js'
+const VERCEL_LAUNCHER = `import { handle, handleActionNode, nodeRequest, applyHeaders } from './server.js'
 
 export default async function (req, res) {
   try {
     if (req.method === 'POST' && (req.url ?? '').startsWith('/__modulato/action/')) {
       return await handleActionNode(req, res)
     }
-    const { html, status } = await handle(req.url ?? '/')
+    const { html, status, headers } = await handle(req.url ?? '/', nodeRequest(req))
+    applyHeaders(res, headers)
     res.statusCode = status
     res.setHeader('content-type', 'text/html; charset=utf-8')
     res.end(html)
@@ -799,9 +852,14 @@ export default async function (req, res) {
  * Emit Vercel Build Output API v3: the client build as static assets and the
  * bundled SSR module as one Node serverless function behind a catch-all.
  */
-function emitVercelOutput(root) {
+function emitVercelOutput(root, config = {}, warn = console.warn) {
   const out = path.join(root, '.vercel/output')
-  fs.rmSync(out, { recursive: true, force: true })
+  // Remove only what Modulato owns. The whole tree used to go, which meant a
+  // project with its own function had to run after this step and could never
+  // just put one there.
+  fs.rmSync(path.join(out, 'static'), { recursive: true, force: true })
+  fs.rmSync(path.join(out, 'functions/__ssr.func'), { recursive: true, force: true })
+  fs.rmSync(path.join(out, 'config.json'), { force: true })
 
   fs.cpSync(path.join(root, 'dist/client'), path.join(out, 'static'), {
     recursive: true,
@@ -817,7 +875,7 @@ function emitVercelOutput(root) {
     path.join(fn, '.vc-config.json'),
     JSON.stringify(
       {
-        runtime: 'nodejs22.x',
+        runtime: config.runtime ?? defaultVercelRuntime(warn),
         handler: 'index.mjs',
         launcherType: 'Nodejs',
         shouldAddHelpers: false,
@@ -838,6 +896,12 @@ function emitVercelOutput(root) {
             headers: { 'cache-control': 'public, max-age=31536000, immutable' },
             continue: true,
           },
+          // Caller routes go here — after the asset headers, before the
+          // filesystem phase and the SSR catch-all, which is the only window
+          // where a project's own function can win a path. Splicing them back
+          // into generated JSON afterwards was the alternative, and it reached
+          // into output whose shape nothing promised to keep.
+          ...(config.routes ?? []),
           { handle: 'filesystem' },
           { src: '/(.*)', dest: '/__ssr' },
         ],
@@ -846,6 +910,31 @@ function emitVercelOutput(root) {
       2,
     ),
   )
+}
+
+// Vercel's Node runtimes, newest last. A version outside this range is a hard
+// deploy failure, so an unknown major clamps to the newest known one WITH a
+// warning rather than shipping a runtime string Vercel will reject — and
+// `modulato({ vercel: { runtime } })` overrides it the day a new one lands,
+// so this list going stale can never block a deploy.
+const VERCEL_NODE_RUNTIMES = [20, 22, 24]
+
+/**
+ * The runtime for the SSR function: the Node major running the build, so a
+ * project on 24 does not silently deploy onto 22.
+ */
+function defaultVercelRuntime(warn = console.warn) {
+  const major = Number(process.versions.node.split('.')[0])
+  if (VERCEL_NODE_RUNTIMES.includes(major)) return `nodejs${major}.x`
+  const newest = VERCEL_NODE_RUNTIMES.at(-1)
+  const oldest = VERCEL_NODE_RUNTIMES[0]
+  const pick = major > newest ? newest : oldest
+  warn(
+    `[modulato] Node ${major} is not a Vercel runtime this version knows about — ` +
+      `the SSR function will run on nodejs${pick}.x. ` +
+      `Set modulato({ vercel: { runtime: 'nodejs${major}.x' } }) if Vercel now supports it.`,
+  )
+  return `nodejs${pick}.x`
 }
 
 /**

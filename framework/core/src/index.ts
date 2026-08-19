@@ -23,7 +23,9 @@ export type {
   ModulatoConfig,
   ModulatoContent,
   HeadConfig,
+  ResponseContext,
 } from './config'
+export type { Cookies, CookieOptions } from './cookies'
 export { useRoute, useNavigation, useRouter } from './context'
 export { useSearchParam, useSearchParams, setSearchParam, readSearchParams } from './search'
 export type { SetSearchParamOptions, SearchParams } from './search'

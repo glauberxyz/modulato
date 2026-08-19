@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 // MCP server for a Modulato project. Run from the project root:
-//   claude mcp add modulato -- npx modulato-mcp
+//   claude mcp add modulato -- npx -y @modulato/mcp
 //
 // Static tools (routes, check, scaffolds, token files) work on the file
 // system; live tools (replay, speed) relay through the dev server, and token

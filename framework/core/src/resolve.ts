@@ -24,6 +24,8 @@ export async function resolveEntry(
   key: string,
   props?: Record<string, unknown>,
   content: ContentSource = {},
+  /** SSR only — the incoming request, handed to `load()` as `ctx.request`. */
+  request?: Request,
 ): Promise<Entry | null> {
   const match = matchRoute(routes, pathname)
   if (!match) return null
@@ -43,6 +45,7 @@ export async function resolveEntry(
     params: match.params,
     path: pathname,
     content: snapshot as unknown as LoadArgs['content'],
+    request,
   }
   const resolvedProps = (props ??
     (cfg.load ? await cfg.load(loadArgs) : {}) ??

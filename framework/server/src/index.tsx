@@ -8,17 +8,28 @@ import {
   type HeadMeta,
   type HeadScript,
   type MetaResult,
+  type ModulatoConfig,
   type RouteDef,
 } from 'modulato'
+import { createCookies } from './cookies'
 
 export { nodeAction, ACTION_PREFIX } from './action'
 export type { ActionEntry, ActionsManifest } from './action'
+export { createCookies, parseCookieHeader, serializeCookie } from './cookies'
+export type { CookieJar } from './cookies'
+export { nodeRequest, requestUrl, requestHeaders, applyHeaders } from './node'
 
 export interface RenderResult {
   html: string
   status: number
   /** Matched route id — lets the dev server collect this page's CSS. */
   routeId?: string
+  /**
+   * Response headers from the config's `response` hook — including any
+   * `Set-Cookie` it wrote. Callers must apply these (`applyHeaders`); a
+   * session cookie that is never written to the wire is not a session.
+   */
+  headers: Headers
 }
 
 function escapeHtml(value: string): string {
@@ -117,6 +128,8 @@ export async function render({
   shellIntro = false,
   content = {},
   head,
+  request,
+  response,
 }: {
   url: string
   routes: RouteDef[]
@@ -132,14 +145,34 @@ export async function render({
   content?: Record<string, unknown>
   /** Site-wide <head> tags from modulato.config.ts. */
   head?: HeadConfig
+  /**
+   * The incoming request. Optional so `render({ url })` still works, but
+   * without it a page's `load()` sees `request: undefined` on the server too
+   * — which is a first paint that behaves like a client navigation.
+   */
+  request?: Request
+  /** The config's `response` hook — runs once, before the page renders. */
+  response?: ModulatoConfig['response']
 }): Promise<RenderResult> {
   const parsed = new URL(url, 'http://modulato.internal')
+
+  // The response hook runs BEFORE rendering, and outside the 404 branch: a
+  // security header or a session refresh is not something a missing page
+  // should skip.
+  const headers = new Headers()
+  if (response && request) {
+    const cookies = createCookies(request.headers.get('cookie'))
+    await response({ request, headers, cookies })
+    for (const cookie of cookies.pending) headers.append('set-cookie', cookie)
+  }
+
   const entry = await resolveEntry(
     routes,
     parsed.pathname,
     `${parsed.pathname}#0`,
     undefined,
     content,
+    request,
   )
 
   if (!entry) {
@@ -153,6 +186,7 @@ export async function render({
         head,
       }),
       status: 404,
+      headers,
     }
   }
 
@@ -175,5 +209,6 @@ export async function render({
     }),
     status: 200,
     routeId: entry.routeId,
+    headers,
   }
 }

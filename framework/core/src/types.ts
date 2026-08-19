@@ -10,6 +10,25 @@ export interface LoadArgs {
    * paint and on client-side navigation.
    */
   content: ModulatoContent
+  /**
+   * The incoming request — **server-side only, and `undefined` otherwise.**
+   *
+   * `load()` runs in BOTH places: server-side for the first paint, and in the
+   * BROWSER on every navigation after it. So this is present on the first
+   * paint of a page and absent when the reader arrives at the same page by
+   * clicking a link. Code that reads it must handle both, and it can never
+   * hold a secret — anything derived from it ends up in `props`, which ship
+   * to the client either way.
+   *
+   *   export function load({ request, params }: LoadArgs) {
+   *     if (!request) return fetch(`/api/project/${params.slug}`).then((r) => r.json())
+   *     return db.project(params.slug)          // first paint, no round trip
+   *   }
+   *
+   * `modulato check` errors on a `load()` that reads it without a guard —
+   * unguarded, it throws on the first link click and not before.
+   */
+  request?: Request
 }
 
 /** A `<link>` tag: `rel` + `href` required, any other attributes allowed. */

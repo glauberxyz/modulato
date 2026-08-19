@@ -6,7 +6,7 @@ Tweak overlay use: `list_routes`, `check`, scaffolds, `list_motion_tokens`,
 `replay` and `set_speed` against the running dev server.
 
 ```sh
-cd your-site && claude mcp add modulato -- npx modulato-mcp
+cd your-site && claude mcp add modulato -- npx -y @modulato/mcp
 ```
 
 Part of [modulato](https://www.npmjs.com/package/modulato).

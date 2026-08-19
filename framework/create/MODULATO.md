@@ -3,9 +3,11 @@
 > Modulato is a visual-design-first React framework for making websites,
 > leveraging custom transitions and animations. This file is the entire API
 > surface in one read —
-> written for humans and language models alike. If you are an agent working on
-> a Modulato project: scaffold with `npx modulato new`, edit files directly,
-> and ALWAYS finish with `npx modulato check`.
+> written for humans and language models alike. If you are an agent: create a
+> site with `npm create modulato@latest <dir>`, scaffold INSIDE one with
+> `npx modulato new page|transition|behavior|intro`, edit files directly, and
+> ALWAYS finish with `npx modulato check`. (`modulato new` needs an existing
+> site — it is the in-project scaffolder, not the site creator.)
 
 Stack: React 19 · Vite 7 · GSAP (sole animation engine) · Lenis (smooth
 scroll) · classic SSR + hydration (no RSC, no streaming).
@@ -123,6 +125,23 @@ when that list declares `restore: false`.
 `load` runs server-side for the first paint and client-side on navigations —
 same code, same `content` snapshot. `meta` sets title/description (SSR +
 client title sync).
+
+**`ctx.request` — server-only, and `undefined` otherwise.** Because `load`
+runs in both places, the request exists on the first paint and not when a
+reader reaches the same page by clicking a link. Code that reads it must
+handle both, and it can never hold a secret: whatever you derive from it
+becomes props, and props ship to the client.
+
+```ts
+export function load({ request, params }: LoadArgs) {
+  if (!request) return fetch(`/api/project/${params.slug}`).then((r) => r.json())
+  return db.project(params.slug)          // first paint — no round trip
+}
+```
+
+`modulato check` **errors** on a `load()` that reads `request` without a guard
+(an early `if (!request)` or `request?.`). Unguarded it throws on the first
+link click and not before, which is the one order nobody tests in.
 
 ### Styles & design tokens
 
@@ -347,10 +366,10 @@ using `useMotion` get it without doing anything.
 
 ### Finding the code behind a node
 
-In dev, every host element carries the file, line and column that authored it:
+In dev, every host element carries the file and line that authored it:
 
 ```html
-<h1 class="home__claim" data-modulato-source="/pages/home/page.tsx:78:9">
+<h1 class="home__claim" data-modulato-source="/pages/home/page.tsx:78">
 ```
 
 Inspect a node and you know where it came from — no grepping for a class name.
@@ -611,6 +630,30 @@ export function meta({ props }) {
 on client navigation. Public files live in `public/` and are served from the
 root (`public/favicon.svg` → `/favicon.svg`).
 
+### Response headers (the `response` hook)
+
+`<head>` is the document; this is the **response around it**. A `response`
+hook in `modulato.config.ts` runs once per SSR request, before the page
+renders, and is the only place to set a header or a cookie on a page load —
+a security header, a first-visit cookie, a session refresh.
+
+```ts
+// modulato.config.ts — server-only, so it may read secrets
+export default defineConfig({
+  response({ request, headers, cookies }) {
+    headers.set('x-content-type-options', 'nosniff')
+    headers.set('referrer-policy', 'strict-origin-when-cross-origin')
+    if (!cookies.get('visitor'))
+      cookies.set('visitor', crypto.randomUUID(), { path: '/', maxAge: 31536000 })
+  },
+})
+```
+
+It runs for 404s too, and cannot see the matched route — it is a hook on the
+request, not on the page. A cookie it sets is **not** visible to that same
+request's `load()`: the browser has it from the next request onward. It may be
+`async`. Same `cookies` API as server actions (§10).
+
 Per-page `script[]` is for crawler-facing payloads like JSON-LD:
 
 ```ts
@@ -712,6 +755,51 @@ redirect, PRG). With JS, `useFormAction` intercepts, posts via fetch, and
 drives `idle → pending → ok | error`. `data` is typed from the handler's
 return type. Convention: actions are `export const <name> = action(...)`.
 
+### The request and cookies
+
+A handler gets `request` (the whole `Request` — headers, method, url) and
+`cookies`, which is what makes a session possible: sign-in is an action that
+verifies a password and sets an httpOnly cookie.
+
+```ts
+// pages/account/server.ts
+import { action } from 'modulato'
+
+export const signIn = action(async ({ form, cookies }) => {
+  const token = await verify(String(form.get('email')), String(form.get('password')))
+  cookies.set('session', token, {
+    httpOnly: true,               // invisible to document.cookie
+    secure: true,
+    sameSite: 'lax',
+    maxAge: 60 * 60 * 24 * 7,     // SECONDS, the header's own unit
+  })
+  return { redirect: '/dashboard' }
+})
+
+export const signOut = action(async ({ cookies }) => {
+  cookies.delete('session')       // path/domain must match how it was set
+  return { redirect: '/' }
+})
+
+export const whoami = action(async ({ cookies, request }) => ({
+  user: await session(cookies.get('session')),
+  agent: request.headers.get('user-agent'),
+}))
+```
+
+- `cookies.get` / `getAll` / `set` / `delete`. Writes are collected and flushed
+  onto the response when the handler returns — including when it **throws**, so
+  an action that clears a session and then rejects still clears it.
+- A `get` after a `set` returns the new value; the jar is the request's cookies
+  with your writes applied over them.
+- `path` defaults to `/`. Without that a cookie set by an action would be
+  scoped to `/__modulato/action/…` and invisible to every page.
+- `form` is the request body already parsed. `request` still has its body
+  unread if you want it another way.
+
+`load()` cannot set a cookie — it also runs in the browser (§3). Setting
+belongs in an action or the `response` hook (§9b); reading, in either.
+
 ## 11. Feeding custom components (canvas, WebGL, r3f)
 
 Modulato ships no 3D features on purpose. Instead, ANY persistent component
@@ -742,6 +830,17 @@ when used in the shell).
 Every command is non-interactive (args only), safe to retry, and takes
 `--json` for machine-readable output. Exit codes: 0 ok, 1 error.
 
+Creating a site is a SEPARATE package (`create-modulato`) — `modulato new`
+scaffolds inside an existing site and rejects an empty directory:
+
+```
+npm create modulato@latest <dir>      new site (create-modulato; the template
+                                        declares engines.node >= 24 and ships
+                                        an .nvmrc, because its default `dev`
+                                        runs through portless — `npm run
+                                        dev:plain` works on older Node)
+```
+
 ```
 modulato dev                          dev server, SSR + HMR (runs until killed;
                                         honors PORT — scaffolded sites run it
@@ -761,13 +860,17 @@ modulato check [--json]               validate contracts — run after every edi
 
 `modulato check` catches: orphaned page companions, missing default exports,
 malformed/dangling transition pairs, a shell without `<PageOutlet/>`,
-misplaced intro.ts, invalid `eases` declarations (§7).
+misplaced intro.ts, invalid `eases` declarations (§7), and a `config.ts` that
+reads `ctx.request` without guarding for the client (§3).
 
 ## 13. MCP (agents)
 
 ```sh
-claude mcp add modulato -- npx modulato-mcp     # run from the site root
+claude mcp add modulato -- npx -y @modulato/mcp     # run from the site root
 ```
+
+The package is **`@modulato/mcp`**; `modulato-mcp` is the bin it provides, so
+naming that alone only resolves if the package is already installed locally.
 
 Tools: `list_routes`, `check`, `scaffold_page/transition/behavior/intro`,
 `list_motion_tokens`, `set_motion_tokens` (AST-preserving file write —
@@ -789,6 +892,26 @@ vercel deploy --prebuilt       # deploy exactly what was built locally
 On Vercel's own builders `VERCEL=1` is set automatically. The SSR bundle is
 dependency-free (single function). Assets ship with immutable cache headers.
 SSR HTML is always complete — view-source shows the whole page.
+
+The SSR function runs on **the Node major that ran the build**, so a project
+on Node 24 does not deploy onto 22. Pin it, or add your own routes and
+functions, through the plugin:
+
+```ts
+// vite.config.ts
+modulato({
+  vercel: {
+    runtime: 'nodejs24.x',                          // default: the build's major
+    routes: [{ src: '/api/(.*)', dest: '/api' }],   // merged before the SSR catch-all
+  },
+})
+```
+
+`routes` land after the asset cache headers and before `handle: filesystem` —
+the only window where your own function can win a path. Modulato removes only
+what it owns (`static/`, `functions/__ssr.func`, `config.json`), so a function
+your build writes to `.vercel/output/functions/` survives whichever step ran
+first.
 
 ## 15. Contracts & gotchas
 
@@ -816,6 +939,12 @@ SSR HTML is always complete — view-source shows the whole page.
 - `modulato.config.ts` runs in Node (content adapters can use fs/secrets);
   its `breakpoints` must be literal strings (statically extracted).
 - server.ts exports must be `export const <name> = action(...)`.
+- **Where the server actually is.** A server action (§10) and the `response`
+  hook (§9b) run only on the server, get the request, and can set cookies —
+  that is where sessions and secrets live. `load()` runs in BOTH places, so it
+  gets a read-only `request` that is `undefined` on client navigations and can
+  never hold a secret. Page components render in both too. If a value must
+  stay on the server, it must never become props.
 - Nested scrollable UI under Lenis needs `data-lenis-prevent` on the
   scrollable element.
 - Transitions should start their animations synchronously in `run()`.
