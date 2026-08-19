@@ -1,0 +1,84 @@
+// Design tokens — the single source for color, type and the grid.
+// CSS custom properties on :root: readable at runtime (from JS/WebGL),
+// usable from any stylesheet without an import.
+:root {
+  // Two worlds. Chapters print dark-on-paper; the index and the darkroom
+  // invert — the site's own "plate" and "proof".
+  --paper: #f4f1ea;
+  --ink: #231f20;
+  --muted: #7a7a75;
+  --rule: #d6d1c6;
+  // A second, brighter sheet for apparatus laid UNDER the argument — the
+  // chapter's sources band. Paper is warm and slightly gray; this is the
+  // white it would be printed on, so the change of surface reads as a
+  // change of register rather than as a panel.
+  --paper-bright: #ffffff;
+
+  --dark-paper: #14110f;
+  --dark-ink: #f4f1ea;
+  --dark-muted: #8b857c;
+  --dark-rule: #332e29;
+
+  // The four plates. Used ONLY where CMYK is the subject (chapter III and
+  // the plate-colored link dots) — everywhere else the site is monochrome,
+  // so the color arrives as an argument, not as decoration.
+  --plate-c: #00a0c6;
+  --plate-m: #d81e78;
+  --plate-y: #f5c400;
+  --plate-k: #231f20;
+
+  // Selection: white paper, dark ink — the same two values the site is
+  // printed with, whichever surface you are on.
+  --select-bg: #ffffff;
+  --select-fg: #231f20;
+
+  --font-sans: 'franklin-gothic-urw', 'Helvetica Neue', sans-serif;
+  --font-serif: 'adobe-garamond-pro', Georgia, serif;
+
+  // Prose size, in one step: 24px on a large screen, 22px below it.
+  //
+  // A custom property rather than a media query inside the `body` mixin,
+  // because `body-large` INCLUDES that mixin and then overrides the size —
+  // Sass hoists a nested @media below the rule it came from, so it would
+  // out-cascade the lede's 30px and shrink every lede to body size at the
+  // same breakpoint. A variable is read where it is used and cannot do that.
+  --type-body: 24px;
+
+  // 12 columns everywhere; 6 on phones. Every block is placed by column.
+  --cols: 12;
+  --gutter: 20px;
+  --margin: 32px;
+}
+
+// Page-level surface switch. `.is-dark` flips the four surface variables so
+// every component below reads --paper/--ink and needs no dark variant.
+// The mixin exists so the framework's page wrapper can adopt the same
+// surface without the class — see global.scss.
+@mixin dark {
+  --paper: #14110f;
+  --ink: #f4f1ea;
+  --muted: #8b857c;
+  --rule: #332e29;
+  // Brighter than the surface, same as on paper — a lift, not a white.
+  --paper-bright: #1c1916;
+}
+
+.is-dark {
+  @include dark;
+}
+
+// Anything that is not a large screen — the config's `tablet` breakpoint
+// begins at 768px and runs to 1279px, so this is phone and tablet together.
+@media (max-width: 1279px) {
+  :root {
+    --type-body: 22px;
+  }
+}
+
+@media (max-width: 767px) {
+  :root {
+    --cols: 6;
+    --gutter: 16px;
+    --margin: 20px;
+  }
+}

@@ -1,0 +1,71 @@
+/** Shapes for the JSON in content/ — see modulato content --json. */
+
+export interface Source {
+  text: string
+  url: string
+}
+
+export interface Movement {
+  /** `statement` is a prose movement given the whole fold: its heading set as
+   *  large as the column allows, its body centered beneath. */
+  kind: 'prose' | 'figure' | 'aside' | 'diagram' | 'statement'
+  heading?: string
+  body: string[]
+  /** figure slug, when kind === 'figure' */
+  figure?: string
+  /**
+   * How wide a figure is set. Default is the field — the same centered eight
+   * columns the prose is measured against. `bleed` breaks out to the full
+   * width of the screen, inset only by the page margin.
+   *
+   * Per FIGURE and not per page, because it is a property of the picture: a
+   * wide engraving earns the whole screen, and a scan of a newspaper page —
+   * which is already a page — reads better held inside one.
+   */
+  width?: 'field' | 'bleed'
+  /** diagram id, when kind === 'diagram' */
+  diagram?: string
+  note?: string
+  /**
+   * Consecutive movements sharing an id ride one horizontal track — laid end
+   * to end and pulled sideways while the section is pinned. The id is only an
+   * adjacency key; nothing looks it up.
+   */
+  track?: string
+}
+
+export interface Chapter {
+  slug: string
+  numeral: string
+  title: string
+  plate: 'c' | 'm' | 'y' | 'k'
+  abstract: string
+  lede: string
+  movements: Movement[]
+  sources: Source[]
+}
+
+/**
+ * The chapter after this one, wrapping past the last back to the first — the
+ * sequence is a loop, so the reader is never handed a dead end.
+ */
+export function nextChapter(chapters: Chapter[], slug: string): Chapter {
+  const i = chapters.findIndex((c) => c.slug === slug)
+  return chapters[(i + 1) % chapters.length]
+}
+
+export interface Figure {
+  slug: string
+  title: string
+  credit: string
+  year: string
+  license: string
+  source: string
+  chapter: string
+  note: string
+}
+
+export interface Content {
+  chapters: Chapter[]
+  figures: Figure[]
+}

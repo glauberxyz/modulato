@@ -203,6 +203,8 @@ const activeId = (nav.to ?? route).id   // switches the moment navigation starts
 | `useScroll(cb)` | anywhere | smooth-scroll frames `{ scroll, limit, velocity, progress }`. Inside a page: that page's scroll. In the shell: the ACTIVE page's scroll, surviving navigations |
 | `useTicker(cb)` | anywhere | per-frame `(time, delta)` on the single RAF ticker, auto-cleaned. Runs on the motion clock: dev slow-mo scales `delta`, and `time` advances by the scaled deltas |
 | `useViewport()` | anywhere | reactive `{ width, height, dpr, breakpoint, reducedMotion, isPhone, isTablet, isDesktop }` |
+| `useSearchParam(key)` | anywhere | `[value, set]` for one query param — reactive read, SHALLOW write (no remount). `null` on the server and during hydration |
+| `useSearchParams()` | anywhere | the whole query as `{ key: value }`, same contract — empty on the server and during hydration |
 | `useFormAction(ref)` | inside a page | progressive server-action form wiring (§10) |
 | `useMotion(fn)` | inside a page — from **@modulato/gsap** | page-scoped `gsap.context()`: selectors scoped to the page, everything auto-reverted on unmount, re-run on breakpoint change and Tweak replays |
 
@@ -225,6 +227,37 @@ useMotion(({ q, gsap }) => {
   return () => { /* optional extra teardown */ }
 })
 ```
+
+### URL state (the query)
+
+UI state that belongs in the URL — an open overlay, a selected tab, a preset —
+lives in the query, not in a route. Writing is a SHALLOW history update: the
+router does not re-resolve the entry or remount the page, so the page keeps its
+scroll, its canvases and its WebGL context while the address bar changes.
+
+```tsx
+import { useSearchParam, useSearchParams, setSearchParam } from 'modulato'
+
+const [company, setCompany] = useSearchParam('company')
+setCompany('aero')                        // pushState — Back closes the overlay
+setCompany(null)                          // removes the param
+setCompany('layer', { replace: true })    // no new history entry
+
+const { tab, preset } = useSearchParams() // every param, same reactivity
+setSearchParam('tab', 'team')             // the same write, outside React
+```
+
+**The query is client state.** It is never part of the SSR'd HTML — both hooks
+read empty on the server AND during hydration, which is what keeps a deep link
+from mismatching. So a deep-linked param arrives one render AFTER hydration:
+*react* to it in an effect (an overlay animates itself open; a preset applies
+itself), never seed `useState` from it — that captures the server's value and
+then never changes, leaving a control that claims one thing while the page
+shows another.
+
+`useRoute().path` is the pathname only, and `RouteInfo` carries no query on
+purpose: a shallow write leaves the route entry untouched, so any query copied
+onto it would be authoritative-looking and wrong the moment an overlay opened.
 
 ## 6. Intros (first load) and transitions (navigation)
 
@@ -772,4 +805,6 @@ SSR HTML is always complete — view-source shows the whole page.
 - Nested scrollable UI under Lenis needs `data-lenis-prevent` on the
   scrollable element.
 - Transitions should start their animations synchronously in `run()`.
+- Query params are client state: empty on the server and during hydration.
+  Apply a deep-linked param in an effect, never as a `useState` seed.
 - After ANY structural edit: `npx modulato check`.

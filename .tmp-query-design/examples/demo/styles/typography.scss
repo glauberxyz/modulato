@@ -1,0 +1,74 @@
+// The type system. Pages @use this file and @include; they never declare
+// font properties directly, so changing type here changes it everywhere.
+//
+// Every style below carries `text-wrap: balance`. Three of them say so —
+// `title`, `body` and `small` — and the other three get it by composition:
+// `display` includes `title`, `body-large` includes `body`, `label` includes
+// `small`. Declaring it in the type system rather than leaning on inheritance
+// from <body> means a style keeps its wrapping wherever it is used, including
+// inside anything that sets `text-wrap` for its own reasons. Browsers cap
+// balancing at a few lines and fall back on long prose, so this is a setting
+// for headings and short blocks that costs paragraphs nothing.
+
+// Franklin Gothic, heavy. Chapter titles, numerals, pull quotes.
+@mixin title {
+  font-family: var(--font-sans);
+  font-weight: 900;
+  font-size: 40px;
+  line-height: 0.95;
+  letter-spacing: -0.03em;
+  text-wrap: balance;
+}
+
+// The Title style at display scale — chapter openers and the index claim.
+// Not a separate style: same face and weight, sized fluidly. Declared once
+// here so the ceiling is a single edit.
+@mixin display {
+  @include title;
+  font-size: clamp(44px, 9vw, 90px);
+}
+
+// Adobe Garamond. All prose. The size steps down below a large screen — see
+// `--type-body` in tokens.scss, which is where that step is declared.
+@mixin body {
+  font-family: var(--font-serif);
+  font-weight: 400;
+  font-size: var(--type-body);
+  line-height: 1.32;
+  letter-spacing: -0.01em;
+  text-wrap: balance;
+}
+
+// Garamond, larger. Ledes and opening paragraphs — the step between a title
+// and running prose. Tighter leading than body, since the lines are longer.
+@mixin body-large {
+  @include body;
+  font-size: 30px;
+  line-height: 1.2;
+}
+
+// Franklin Gothic, regular. Captions, figure refs, running heads, metadata,
+// footnotes, nav — the layer that does most of the editorial work.
+@mixin small {
+  font-family: var(--font-sans);
+  font-weight: 400;
+  font-size: 14px;
+  line-height: 1.5;
+  letter-spacing: 0;
+  text-wrap: balance;
+}
+
+// Small uppercase copy — labels and running heads only. Set solid: the caps
+// carry the distinction on their own, and tracking them out turned every
+// label into a texture you read letter by letter.
+//
+// The ONE definition of this style. Everything that is a label wears the
+// global `.label` class (global.scss) rather than including this mixin again
+// — so a change here reaches the running head, the contents and sources
+// headings, the next-chapter card, the diagram readouts and the plate meta
+// in one edit.
+@mixin label {
+  @include small;
+  text-transform: uppercase;
+  letter-spacing: 0;
+}

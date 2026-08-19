@@ -1,0 +1,237 @@
+@use '../../styles/typography' as type;
+
+.styles {
+  padding-bottom: 14vh;
+}
+
+// Off-screen probe used to read the inverted surface's computed values.
+.styles__probe {
+  position: absolute;
+  left: -9999px;
+  width: 1px;
+  height: 1px;
+}
+
+.styles__head {
+  padding-top: 22vh;
+  padding-bottom: 6vh;
+  row-gap: 18px;
+}
+
+.styles__meta {
+  display: flex;
+  justify-content: space-between;
+  padding-bottom: 12px;
+  border-bottom: 1px solid var(--ink);
+}
+
+.styles__title {
+  @include type.display;
+  margin: 0;
+}
+
+.styles__lede {
+  @include type.body-large;
+  max-width: 40ch;
+  margin-top: 3vh;
+}
+
+.styles__section {
+  padding-block: 5vh 2vh;
+  align-items: start;
+}
+
+.styles__h {
+  @include type.title;
+  font-size: clamp(24px, 2.4vw, 32px);
+}
+
+.styles__note {
+  @include type.small;
+  color: var(--muted);
+  max-width: 58ch;
+
+  code {
+    font-family: var(--font-sans);
+    color: var(--ink);
+  }
+}
+
+.styles__sublabel {
+  display: block;
+  padding-bottom: 10px;
+  border-bottom: 1px solid var(--ink);
+  margin-bottom: 14px;
+}
+
+// ── type specimens ───────────────────────────────────────────────────
+.styles__type {
+  padding-block: 4vh;
+  border-top: 1px solid var(--rule);
+  align-items: start;
+}
+
+.styles__typemeta .label {
+  display: block;
+  margin-bottom: 10px;
+}
+
+.styles__use {
+  @include type.small;
+  color: var(--muted);
+  max-width: 30ch;
+  margin-bottom: 16px;
+}
+
+.styles__clamp {
+  font-size: 12px;
+  color: var(--muted);
+}
+
+.styles__caveat {
+  @include type.small;
+  color: var(--muted);
+  max-width: 28ch;
+  margin-top: 12px;
+  padding-top: 10px;
+  border-top: 1px solid var(--rule);
+}
+
+.styles__spec {
+  @include type.small;
+  display: grid;
+  grid-template-columns: 8ch 1fr;
+  gap: 3px 10px;
+  margin: 0;
+
+  dt {
+    color: var(--muted);
+  }
+  dd {
+    margin: 0;
+    font-variant-numeric: tabular-nums;
+  }
+}
+
+.styles__sample {
+  margin: 0;
+
+  // The chapter-opener size — the Title style, scaled with the viewport.
+  &--display {
+    @include type.display;
+  }
+  &--title {
+    @include type.title;
+  }
+  &--body-large {
+    @include type.body-large;
+    max-width: 40ch;
+  }
+  &--body {
+    @include type.body;
+    max-width: 46ch;
+  }
+  &--small {
+    @include type.small;
+  }
+}
+
+// ── color ───────────────────────────────────────────────────────────
+.styles__swatches {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.styles__swatches--dark {
+  background: var(--paper);
+  color: var(--ink);
+  padding: 16px;
+}
+
+.styles__swatch {
+  display: grid;
+  grid-template-columns: 34px 10ch 9ch 1fr;
+  align-items: center;
+  gap: 12px;
+  padding: 9px 0;
+  border-bottom: 1px solid var(--rule);
+
+  &:last-child {
+    border-bottom: 0;
+  }
+}
+
+.styles__chip {
+  width: 34px;
+  height: 22px;
+  border: 1px solid var(--rule);
+}
+
+.styles__swatchname {
+  @include type.small;
+}
+
+.styles__hex {
+  @include type.small;
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
+  text-transform: uppercase;
+}
+
+.styles__swatchnote {
+  @include type.small;
+  color: var(--muted);
+}
+
+.styles__plates {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: var(--gutter);
+
+  li {
+    display: grid;
+    gap: 6px;
+  }
+}
+
+.styles__platechip {
+  height: 90px;
+  margin-bottom: 6px;
+}
+
+// ── grid ─────────────────────────────────────────────────────────────
+.styles__gridshow {
+  padding-block: 2vh 6vh;
+}
+
+.styles__col {
+  @include type.small;
+  grid-column: span 1;
+  background: var(--muted);
+  color: var(--paper);
+  opacity: 0.18;
+  text-align: center;
+  padding: 22px 0;
+  font-variant-numeric: tabular-nums;
+}
+
+.styles__foot {
+  padding-top: 6vh;
+  border-top: 1px solid var(--rule);
+}
+
+@media (max-width: 767px) {
+  .styles__plates {
+    grid-template-columns: repeat(2, 1fr);
+  }
+  .styles__swatch {
+    grid-template-columns: 28px 8ch 1fr;
+  }
+  .styles__swatchnote {
+    display: none;
+  }
+}

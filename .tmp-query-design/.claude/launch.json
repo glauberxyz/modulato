@@ -1,0 +1,67 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "demo",
+      "runtimeExecutable": "npm",
+      "runtimeArgs": [
+        "run",
+        "dev"
+      ],
+      "port": 5173,
+      "autoPort": true
+    },
+    {
+      "name": "demo-prod",
+      "runtimeExecutable": "npm",
+      "runtimeArgs": [
+        "run",
+        "preview",
+        "-w",
+        "examples/demo"
+      ],
+      "port": 4173
+    },
+    {
+      "name": "site",
+      "runtimeExecutable": "npm",
+      "runtimeArgs": [
+        "run",
+        "dev:plain",
+        "-w",
+        "docs/site"
+      ],
+      "port": 5174
+    },
+    {
+      "name": "glauber-v2",
+      "runtimeExecutable": "npm",
+      "runtimeArgs": [
+        "run",
+        "dev:plain",
+        "--prefix",
+        "/Users/glauber/Documents/Github/glauber-2026-v2",
+        "--",
+        "--port",
+        "5175",
+        "--strictPort"
+      ],
+      "port": 5175
+    },
+    {
+      "name": "expa-modulato",
+      "runtimeExecutable": "npm",
+      "runtimeArgs": [
+        "run",
+        "dev:plain",
+        "--prefix",
+        "/Users/glauber/Documents/Github/Expa-Website-Modulato",
+        "--",
+        "--port",
+        "5180",
+        "--strictPort"
+      ],
+      "port": 5180
+    }
+  ]
+}

@@ -1,0 +1,31 @@
+{
+  "name": "@modulato/content-local",
+  "version": "0.1.1",
+  "description": "Local JSON content adapter for Modulato: content/*.json becomes the typed content snapshot.",
+  "license": "MIT",
+  "homepage": "https://github.com/glauberxyz/modulato#readme",
+  "type": "module",
+  "exports": {
+    ".": {
+      "types": "./src/index.d.ts",
+      "default": "./src/index.mjs"
+    }
+  },
+  "files": [
+    "src",
+    "README.md",
+    "LICENSE"
+  ],
+  "engines": {
+    "node": ">=20"
+  },
+  "peerDependencies": {
+    "modulato": ">=0.1.0 <1.0.0"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/glauberxyz/modulato.git",
+    "directory": "framework/content-local"
+  },
+  "bugs": "https://github.com/glauberxyz/modulato/issues"
+}

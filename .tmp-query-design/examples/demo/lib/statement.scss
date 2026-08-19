@@ -1,0 +1,57 @@
+@use '../styles/typography' as type;
+
+// A statement holds the fold on its own: one heading at the largest size its
+// column allows, and the copy centered beneath it.
+.statement {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  padding-block: 10vh;
+  // A gutter, not a margin. The heading fills whatever column it is given, so
+  // this is the one place that decides how close to the glass the type comes;
+  // set it to 0 for true edge-to-edge.
+  padding-inline: var(--margin);
+}
+
+.statement__title {
+  @include type.title;
+  // The SIZE is not here. It is measured against the rendered line boxes in
+  // Statement.tsx, because a column's width and the width the type comes to
+  // are the same number only by accident. What is here is the fallback for
+  // the frame before that runs — and for no JS at all — so the heading is
+  // never unstyled, only less exact.
+  font-size: clamp(40px, 13vw, 190px);
+  // A further 5% down, and 15% under the 0.92 this started at. At this size the
+  // leading is the gap between three heavy lines rather than the rhythm of a
+  // paragraph, so it goes well below the type system's default — every 1% here
+  // is roughly 10px of block height at a laptop width.
+  line-height: 0.786;
+  // Tighter than the title style's -0.03em. At this size the default tracking
+  // reads loose; the fit picks the difference up on its own, since narrower
+  // lines simply mean a larger size is needed to reach the edge.
+  letter-spacing: -0.04em;
+  text-align: center;
+  margin: 0;
+}
+
+// One line, and it does not re-wrap. The breaks are the author's — see
+// Statement.tsx — so the browser is not choosing here, which is also what
+// makes a line's width proportional to the size and the fit a measurement
+// rather than a search. `nowrap` supersedes the type system's `balance`.
+.statement__line {
+  display: block;
+  white-space: nowrap;
+}
+
+.statement__copy {
+  @include type.body;
+  max-width: 44ch;
+  margin: 7vh auto 0;
+  text-align: center;
+
+  .movement__p + .movement__p {
+    margin-top: 0.85em;
+  }
+}
+

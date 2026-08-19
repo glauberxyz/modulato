@@ -73,3 +73,42 @@ export function useSearchParam(
   )
   return [value, set]
 }
+
+// Cached parse. useSyncExternalStore compares snapshots by IDENTITY, so
+// getSnapshot must return the same object until the query actually changes —
+// parsing on every call is an infinite render loop. The raw search string is
+// the cache key, and it is the only state this needs.
+const EMPTY_QUERY: Record<string, string> = {}
+let cachedSearch: string | null = null
+let cachedQuery: Record<string, string> = EMPTY_QUERY
+
+function readQuery(): Record<string, string> {
+  const search = window.location.search
+  if (search !== cachedSearch) {
+    cachedSearch = search
+    const next: Record<string, string> = {}
+    // First value wins, so a repeated key reads the same here as through
+    // useSearchParam (URLSearchParams.get returns the first).
+    for (const [key, value] of new URLSearchParams(search)) next[key] ??= value
+    cachedQuery = next
+  }
+  return cachedQuery
+}
+
+/**
+ * The whole query, reactive to the same shallow writes and Back/Forward as
+ * `useSearchParam`. Read it in render — no trip to `location.search`:
+ *
+ *   const { preset = 'magazine', tab } = useSearchParams()
+ *
+ * EMPTY on the server and during hydration — the same contract as
+ * `useSearchParam` returning null there, and for the same reason: the query is
+ * client state, never part of the SSR'd HTML, so a deep-linked overlay opens
+ * (and animates) after hydration instead of mismatching. Seed `useState` from
+ * it and you get the server's value forever; react to it in an effect.
+ *
+ * Repeated keys keep the first value (`?tag=a&tag=b` → `{ tag: 'a' }`).
+ */
+export function useSearchParams(): Record<string, string> {
+  return useSyncExternalStore(subscribe, readQuery, () => EMPTY_QUERY)
+}

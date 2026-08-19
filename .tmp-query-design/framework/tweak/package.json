@@ -1,0 +1,49 @@
+{
+  "name": "@modulato/tweak",
+  "version": "0.4.0",
+  "description": "Tweak Mode for Modulato: dev overlay for motion tokens with save-back into source files.",
+  "license": "MIT",
+  "homepage": "https://github.com/glauberxyz/modulato#readme",
+  "type": "module",
+  "exports": {
+    "./overlay": "./src/overlay.tsx",
+    "./middleware": "./src/middleware.mjs",
+    "./tokens": "./src/tokens.mjs"
+  },
+  "files": [
+    "src",
+    "README.md",
+    "LICENSE"
+  ],
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "build:css": "tailwindcss -i src/theme.css -o src/overlay.css --minify && node scripts/postprocess.mjs"
+  },
+  "dependencies": {
+    "@base-ui/react": "^1.0.0",
+    "class-variance-authority": "^0.7.1",
+    "clsx": "^2.1.1",
+    "magicast": "^0.3.5",
+    "tailwind-merge": "^3.0.0"
+  },
+  "peerDependencies": {
+    "modulato": ">=0.1.0 <1.0.0",
+    "react": "^18.0.0 || ^19.0.0",
+    "react-dom": "^18.0.0 || ^19.0.0"
+  },
+  "devDependencies": {
+    "@tailwindcss/cli": "^4.0.0",
+    "@types/react": "^19.0.0",
+    "shadcn": "^4.0.0",
+    "tailwindcss": "^4.0.0",
+    "tw-animate-css": "^1.0.0"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/glauberxyz/modulato.git",
+    "directory": "framework/tweak"
+  },
+  "bugs": "https://github.com/glauberxyz/modulato/issues"
+}

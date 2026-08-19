@@ -1,0 +1,22 @@
+// Shared typography — every text style in the project, as mixins.
+// Page styles @use this file and @include; they never declare font
+// properties directly, so retypesetting the site is a one-file change.
+
+@mixin headline {
+  font-family: var(--font-sans);
+  font-size: clamp(3rem, 8vw, 6.5rem);
+  letter-spacing: -0.03em;
+  line-height: 1;
+}
+
+@mixin body {
+  font-family: var(--font-sans);
+  font-size: 1.125rem;
+  line-height: 1.7;
+}
+
+@mixin small {
+  font-family: var(--font-sans);
+  font-size: 0.875rem;
+  line-height: 1.4;
+}

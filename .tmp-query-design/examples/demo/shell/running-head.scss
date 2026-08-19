@@ -1,0 +1,44 @@
+@use '../styles/typography' as type;
+
+.runhead {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 30;
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--gutter);
+  // Equal on every side, and equal to the page gutter, so it lines up
+  // with the grid on the chapter pages.
+  padding: var(--margin);
+  // difference blend keeps it legible over either surface without the shell
+  // needing to know which page is under it.
+  mix-blend-mode: difference;
+  color: #f4f1ea;
+  pointer-events: none;
+
+  a {
+    pointer-events: auto;
+    text-decoration: none;
+  }
+}
+
+.runhead__mark,
+.runhead__end {
+  // Same size, same weight — the Darkroom link is not more important
+  // than the site's own name.
+  @include type.small;
+  opacity: 0.85;
+
+  &:hover {
+    opacity: 1;
+  }
+}
+
+@media (max-width: 767px) {
+  .runhead__mark {
+    max-width: 22ch;
+  }
+}

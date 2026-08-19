@@ -1,0 +1,298 @@
+@use '../styles/typography' as type;
+
+.chapter {
+  // No trailing padding: the chapter ends ON the next-chapter card, which is
+  // full-bleed and carries its own height. Any space below it would read as
+  // the page continuing past the handoff.
+  padding-bottom: 0;
+}
+
+.chapter__head {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  padding: 16vh var(--margin) 12vh;
+}
+
+.chapter__title {
+  @include type.display;
+  margin: 0;
+  max-width: 12ch;
+
+  // Words stack — this is where the index's inline words land. A flex
+  // column, so each word's box hugs its OWN glyphs: as plain blocks they
+  // were all full-width, and the transition measured every word as the
+  // same 256px container instead of the letters it has to fly to.
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.chapter__lede {
+  @include type.body-large;
+  max-width: 32ch;
+  margin-top: 0.6em;
+}
+
+// ── movements ────────────────────────────────────────────────────────
+.movement {
+  padding-block: 6vh;
+  row-gap: 24px;
+  align-items: start;
+}
+
+.movement__h {
+  @include type.title;
+  font-size: clamp(24px, 2.4vw, 32px);
+}
+
+// An aside's heading is a LABEL, not a small heading — so it wears the global
+// `.label` class and this adds only its rule and spacing. It used to re-include
+// the label mixin here, which made chapter.scss a second place the style was
+// described; letter-spacing had to be changed in two files to change once.
+.movement__label {
+  display: block;
+  padding-bottom: 10px;
+  margin-bottom: 10px;
+  border-bottom: 1px solid var(--rule);
+}
+
+.movement__p {
+  @include type.body;
+  max-width: 62ch;
+
+  // Space between paragraphs, and no first-line indent. The two are
+  // alternative ways to mark a paragraph break and using both marks it twice.
+  & + & {
+    margin-top: 0.85em;
+  }
+}
+
+.movement__note {
+  @include type.small;
+  color: var(--muted);
+  margin-top: 12px;
+  padding-top: 10px;
+  border-top: 1px solid var(--rule);
+}
+
+// The aside's rule, spanning the whole field above the text.
+.movement__band {
+  border-top: 2px solid var(--ink);
+  align-self: start;
+}
+
+// Tighter than the other movements: the band is the aside's own top edge, so
+// it should sit close to the text it opens rather than float above it.
+//
+// And no vertical padding of its own. Every movement carries 6vh, so the
+// prose above and the figure below already stand it off by that much on each
+// side — its own band would have been adding a third and fourth helping of
+// the same space.
+.movement--aside {
+  padding-block: 0;
+  row-gap: 10px;
+}
+
+.chapter__aside {
+  .movement__p {
+    @include type.small;
+    max-width: 52ch;
+  }
+}
+
+// ── figures ──────────────────────────────────────────────────────────
+.movement--figure figure {
+  margin: 0;
+}
+
+// No fill behind the picture. It was a placeholder for the moment before an
+// image loads, and it cost more than it bought: on a track panel the image is
+// letterboxed inside its column, so the rule color showed as a band down
+// each side of the plate.
+.movement__figlink {
+  display: block;
+  overflow: hidden;
+
+  img {
+    width: 100%;
+    // Numbers from the site's `figure` motion group, set on the page root by
+    // ChapterView. The fallbacks are NEUTRAL rather than a second copy of the
+    // values: before JS runs there is simply no hover, which keeps the token
+    // the only place the gesture is described.
+    transition: scale var(--fig-hover-duration, 0s) var(--fig-hover-ease, linear);
+  }
+
+  &:hover img {
+    scale: var(--fig-hover, 1);
+  }
+}
+
+// One line, set as a figure reference — see the `figref` class it carries.
+.movement__cap {
+  display: block;
+  margin-top: 10px;
+}
+
+// ── diagrams ─────────────────────────────────────────────────────────
+// Bottom only. The frame inside is 100vh on a large screen and centers its
+// own contents (control.scss), so a top padding was pushing a module that
+// asks for exactly one screen down past the fold — it could never sit
+// against the top of the viewport, which is the one position that makes a
+// full-height module read as full-height.
+//
+// Nothing is lost by removing it: whatever precedes a diagram carries its own
+// bottom padding — 6vh from an ordinary movement, 10vh from a statement — so
+// the gap above is set by the neighbor, the same way `.movement--aside`
+// leans on both of its.
+.movement--diagram {
+  padding-block: 0 9vh;
+
+  // Far more than the 24px a movement's rows normally take. What sits above
+  // is a full screen of instrument — the reader has been operating something,
+  // not reading — and the prose underneath is a change of activity, not the
+  // next paragraph of the same one. At the ordinary gap the copy read as a
+  // caption that had slipped its picture.
+  //
+  // In vh like the padding around it, so the break scales with the screen the
+  // diagram just filled rather than staying a fixed number under it.
+  row-gap: 8vh;
+}
+
+// No rule above the note here. In an aside it sits directly under that aside's
+// own paragraphs, and the hairline is what marks the change of register; on a
+// diagram it is already alone on its row with a screen's width of white above
+// it, so the line was drawing a boundary the layout had drawn twice over. The
+// padding goes with it — it only ever existed to hold the text off the rule.
+.movement--diagram .movement__note {
+  border-top: 0;
+  padding-top: 0;
+}
+
+// On a large screen the interactive modules leave the field and take the whole
+// width — the grid carries no side padding, so spanning every column IS 100vw.
+// The frame's own 12-column split lives in control.scss.
+//
+// Two classes deep so it beats `.col-field` on specificity rather than on
+// stylesheet order, which is not ours to depend on: both are single-class
+// selectors, and which file Vite emits last is an implementation detail.
+// From 1024, not 1280 — the width where these blocks stop sharing the field
+// with anything. Gated at 1280 they spent the range between the two sitting
+// inside `col-field`'s clear column, which is a WIDER inset than the page's
+// own margin: the module read as narrower than the running head above it,
+// and it read that way precisely where the screen had least to give.
+@media (min-width: 1024px) {
+  .movement--diagram .movement__diagram {
+    grid-column: 1 / -1;
+  }
+
+  // A plate can take the whole width, on the same terms as a diagram: every
+  // column, with a MARGIN for its inset rather than clear columns. The
+  // pictures are the chapter's evidence — the scans you are meant to look
+  // into and see dots in — and at eight columns some were being shown at
+  // less than the screen could give them.
+  //
+  // OPT-IN, from the figure's own `width` in the content, so the plate that
+  // does not want it simply says nothing and keeps `col-field`. Written the
+  // other way round — bleed by default with an override to pull it back —
+  // the override would have to restate col-field's spans at every breakpoint,
+  // and grid.scss exists precisely so those numbers live in one place.
+  //
+  // The caption and the prose stay where they were either way. Only the
+  // picture grows; the reader's column does not move.
+  .movement--figure figure.is-bleed {
+    grid-column: 1 / -1;
+    padding-inline: var(--margin);
+  }
+}
+
+// ── sources ──────────────────────────────────────────────────────────
+.chapter__foot {
+  // Full-bleed white — the surface change IS the divider, so there is no rule
+  // holding it off the prose.
+  background: var(--paper-bright);
+  // Half a screen, and the weight deliberately at the BOTTOM. `min-height`
+  // rather than `height` so a chapter with a long source list grows instead
+  // of spilling; block flow then drops the whole surplus below the list,
+  // which is the asymmetry: the apparatus sits up close under the argument
+  // it supports, and the new surface runs on beneath it.
+  min-height: 50vh;
+  padding-block: 5vh 12vh;
+  margin-top: 3vh;
+
+  .label {
+    display: block;
+    margin-bottom: 18px;
+  }
+}
+
+// Numbered rows, ruled off from each other. The number holds a column of its
+// own so every link begins at the same x whether the list runs to one digit
+// or two — which is the whole reason this is a CSS counter and not
+// `list-style: decimal`: a ::marker cannot be given a width, and a real
+// marker's position depends on how wide its own digits are.
+.chapter__sources {
+  @include type.small;
+  // Tune the alignment here and nowhere else.
+  --sources-number: 3.5em;
+  list-style: none;
+  padding-left: 0;
+  margin: 0;
+  counter-reset: source;
+
+  li {
+    counter-increment: source;
+    display: grid;
+    // The one value that governs where every link starts.
+    grid-template-columns: var(--sources-number) 1fr;
+    align-items: baseline;
+    padding-block: 14px;
+    // Above each row, so the list opens with a rule and does not close with
+    // one — the last row's edge is the white running out beneath it.
+    border-top: 1px solid var(--rule);
+  }
+
+  li::before {
+    content: counter(source);
+    color: var(--muted);
+    // Tabular, so the digits themselves cannot shift the column.
+    font-variant-numeric: tabular-nums;
+  }
+
+  a {
+    // One line, clipped. A source is a reference, and a long title wrapping
+    // to three lines turns a list you scan into prose you have to read.
+    display: -webkit-box;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 1;
+    line-clamp: 1;
+    overflow: hidden;
+    color: var(--ink);
+    // No underline. The rule above each row already draws the horizontals in
+    // this block, and a second line under every title made the list read as
+    // hatching rather than as rows. Nothing global changes: `global.scss` only
+    // sets `a { color: inherit }` — the underline was declared right here.
+    //
+    // Which leaves hover as the affordance. That is thin for a link, but the
+    // numbered rows under a "Sources" label are already legible AS references,
+    // and each one carries `data-native` so it leaves the site the way an
+    // external reference should.
+    text-decoration: none;
+  }
+  a:hover {
+    color: var(--muted);
+    text-decoration: underline;
+    text-underline-offset: 3px;
+  }
+}
+
+@media (max-width: 767px) {
+  .chapter__head {
+    padding-top: 18vh;
+  }
+}
+
+// No prefers-reduced-motion block for the figure hover any more: the token's
+// own `reduced` override sets it to scale 1 over 0s, and the CSS fallbacks
+// are neutral, so both the resolved and the unresolved case are already still.

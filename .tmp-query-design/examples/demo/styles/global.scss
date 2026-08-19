@@ -1,0 +1,168 @@
+@use './tokens';
+@use './grid';
+@use './typography' as type;
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html {
+  // Lenis drives scrolling; the UA smooth-scroll would fight it.
+  scroll-behavior: auto;
+  // No rubber-band, and no swipe-nav glyph dragging the sheet sideways. The
+  // page has no horizontal scroll of its own (measured: scrollWidth ===
+  // clientWidth on every route), so a sideways trackpad swipe was only ever
+  // the browser's back/forward affordance moving the whole page under you.
+  // Set on the ROOT, which is where it propagates to the viewport from.
+  //
+  // The cost is real: in Chromium this also disables two-finger swipe to go
+  // Back or Forward. Keyboard (⌘←/⌘→) and the toolbar buttons still work.
+  // `overscroll-behavior-y: none` instead would keep the swipe and only stop
+  // the vertical bounce.
+  overscroll-behavior: none;
+}
+
+body {
+  margin: 0;
+  background: var(--paper);
+  color: var(--ink);
+  // `text-wrap: balance` arrives with this include rather than being declared
+  // here — the type system owns it now, and it still inherits from <body> to
+  // any text that is not wearing a type style of its own.
+  @include type.body;
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+  // Surface changes belong to the page, but the body backstops the gap
+  // between pages during a transition.
+  transition: background-color 0.6s linear;
+}
+
+h1,
+h2,
+h3,
+p,
+figure,
+blockquote {
+  margin: 0;
+}
+
+img {
+  display: block;
+  max-width: 100%;
+  height: auto;
+}
+
+a {
+  color: inherit;
+}
+
+// Every page root paints its own opaque surface — pages STACK during a
+// transition, so a transparent page would show the one underneath.
+[data-page] {
+  background: var(--paper);
+  color: var(--ink);
+  min-height: 100vh;
+}
+
+// The framework's wrapper is the element a transition animates, and it sits
+// OUTSIDE the page's own `.is-dark` — so it was painting the light :root
+// paper directly beneath a dark page. Any partial opacity leaked white.
+// `:has` keeps the page component the single source of truth: whichever
+// page declares itself dark, its wrapper follows.
+//
+// Scoped to the OUTLET'S OWN CHILD, not to any [data-page]. Pages carry
+// `data-page` on their own root too, so the bare selector also matched a
+// light chapter holding one dark section — the next-chapter card is a direct
+// child of the chapter's <article> — and flipped the entire chapter to the
+// dark palette. Only the wrapper the framework animates should follow the
+// page's surface; a dark band inside a light page is just a dark band.
+[data-modulato-outlet] > [data-page]:has(> .is-dark) {
+  @include tokens.dark;
+}
+
+::selection {
+  background: var(--select-bg);
+  color: var(--select-fg);
+}
+
+// ── shared editorial furniture ────────────────────────────────────────
+
+.label {
+  @include type.label;
+  color: var(--muted);
+}
+
+.caption {
+  @include type.small;
+  color: var(--muted);
+  max-width: 34ch;
+}
+
+.rule {
+  border: 0;
+  border-top: 1px solid var(--rule);
+  margin: 0;
+}
+
+// A chapter, listed. Worn by the index's contents AND by every chapter's
+// next-chapter card, which is what lets one transition serve both: the word
+// flight finds `.entry__word` by <Shared> id and the departing text by
+// `.entry__abstract`, wherever the link happens to live. Shared furniture
+// rather than page styles, because a cold landing on a chapter never imports
+// the index's stylesheet.
+.entry {
+  display: block;
+  text-decoration: none;
+}
+
+.entry__title {
+  @include type.title;
+  display: block;
+
+  // Each word is inline-block so it can be measured and flown on its own
+  // during the transition to a chapter.
+  .entry__word {
+    display: inline-block;
+  }
+  .entry__word + .entry__word {
+    margin-left: 0.24em;
+  }
+}
+
+.entry__arrow {
+  display: inline-block;
+  margin-left: 0.34em;
+  vertical-align: middle;
+  transition: transform 0.45s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.entry:hover .entry__arrow {
+  transform: translateX(6px);
+}
+
+.entry__abstract {
+  @include type.body;
+  display: block;
+  color: var(--muted);
+  // The abstract keeps its own reading measure inside the wider item.
+  max-width: 34ch;
+  margin: 0.4em auto 0;
+}
+
+// A figure reference — "ABB. 3 · S. 94" in the reference spreads.
+.figref {
+  @include type.small;
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  body {
+    transition: none;
+  }
+  .entry__arrow {
+    transition: none;
+  }
+}

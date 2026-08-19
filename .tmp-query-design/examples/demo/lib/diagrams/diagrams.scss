@@ -1,0 +1,140 @@
+@use '../../styles/typography' as type;
+
+// Imported by each diagram that uses a class from here — Separation, Angles,
+// Neighbor. Nothing pulled this file in for the first four months of its
+// life, so every rule below was dead: the beat readout, the fetch counter and
+// the plate bars all rendered as bare inline spans in the body serif. It went
+// unnoticed because the diagrams that needed color were painting it inline,
+// so the only symptom was type that looked wrong rather than a layout that
+// visibly collapsed.
+//
+// There is no auto-import for a stylesheet in `lib/` — that convention is for
+// a page folder's own `styles.scss` — so a component here has to ask for its
+// styles the way Control, Chapter, Track and Statement all do.
+
+// ── angles ───────────────────────────────────────────────────────────
+.angles__beat {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 4px 10px;
+  margin-top: 14px;
+  padding-top: 12px;
+  border-top: 2px solid var(--ink);
+
+  strong {
+    @include type.small;
+    font-weight: 700;
+    font-variant-numeric: tabular-nums;
+  }
+
+  &.is-bad strong {
+    color: var(--plate-m);
+  }
+}
+
+.angles__pair {
+  @include type.small;
+  grid-column: 2;
+  color: var(--muted);
+}
+
+// ── separation ───────────────────────────────────────────────────────
+// Two fields of flat color, filling the stage. Padded off the frame's own
+// border so each one reads as a printed patch rather than as the stage
+// wearing a color — which is what the previous version looked like, since
+// the color WAS the stage's background.
+.sep__compare {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--gutter);
+  padding: var(--gutter);
+}
+
+.sep__half {
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  // A flex item's `auto` minimum is its content; without this the caption
+  // sets a floor the field cannot shrink under and the two halves drift
+  // out of step on a short stage.
+  min-height: 0;
+}
+
+// A canvas, so it needs a real box to take its resolution from — the press
+// reads `clientWidth * dpr` under a ResizeObserver. `flex: 1` with the
+// `min-height: 0` above gives it whatever the caption leaves.
+.sep__field {
+  flex: 1;
+  display: block;
+  width: 100%;
+  min-height: 0;
+  background: var(--paper);
+}
+
+.sep__halfcap {
+  margin-top: 8px;
+}
+
+.sep__bars {
+  margin-top: 14px;
+  padding-top: 12px;
+  border-top: 2px solid var(--ink);
+  display: grid;
+  gap: 6px;
+}
+
+.sep__bar {
+  display: grid;
+  grid-template-columns: 2ch 1fr 4ch;
+  align-items: center;
+  gap: 8px;
+}
+
+.sep__name,
+.sep__num {
+  @include type.small;
+  font-variant-numeric: tabular-nums;
+  color: var(--muted);
+}
+
+.sep__num {
+  text-align: right;
+}
+
+.sep__track {
+  height: 6px;
+  background: var(--rule);
+  overflow: hidden;
+}
+
+.sep__fill {
+  display: block;
+  height: 100%;
+  transition: width 0.25s ease;
+}
+
+// ── neighbors ───────────────────────────────────────────────────────
+.nb__stat {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  margin-top: 14px;
+  padding-top: 12px;
+  border-top: 2px solid var(--ink);
+
+  strong {
+    @include type.small;
+    font-weight: 700;
+    font-variant-numeric: tabular-nums;
+  }
+}
+
+// Nothing for the ruling diagram: it is a `pair`, and its plates are the
+// frame's own (`.diagram__plate` in control.scss) rather than anything of
+// its own making.
+
+@media (prefers-reduced-motion: reduce) {
+  .sep__fill {
+    transition: none;
+  }
+}

@@ -1,0 +1,57 @@
+name: Release
+
+# Automated releases via Changesets + npm Trusted Publishing (OIDC).
+#
+# Flow:
+#   1. A push to main carrying .changeset/*.md files makes this workflow open
+#      (or refresh) a "Version Packages" PR — it bumps versions + writes
+#      changelogs, cascading through internal deps (bump `modulato` and its
+#      dependents follow).
+#   2. Merging that PR runs the publish step: `changeset publish` ships every
+#      package whose version isn't yet on npm, tags them, and creates a GitHub
+#      Release per package.
+#
+# No NPM_TOKEN — OIDC trusted publishing. All 8 packages' trusted-publisher
+# configs on npm point at THIS filename (publish.yml). Do not rename this file.
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+concurrency: release-${{ github.ref }}
+
+permissions:
+  contents: write # push the version PR branch, tags, GitHub Releases
+  pull-requests: write # open/update the Version Packages PR
+  id-token: write # OIDC trusted publishing + provenance
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      # No `registry-url`: it writes an .npmrc with `_authToken=${NODE_AUTH_TOKEN}`,
+      # and with OIDC there is no token — the empty value breaks the anonymous
+      # registry reads Changesets uses to detect what's already published (it then
+      # tries to republish everything). OIDC authenticates at publish time on its
+      # own (npm >= 11.5.1 + id-token: write; default registry is npmjs).
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+
+      # Pin npm 11 (>= 11.5.1, so OIDC trusted publishing works). NOT npm@latest:
+      # npm 12 dropped the `versions` array from `npm info <pkg> --json`, which
+      # Changesets 2.31.0 reads to detect what's already published — under npm 12
+      # every package looks unpublished and it tries to republish all of them.
+      - run: npm install -g npm@11
+
+      - run: npm ci
+
+      - uses: changesets/action@v1
+        with:
+          version: npm run changeset:version # bump versions + changelogs + lockfile
+          publish: npm run changeset:publish # npm publish (OIDC) + git tags + GitHub Releases
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
