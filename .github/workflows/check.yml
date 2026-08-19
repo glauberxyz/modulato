@@ -1,0 +1,68 @@
+name: Check
+
+# The gate that Release does not have.
+#
+# Release (publish.yml) runs `npm ci` itself, so a lockfile that cannot resolve
+# fails INSIDE the release — which is how a bad peer range once froze an open
+# Version Packages PR through five red runs. Nothing ran before that point:
+# this repo published on trust. This workflow is that missing gate, and it runs
+# the same `npm ci` first so the failure lands on the pull request instead.
+#
+# Deliberately mirrors the release environment (Node 24, npm 11) so a green
+# check means the release will get as far as publishing.
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+# A force-push supersedes the run it interrupted; main is never cancelled.
+concurrency:
+  group: check-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+permissions:
+  contents: read
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+
+      # Same pin as the release, for the same reason: npm 12 changed
+      # `npm info --json`, which Changesets reads. Keeping the versions
+      # identical is the point — a green check should mean a green release.
+      - run: npm install -g npm@11
+
+      # STRICT, unlike `npm install`. This is the one that catches a
+      # peer/dependency range naming a version that does not exist; a local
+      # `npm install --package-lock-only` is lenient and will not.
+      - run: npm ci
+
+      - name: Types
+        run: npm run check
+
+      # The framework validating a real project with its own CLI — the demo is
+      # the proving ground, so a contract it breaks is a contract worth failing.
+      - name: Contracts
+        run: npx modulato check
+        working-directory: examples/demo
+
+      - name: Build
+        run: npm run build -w examples/demo
+
+      # docs/MODULATO.md is copied into the scaffold and the llms.txt the site
+      # serves. Editing it without running `npm run sync:docs` ships a reference
+      # that disagrees with itself, and nothing else notices.
+      - name: Docs in sync
+        run: |
+          npm run sync:docs
+          git diff --exit-code -- framework/create/MODULATO.md docs/site/public/llms-full.txt \
+            || { echo '::error::docs/MODULATO.md changed without `npm run sync:docs` — run it and commit the result'; exit 1; }
