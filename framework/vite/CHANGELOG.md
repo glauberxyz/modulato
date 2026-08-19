@@ -1,5 +1,58 @@
 # @modulato/vite
 
+## 0.3.0
+
+### Minor Changes
+
+- 63bec8a: The content snapshot is fetched on the first client navigation instead of
+  shipping in the entry bundle.
+
+  `virtual:modulato/content` was imported eagerly by the generated client entry,
+  so the whole snapshot sat in the one chunk every route loads before anything
+  else — every visitor downloaded every route's content to see one page. It is
+  not needed then: the first page hydrates from props SSR already sent, and
+  `resolveEntry` only touches the snapshot when it has to RUN a route's `load()`,
+  which happens on client navigations and never on first paint.
+
+  `boot({ content })` and `<Root content>` now accept a `ContentSource` — the
+  snapshot object as before, or a function returning it. `@modulato/vite` passes
+  a dynamic import, so the snapshot becomes its own chunk: absent from the entry,
+  not preloaded, fetched on the first link click and memoised for every
+  navigation after. The server entry keeps its eager import, where there is no
+  download to pay for.
+
+  In the demo this moves 21 KB out of a 313 KB entry chunk. The saving scales
+  with the content, not the code — a site with a few hundred entries is where it
+  stops being cosmetic.
+
+  Passing a plain object still works, so existing `boot()` calls are unaffected.
+
+- bec56e7: Inspect mode: hold Option (Alt) and click any element to open the line that authored it.
+
+  Reads the `data-modulato-source` attribute the Vite plugin stamps in dev, so it names the
+  real file, line and column rather than guessing from a class name. Holding the key outlines
+  whatever is under the cursor and labels it, so you can see what you are about to open; the
+  click is swallowed, so neither the site's handlers nor the browser's own Option-click
+  behaviour fire.
+
+  Resolution goes through a new `GET /__modulato/open`, because Vite's `/__open-in-editor`
+  resolves relative paths against `process.cwd()` — rarely the Vite root in a monorepo — and
+  answers 200 even when the file does not exist. The endpoint resolves against the real root,
+  refuses paths that escape it, and turns a miss into a message instead of nothing happening.
+
+- 8b6a5fe: Stamp `data-modulato-source="/pages/home/page.tsx:12:5"` on every host element in dev.
+
+  Dev's JSX runtime is already handed the file, line and column of every element it
+  creates; React keeps it on the fiber, where only devtools can read it. This copies it
+  into the DOM, which is where an inspector, the Tweak overlay, and an agent reading a
+  page are all actually looking — collapsing "read a DOM snapshot, guess which component
+  rendered that node, grep for a class name" into a read.
+
+  It works by pointing a project file's JSX runtime import at a thin wrapper, so it lands
+  identically in the SSR HTML and in client-rendered updates, and no component can swallow
+  it by not spreading props. Production compiles to a different JSX runtime, so not a byte
+  of it ships. Opt out with `modulato({ sourceAttribute: false })`.
+
 ## 0.2.1
 
 ### Patch Changes
