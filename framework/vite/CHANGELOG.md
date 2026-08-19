@@ -1,5 +1,88 @@
 # @modulato/vite
 
+## 0.4.0
+
+### Minor Changes
+
+- c6d364d: Give the server the request: cookie auth is now possible.
+
+  Nothing on the server could see the request. SSR was `handle(url)` — a URL
+  string, no headers — and an action got `{ form }` only, so it could neither
+  read a cookie nor set one. Any site with a session had to resolve every
+  authenticated view client-side after mount, a round trip and a skeleton each.
+
+  Three additions, smallest surface first:
+
+  - **Actions get `request` and `cookies`.** `action(async ({ form, request, cookies }) => …)`
+    with `cookies.get/getAll/set/delete`. Writes flush onto the response when
+    the handler returns, including when it **throws** — an action that clears a
+    session and then rejects still clears it. `path` defaults to `/`, without
+    which a cookie set by an action would be scoped to `/__modulato/action/…`
+    and invisible to every page. This alone unblocks sign-in.
+  - **`load()` gets `ctx.request` — server-only.** Present on the first paint,
+    `undefined` on client navigations, because `load()` runs in both places.
+    `modulato check` now ERRORS on a `load()` that reads it without a guard:
+    unguarded it throws on the first link click and not before, which is the one
+    order nobody tests in.
+  - **A `response` hook in `modulato.config.ts`.** Runs once per SSR request
+    before the page renders — the only place to set a response header or a
+    cookie on a page load. Applied identically by the dev middleware and the
+    Vercel function.
+
+  `handle(url)` still works; `render()` now also returns `headers`, which
+  callers must apply (`applyHeaders`). `@modulato/server` exports `nodeRequest`,
+  `requestUrl`, `requestHeaders`, `applyHeaders`, `createCookies`,
+  `parseCookieHeader` and `serializeCookie`.
+
+- c6d364d: Vercel output: runtime follows the build, and the build output is extensible.
+
+  - The SSR function was hardcoded to `nodejs22.x`, so a project on Node 24
+    silently deployed onto 22. It now uses **the Node major that ran the
+    build**, and an unknown major clamps to the newest runtime this version
+    knows about with a warning rather than shipping a string Vercel rejects.
+  - `emitVercelOutput()` wiped `.vercel/output` entirely and wrote one fixed
+    route table, so a project needing its own function had to read the generated
+    JSON back and splice a route into it. Modulato now removes only what it owns
+    (`static/`, `functions/__ssr.func`, `config.json`), leaving any other
+    function in place.
+
+  Both are configurable: `modulato({ vercel: { runtime, routes } })`. Caller
+  routes merge after the asset cache headers and before `handle: filesystem` —
+  the only window where a project's own function can win a path. `vercel: true`
+  still works.
+
+### Patch Changes
+
+- c6d364d: Dev no longer 404s a request whose `Accept` is not HTML.
+
+  `curl http://localhost:5173/` returned `Cannot GET /` in dev and 200 in
+  production — same URL, same build, opposite answers. The SSR middleware gated
+  on `Accept: text/html`, and `*/*` is what curl, wget, health checks, uptime
+  monitors and most shell scripts send, so the first thing anyone does to check
+  a dev server looked like a broken route.
+
+  It now matches the request PATH instead — asset-shaped paths (`/@vite/`,
+  `/@fs/`, `/@id/`, `/node_modules/`, an extension on the last segment) fall
+  through to Vite's own middleware, everything else is served as a page. An
+  explicit `text/html` still wins, so a real route with a dot in its last
+  segment (`/blog/v1.2-release`) is served while a missing `/logo.png` keeps
+  getting Vite's asset 404 rather than a page with a 200.
+
+- c6d364d: `data-modulato-source` drops the column, ending a hydration warning on every page.
+
+  Vite's client and SSR transforms disagree about where a parenthesised JSX
+  expression starts — an arrow body, a ternary branch — for roughly one host
+  element in five, by a delta that varies, so it could not be corrected
+  arithmetically. The attribute was the only thing that differed between the two
+  renders, so each of those elements logged a React hydration mismatch. The
+  noise trains people to ignore hydration warnings, which is exactly when a real
+  one appears.
+
+  Lines agreed on every element measured, and the column bought nothing:
+  `/__modulato/open` hands the value to Vite's `/__open-in-editor`, which is
+  happy with `file:line`, and an editor puts the cursor on the right line either
+  way. The attribute is now `/pages/home/page.tsx:78`.
+
 ## 0.3.0
 
 ### Minor Changes
