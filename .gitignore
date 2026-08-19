@@ -6,3 +6,6 @@ build/
 .env
 .env.*
 .vercel/
+
+# Scratch copies (agents, experiments) — never committable.
+.tmp-*/
