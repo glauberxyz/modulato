@@ -315,7 +315,10 @@ export default motion({
 - Override keys are reserved at **every** nesting level: write the block next
   to the group it modifies, as above. A hoisted spelling
   (`intro: { phone: { headline: {…} } }`) resolves — and folds into the same
-  overlay tabs — identically, but colocated is the house style.
+  overlay tabs — identically, but colocated is the house style. Write the same
+  leaf BOTH ways and the hoisted one wins: the colocated block merges while
+  the resolver descends, the hoisted one merges at the outer level afterwards,
+  so it lands last. The Tweak overlay dims the row that is never read.
 - **Tweak Mode** (dev, with `@modulato/tweak` installed): the ✦ Tweak
   overlay shows the token files for the current view (shell + this page +
   transitions touching this route; "Show all" reveals the rest) — edit live,

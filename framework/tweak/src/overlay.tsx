@@ -578,7 +578,14 @@ function GroupSection({
           ))}
           <span className="font-medium text-foreground">{leafSeg ?? 'root'}</span>
         </span>
-        {withRows.length > 1 && (
+        {/* Shown whenever there is a choice to make OR the one block on screen
+            is not `base`. Gated on `> 1` alone it disappeared exactly when it
+            mattered most: a group whose leaves all come from override blocks,
+            or a query that narrows to one, rendered phone/reduced values with
+            nothing to say they were overrides — they read as base values, and
+            editing them looked like editing the default. A single tab is not
+            redundant; it is the label. */}
+        {(withRows.length > 1 || displayed.key !== 'base') && (
           <span className="flex shrink-0 items-center gap-0.5">
             {withRows.map((b) => {
               const isActive = displayed.key === b.key
@@ -609,19 +616,53 @@ function GroupSection({
           </span>
         )}
       </div>
-      {displayed.rows.map((leaf) => {
-        const key = leaf.path.join('.')
-        return (
-          <LeafRow
-            key={key}
-            leaf={leaf}
-            dirty={dirtySet.has(key)}
-            declared={declared}
-            onChange={(value) => onChange(leaf, value)}
-            onReset={() => onReset(leaf)}
-          />
-        )
-      })}
+      {(() => {
+        // One leaf can be overridden in BOTH spellings at once —
+        // `claim.reduced.amount` AND `reduced.claim.amount`. Both fold to this
+        // group, this block, and the same name, so they render as two
+        // identical rows and only one of them does anything: `resolveNode`
+        // merges the colocated block while descending and the hoisted one at
+        // the outer level afterwards, so the HOISTED value lands last and
+        // wins. Editing the other row changes a number nothing reads.
+        //
+        // Marked rather than hidden: the dead value is really in the file, and
+        // the fix is to delete it there, which the reader cannot be told to do
+        // if the row is not shown.
+        const liveIndexFor = new Map<string, number>()
+        for (const leaf of displayed.rows) {
+          const name = leaf.path[leaf.path.length - 1]
+          const depth = leaf.path.findIndex((seg) => seg === displayed.key)
+          const best = liveIndexFor.get(name)
+          if (best === undefined || depth < best) liveIndexFor.set(name, depth)
+        }
+        return displayed.rows.map((leaf) => {
+          const key = leaf.path.join('.')
+          const name = leaf.path[leaf.path.length - 1]
+          const depth = leaf.path.findIndex((seg) => seg === displayed.key)
+          const shadowed =
+            displayed.rows.filter((l) => l.path[l.path.length - 1] === name).length > 1 &&
+            depth > (liveIndexFor.get(name) ?? depth)
+          return (
+            <div
+              key={key}
+              className={shadowed ? 'opacity-40' : undefined}
+              title={
+                shadowed
+                  ? `Overridden twice — the hoisted spelling of "${name}" wins, so this value is never read. Delete one of them.`
+                  : undefined
+              }
+            >
+              <LeafRow
+                leaf={leaf}
+                dirty={dirtySet.has(key)}
+                declared={declared}
+                onChange={(value) => onChange(leaf, value)}
+                onReset={() => onReset(leaf)}
+              />
+            </div>
+          )
+        })
+      })()}
     </div>
   )
 }
