@@ -13,11 +13,22 @@ npm run dev         # examples/demo with SSR + HMR
 npm run check       # TypeScript across demo + server + tweak + site — THE gate
 ```
 
-CI runs that gate and four more on every pull request and push to `main`
+CI runs that gate and five more on every pull request and push to `main`
 (`.github/workflows/check.yml`): a strict `npm ci`, `npm run check`,
-`modulato check` against the demo, a demo build, and a `sync:docs` no-op check.
-It mirrors the release environment (Node 24, npm 11) on purpose — a green
-**Check** means **Release** will get as far as publishing.
+`modulato check` against the demo, a demo build, a scaffold-deps check and a
+`sync:docs` no-op check. It mirrors the release environment (Node 24, npm 11)
+on purpose.
+
+**`publish.yml` runs that same gate itself, before it publishes** — and that,
+not the PR check, is what makes a release safe. GitHub refuses to trigger
+workflows on a pull request opened by its own `GITHUB_TOKEN`, so Check on the
+"Version Packages" PR sits at `action_required` and is skipped unless somebody
+approves it by hand — and that PR is the one whose merge ships to npm. Check's
+`push: main` run races the release rather than blocking it, so it can go red
+after the packages are already on the registry. Duplicating the gate inside
+the release job costs two minutes and buys actual enforcement, with no
+credential: a PAT would fix the trigger, but this repo publishes over OIDC
+exactly so that no long-lived token exists.
 
 The `npm ci` step is the load-bearing one. Release runs `npm ci` itself, so a
 lockfile that cannot resolve used to fail *inside* the release: a peer range
