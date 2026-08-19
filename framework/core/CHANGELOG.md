@@ -1,5 +1,57 @@
 # modulato
 
+## 0.6.0
+
+### Minor Changes
+
+- 63bec8a: The content snapshot is fetched on the first client navigation instead of
+  shipping in the entry bundle.
+
+  `virtual:modulato/content` was imported eagerly by the generated client entry,
+  so the whole snapshot sat in the one chunk every route loads before anything
+  else — every visitor downloaded every route's content to see one page. It is
+  not needed then: the first page hydrates from props SSR already sent, and
+  `resolveEntry` only touches the snapshot when it has to RUN a route's `load()`,
+  which happens on client navigations and never on first paint.
+
+  `boot({ content })` and `<Root content>` now accept a `ContentSource` — the
+  snapshot object as before, or a function returning it. `@modulato/vite` passes
+  a dynamic import, so the snapshot becomes its own chunk: absent from the entry,
+  not preloaded, fetched on the first link click and memoised for every
+  navigation after. The server entry keeps its eager import, where there is no
+  download to pay for.
+
+  In the demo this moves 21 KB out of a 313 KB entry chunk. The saving scales
+  with the content, not the code — a site with a few hundred entries is where it
+  stops being cosmetic.
+
+  Passing a plain object still works, so existing `boot()` calls are unaffected.
+
+- d0ff799: Shared pairs say which ones the reader actually triggered.
+
+  A shared id is a VALUE, so the same id legitimately appears on more than one
+  surface — a list naming every item, and a "next item" card at the foot of each.
+  Both then match on a single navigation and the transition receives pairs for
+  something nobody touched. In the demo, moving from the index to a chapter
+  collected six pairs where two were wanted: the other four were a different
+  chapter's index entry matching the next-chapter card at the destination's tail.
+
+  The surplus is worse than extra motion. Anything measuring a bounding span
+  across the set silently aims at the wrong region — both of the demo's scroll
+  helpers broke, one seating the incoming page at its bottom and the other
+  concluding the words were already visible and declining to scroll, and neither
+  failure points anywhere near shared elements.
+
+  `SharedPair` now carries `withinTrigger`: the outgoing element sits inside the
+  element that started the navigation. The list is sorted with those first, so a
+  transition taking the first pair gets the one the reader touched. That replaces
+  matching on the site's own class names, which is what the demo was reduced to.
+
+  It is false for every pair when there is no trigger — a popstate, or a
+  programmatic `navigate()` — so test it rather than assuming it partitions the
+  set. A site whose ids genuinely collide still has to disambiguate those paths
+  itself; the demo does, for the one direction that has no trigger.
+
 ## 0.5.0
 
 ### Minor Changes
