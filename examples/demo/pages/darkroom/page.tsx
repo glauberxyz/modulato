@@ -1,5 +1,5 @@
-import { useRef, useState } from 'react'
-import { useSearchParam } from 'modulato'
+import { useCallback, useEffect, useRef, useState } from 'react'
+import { setSearchParam, useSearchParams } from 'modulato'
 import { HalftoneImage } from '../../lib/HalftoneCanvas'
 import { DEFAULTS, type HalftoneUniforms } from '../../lib/halftone'
 import { Choice, Slider } from '../../lib/Control'
@@ -25,31 +25,46 @@ const PRESETS: Record<string, Partial<HalftoneUniforms>> = {
 }
 
 export default function Darkroom() {
-  // The preset lives in the URL — shareable shader state, no remount.
-  const [preset, setPreset] = useSearchParam('preset')
+  // The preset lives in the URL — shareable shader state, written shallowly so
+  // nothing remounts and the canvas keeps its WebGL context.
+  const { preset } = useSearchParams()
   // The site's real inks on its real paper. The dark inverted palette this
   // used to run belonged to the raymarched scene, which needed to sit inside a
   // dark page; a photograph screened through actual cyan, magenta, yellow and
   // black is the thing the whole site is about, and it cannot show that in
   // negative.
+  // Seeded with the default, NOT with the URL. The query is empty on the server
+  // and through the hydrating render, so reading it here would capture that
+  // emptiness once and keep it — which is what made /darkroom?preset=riso show
+  // the Riso button pressed over Magazine's plates. The effect below is what
+  // actually applies it.
   const [u, setU] = useState<HalftoneUniforms>(() => ({
     ...DEFAULTS,
-    ...(PRESETS[preset ?? 'magazine'] ?? {}),
+    ...PRESETS.magazine,
     cover: true,
   }))
 
   const uniforms = useRef<HalftoneUniforms>(u)
 
-  const patch = (next: Partial<HalftoneUniforms>) => {
+  const patch = useCallback((next: Partial<HalftoneUniforms>) => {
     const merged = { ...uniforms.current, ...next }
     uniforms.current = merged
     setU(merged)
-  }
+  }, [])
 
-  const applyPreset = (key: string) => {
-    setPreset(key)
-    patch(PRESETS[key] ?? {})
-  }
+  // The URL is the single source of truth for the preset, and it arrives one
+  // render after hydration. Applying it here rather than at the click means
+  // Back and Forward move the plates and not just the radio — the button
+  // reads the same query this does.
+  const applied = useRef<string | undefined>(undefined)
+  useEffect(() => {
+    if (preset === applied.current) return
+    applied.current = preset
+    const next = preset ? PRESETS[preset] : undefined
+    if (next) patch(next)
+  }, [preset, patch])
+
+  const applyPreset = (key: string) => setSearchParam('preset', key)
 
   return (
     <main className="dark-room is-dark" data-page="darkroom">

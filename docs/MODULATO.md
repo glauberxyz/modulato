@@ -197,7 +197,9 @@ const activeId = (nav.to ?? route).id   // switches the moment navigation starts
 
 | Hook | Where | What |
 |---|---|---|
-| `useRoute()` | anywhere | committed route `{ id, path, params }` |
+| `useRoute()` | anywhere | committed route `{ id, path, params }` — the PATHNAME, no query |
+| `useSearchParam(key)` | anywhere | `[value, set]` for one query param — reactive read, SHALLOW write (no remount). `null` on the server and through hydration |
+| `useSearchParams()` | anywhere | the whole query as `{ key: value }`, same contract — empty on the server and through hydration |
 | `useNavigation()` | anywhere | `{ phase, from, to }` — `to` is set from navigation start |
 | `usePage()` | inside a page | `{ route, phase: 'entering'\|'active'\|'leaving', element, lenis }` |
 | `useScroll(cb)` | anywhere | smooth-scroll frames `{ scroll, limit, velocity, progress }`. Inside a page: that page's scroll. In the shell: the ACTIVE page's scroll, surviving navigations |
@@ -225,6 +227,51 @@ useMotion(({ q, gsap }) => {
   return () => { /* optional extra teardown */ }
 })
 ```
+
+### URL state (the query)
+
+UI state that belongs in the URL — an open overlay, a selected tab, a preset —
+lives in the query, not in a route. Writing is a **shallow** history update: the
+router does not re-resolve the entry or remount the page, so the page keeps its
+scroll, its canvases and its WebGL context while the address bar changes.
+
+```tsx
+const [company, setCompany] = useSearchParam('company')
+setCompany('aero')                        // pushState — Back closes the overlay
+setCompany(null)                          // remove the param
+setCompany('layer', { replace: true })    // no new history entry
+
+const { tab, preset = 'magazine' } = useSearchParams()  // every param, same reactivity
+setSearchParam('tab', 'team')                           // the same write, outside React
+readSearchParams().tab                                  // the same read, outside React
+```
+
+`useSearchParams()` returns a plain object, **not** a `URLSearchParams` — so
+`query.preset`, not `query.get('preset')`, which is where it differs from the
+same-named hook in React Router and Next. Absent keys read `undefined`. A
+repeated key keeps the first value (`?tag=a&tag=b` → `tag: 'a'`); when you want
+all of them, that is one line of platform:
+`new URLSearchParams(location.search).getAll('tag')`.
+
+**The query is client state.** It is never part of the SSR'd HTML: both hooks
+read empty on the server *and through the hydrating render*, which is what keeps
+a deep link from mismatching and keeps a page cacheable regardless of its query.
+So a deep-linked value arrives one render **after** hydration — react to it in an
+effect, and never seed `useState` from it, or you capture the server's empty
+value and keep it forever:
+
+```tsx
+const { preset } = useSearchParams()
+useEffect(() => { if (preset) apply(PRESETS[preset]) }, [preset])   // ✅
+const [u] = useState(() => PRESETS[preset ?? 'magazine'])           // ❌ always the default
+```
+
+`useRoute().path` is the pathname only, and `RouteInfo` carries **no** `query`
+on purpose. `RouteInfo` is also what a transition, an intro and an enhancer
+receive, and those run at a *moment* rather than across renders: a query copied
+onto the route would look authoritative and be wrong the instant an overlay
+opened, while a live one read there would change with no re-render. Read the
+query with `useSearchParams()` in render and `readSearchParams()` outside it.
 
 ## 6. Intros (first load) and transitions (navigation)
 
