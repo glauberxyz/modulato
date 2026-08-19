@@ -26,6 +26,7 @@ const VIRTUAL = {
   app: 'virtual:modulato/app',
   clientEntry: 'virtual:modulato/client-entry',
   serverEntry: 'virtual:modulato/server-entry',
+  jsxDev: 'virtual:modulato/jsx-dev-runtime',
 }
 
 const CONTENT_SNAPSHOT = '.modulato/content.json'
@@ -59,8 +60,16 @@ export default function modulato(options = {}) {
         // globalTimeline are module-level singletons, so a second copy means
         // config-declared eases (registered by @modulato/gsap) and Tweak's
         // slow-mo silently miss the tweens an app creates with its own import.
-        resolve: { dedupe: ['react', 'react-dom', 'gsap'] },
-        ssr: { noExternal: ['modulato', '@modulato/server', '@modulato/gsap'] },
+        resolve: {
+          dedupe: ['react', 'react-dom', 'gsap'],
+        },
+        ssr: {
+          noExternal: [
+            'modulato',
+            '@modulato/server',
+            '@modulato/gsap',
+          ],
+        },
         optimizeDeps: {
           include: [
             'react',
@@ -140,6 +149,7 @@ export default function modulato(options = {}) {
     load(id) {
       if (id === VIRTUAL.manifest) return generateManifest(pagesDir)
       if (id === VIRTUAL.transitions) return generateTransitions(transitionsDir, pagesDir)
+      if (id === VIRTUAL.jsxDev) return generateJsxDevRuntime(root)
       if (id === VIRTUAL.intros) return generateIntros(pagesDir, root)
       if (id === VIRTUAL.behaviors) return generateBehaviors(behaviorsDir)
       if (id === VIRTUAL.content) {
@@ -247,6 +257,7 @@ export default function modulato(options = {}) {
     },
 
     transform(code, id, options) {
+      const original = code
       const file = id.split('?')[0]
 
       // pages/**/server.ts — server actions. On the CLIENT the module is
@@ -279,6 +290,46 @@ export default function modulato(options = {}) {
         return { code: stubs || 'export {}', map: { mappings: '' } }
       }
 
+      // Dev: point a project file's JSX runtime at our wrapper, so each host
+      // element it creates carries the file, line and column that authored it.
+      //
+      // Rewriting the SPECIFIER here, rather than aliasing the module, is what
+      // makes it work at all: an alias is applied before dependency
+      // pre-bundling and before SSR externalisation, so the wrapper's own
+      // import of the real runtime came back to itself — and pointing it at an
+      // absolute path instead fails, because the file is CJS and Vite's SSR
+      // runner rejects that with ERR_AMBIGUOUS_MODULE_SYNTAX. Resolving by id
+      // fails the other way: the client gets the pre-bundled copy and SSR gets
+      // an externalised one, and neither consults a plugin. Doing it on the
+      // compiled text touches only project files, leaves node_modules and the
+      // wrapper alone, and reaches both environments identically.
+      //
+      // Requires this plugin to run AFTER the React plugin, which is the
+      // documented order. If it runs first there is no `jsxDEV` import to
+      // rewrite yet and the attribute is simply absent — a missing debugging
+      // aid, not a broken build.
+      if (
+        isServe &&
+        options.sourceAttribute !== false &&
+        file.startsWith(root) &&
+        !file.includes('node_modules') &&
+        code.includes('react/jsx-dev-runtime')
+      ) {
+        // Only the import specifier — not the same string appearing in, say,
+        // a docs page that talks about the runtime.
+        //
+        // Rewrite in place and fall through rather than returning: a page.tsx
+        // has JSX AND needs its styles.scss injected further down, and an early
+        // return here would silently drop the stylesheet in dev.
+        //
+        // The swap stays on its own line and shifts nothing after it, so the
+        // map returned by whatever branch does return stays honest.
+        code = code.replace(
+          /(\bfrom\s*)(["'])react\/jsx-dev-runtime\2/g,
+          (_m, from) => from + JSON.stringify(VIRTUAL.jsxDev),
+        )
+      }
+
       // Dev: every motion.ts self-registers into the token registry (Tweak
       // Mode) and self-accepts HMR — re-registration merges into the live
       // object, so file edits reach mounted animations without a reload.
@@ -306,9 +357,12 @@ export default function modulato(options = {}) {
       }
 
       // Auto-import a page's sibling styles.scss.
-      if (!file.startsWith(pagesDir) || !file.endsWith(`${path.sep}page.tsx`)) return undefined
+      // `undefined` means "unchanged", which would throw away a jsx-dev-runtime
+      // rewrite made above. Hand back the code whenever it actually moved.
+      const rewritten = code === original ? undefined : { code, map: null }
+      if (!file.startsWith(pagesDir) || !file.endsWith(`${path.sep}page.tsx`)) return rewritten
       const styles = path.join(path.dirname(file), 'styles.scss')
-      if (!fs.existsSync(styles)) return undefined
+      if (!fs.existsSync(styles)) return rewritten
       return { code: `import ${JSON.stringify(styles)}\n${code}`, map: null }
     },
 
@@ -614,6 +668,55 @@ async function collectDevCss(server, entryFiles) {
  * intro.ts (next to app.tsx) becomes the shell intro — first-load
  * choreography for the persistent shell, run alongside the page intro.
  */
+/**
+ * A drop-in `react/jsx-dev-runtime` that stamps each host element with the
+ * file, line and column that authored it.
+ *
+ * Dev's JSX runtime is already handed `{ fileName, lineNumber, columnNumber }`
+ * for every element — React keeps it on the fiber, where only devtools can
+ * reach it. Copying it into a `data-modulato-source` attribute puts it in the
+ * DOM, which is where an agent reading a page, the Tweak overlay, and anyone
+ * with an inspector open are all actually looking.
+ *
+ * Wrapping the runtime rather than transforming JSX buys three things. No
+ * parser, so this package keeps its zero dependencies. It works in SSR and on
+ * the client without a second implementation, because both call this function.
+ * And it cannot be swallowed: a JSX transform adds the attribute wherever the
+ * element is written, so a component that does not spread its props drops it —
+ * here the attribute is only ever added to a HOST element, whose props go
+ * straight to the DOM.
+ *
+ * The real runtime is imported by resolved path: importing it by name would
+ * resolve back through the alias to this module.
+ */
+function generateJsxDevRuntime(root) {
+  // NAMED imports, and by SPECIFIER not path: the file behind it is CJS
+  // (`module.exports = require('./cjs/…')`), so it has to go through Vite's
+  // normal resolution and interop — reached by absolute path it dies with
+  // ERR_AMBIGUOUS_MODULE_SYNTAX in the SSR runner. `Fragment` and `jsxDEV` are
+  // everything the dev runtime exports.
+  return [
+    `import { Fragment as _Fragment, jsxDEV as _jsxDEV } from 'react/jsx-dev-runtime'`,
+    `const ROOT = ${JSON.stringify(root)}`,
+    `export const Fragment = _Fragment`,
+    `export function jsxDEV(type, props, key, isStatic, source, self) {`,
+    // Host elements only — a component would receive the attribute as an
+    // unknown prop and either drop it or forward it to the wrong node.
+    `  if (typeof type === 'string' && source && source.fileName) {`,
+    `    const file = source.fileName.startsWith(ROOT)`,
+    `      ? source.fileName.slice(ROOT.length)`,
+    `      : source.fileName`,
+    `    const at = file + ':' + source.lineNumber + ':' + source.columnNumber`,
+    // Spread rather than assign: props may be frozen, and it is the caller's.
+    `    if (!props || !props['data-modulato-source'])`,
+    `      props = { ...props, 'data-modulato-source': at }`,
+    `  }`,
+    `  return _jsxDEV(type, props, key, isStatic, source, self)`,
+    `}`,
+    '',
+  ].join('\n')
+}
+
 function generateIntros(pagesDir, root) {
   const entries = []
   const walk = (dir, prefix) => {

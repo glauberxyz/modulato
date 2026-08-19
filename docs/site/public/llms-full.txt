@@ -298,6 +298,23 @@ frame is animation frame zero. Colocate tokens as
 `onPrepare(fn)` is exported for motion layers that need the same hook — sites
 using `useMotion` get it without doing anything.
 
+### Finding the code behind a node
+
+In dev, every host element carries the file, line and column that authored it:
+
+```html
+<h1 class="home__claim" data-modulato-source="/pages/home/page.tsx:78:9">
+```
+
+Inspect a node and you know where it came from — no grepping for a class name.
+Useful in devtools, and more so for an agent reading a page, which otherwise
+has to guess which component rendered what. It is in the SSR HTML too, so it is
+there before hydration.
+
+Dev only: a production build compiles to a different JSX runtime and ships none
+of it. Turn it off with `modulato({ sourceAttribute: false })` if it makes
+snapshot diffs noisy. Host elements only — a component sees no extra prop.
+
 ## 7. Motion tokens & Tweak Mode
 
 ```ts
