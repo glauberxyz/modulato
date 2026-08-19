@@ -1,8 +1,23 @@
 import { useCallback, useState, type FormEvent } from 'react'
+import type { Cookies } from './cookies'
 
 export interface ActionContext {
   /** The submitted form data. */
   form: FormData
+  /**
+   * The whole request — headers, method, url. Already consumed into `form`,
+   * so read the body through that rather than `request.formData()`.
+   *
+   * This is how an action authenticates: `request.headers`, or `cookies`
+   * below for the common case.
+   */
+  request: Request
+  /**
+   * Read and write cookies. Writes are flushed onto the response when the
+   * handler returns — including when it THROWS, so an action that clears a
+   * session and then rejects still clears it.
+   */
+  cookies: Cookies
 }
 
 /**
@@ -26,6 +41,16 @@ export interface Action<T = unknown> {
  *   export const subscribe = action(async ({ form }) => {
  *     await klaviyo.subscribe(String(form.get('email')))
  *     return { message: 'Subscribed!' }
+ *   })
+ *
+ * The handler also gets `request` and `cookies`, which is what makes a
+ * session possible — sign-in is an action that verifies a password and sets
+ * an httpOnly cookie:
+ *
+ *   export const signIn = action(async ({ form, cookies }) => {
+ *     const token = await verify(form.get('email'), form.get('password'))
+ *     cookies.set('session', token, { httpOnly: true, sameSite: 'lax', maxAge: 60 * 60 * 24 * 7 })
+ *     return { redirect: '/dashboard' }
  *   })
  *
  * Throwing makes the submission fail with the error message. Return

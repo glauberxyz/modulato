@@ -41,7 +41,7 @@ export function tokensMiddleware(root) {
 }
 
 /**
- * GET /__modulato/open?at=/pages/home/page.tsx:78:9
+ * GET /__modulato/open?at=/pages/home/page.tsx:78
  *
  * Resolves a `data-modulato-source` value — which is ROOT-RELATIVE, as it
  * appears in the DOM — to an absolute path, and hands it back for the client
@@ -70,6 +70,9 @@ export function openMiddleware(root) {
     if (!at) return send(res, 400, { ok: false, error: 'missing ?at=' })
 
     // Same shape launch-editor parses, so what we validate is what it opens.
+    // The column is optional and normally absent: the attribute carries only
+    // file:line, because Vite's client and SSR transforms disagree about the
+    // column and the difference hydration-mismatched every page.
     const match = /^(.*?):(\d+)(?::(\d+))?$/.exec(at)
     if (!match)
       return send(res, 400, {

@@ -14,6 +14,9 @@ import { fileURLToPath } from 'node:url'
 const HERE = path.dirname(fileURLToPath(import.meta.url))
 const TEMPLATE = path.join(HERE, 'templates/default')
 
+/** Template files that are dotfiles in a real site (see the copy loop below). */
+const DOTFILES = { gitignore: '.gitignore', nvmrc: '.nvmrc' }
+
 const rest = process.argv.slice(2)
 const json = rest.includes('--json')
 const target = rest.find((a) => !a.startsWith('-'))
@@ -37,14 +40,15 @@ const name = path
 if (fs.existsSync(dest) && fs.readdirSync(dest).length > 0)
   fail(`${target} exists and is not empty — nothing was created`)
 
-// Copy the template. `gitignore` ships dotless (npm strips .gitignore from
-// published tarballs) and is renamed on the way out.
+// Copy the template. Dotfiles ship dotless and are renamed on the way out —
+// npm rewrites a published `.gitignore` to `.npmignore`, and shipping the
+// rest of them the same way keeps one rule instead of a per-file gamble.
 const created = []
 const walk = (from, to) => {
   fs.mkdirSync(to, { recursive: true })
   for (const dirent of fs.readdirSync(from, { withFileTypes: true })) {
     const src = path.join(from, dirent.name)
-    const outName = dirent.name === 'gitignore' ? '.gitignore' : dirent.name
+    const outName = DOTFILES[dirent.name] ?? dirent.name
     const out = path.join(to, outName)
     if (dirent.isDirectory()) {
       walk(src, out)

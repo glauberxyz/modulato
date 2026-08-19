@@ -11,7 +11,7 @@ file. The CLI is non-interactive and JSON-friendly; prefer it:
 - Introspect instead of grepping: `npx modulato routes --json`,
   `npx modulato tokens --json`.
 - Content changed? `npx modulato content` (regenerates snapshot + types).
-- Agents can drive motion live: `claude mcp add modulato -- npx modulato-mcp`
+- Agents can drive motion live: `claude mcp add modulato -- npx -y @modulato/mcp`
 
 Key conventions: a page is a folder in `pages/` with `page.tsx` (no
 registration); animation numbers live in `motion.ts` token modules;

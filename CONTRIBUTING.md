@@ -57,6 +57,25 @@ Version Packages PR. Verifying such a change locally needs `npm ci` too —
    build and the docs-sync check), and it's verified running (browser for
    anything visual — SSR curl + DOM-state checks at minimum).
 
+## The scaffold's dependency ranges are generated
+
+`framework/create/templates/default/package.json` pins the Modulato packages,
+and those pins are **written by a script**, never by hand:
+
+```sh
+npm run sync:template            # rewrite from framework/*/package.json
+node scripts/sync-template-deps.mjs --check   # what CI runs
+```
+
+Hand-maintained they went six minors stale in silence: the template said
+`^0.1.0` while core was `0.7.0`, and on a `0.x` line caret never crosses a
+minor — so `npm create modulato` handed every new user 0.1.7 and no `npm
+update` could ever have fixed it. It hid well, because the scaffolded site
+worked; it was just an old framework that disagreed with MODULATO.md.
+
+`changeset:version` runs the script after the bump, so the Version Packages PR
+carries the new ranges, and the Check gate fails on drift.
+
 ## Docs have three lives
 
 `docs/MODULATO.md` is copied into two distribution channels:
@@ -88,15 +107,19 @@ Skip it for changes that don't ship to npm (docs site, demo, internal tooling).
 Internal deps cascade automatically: a `modulato` bump carries its dependents
 (`content-local`, `gsap`, `mcp`, `server`, `tweak`) via `updateInternalDependencies`.
 
-> **Peer-dep bump behaviour — decide before your first core *minor*.**
-> `content-local`, `gsap`, `tweak`, and `server` peer-depend on `modulato`
-> (`^0.1.x`). `onlyUpdatePeerDependentsWhenOutOfRange` (in `.changeset/config.json`)
-> keeps a core **patch** from touching them. But a core **minor** (`0.1.x →
-> 0.2.0`) falls outside `^0.1.x`, so Changesets bumps those four peers — and,
-> per peer semantics, bumps them **major → 1.0.0**. That's correct, just abrupt
-> for a 0.x framework. If you'd rather core minors stay quiet, widen the plugins'
-> peer ranges (e.g. `^0.1.0` → `>=0.1.0`) so minors stay in range. Leave as-is if
-> a `1.0.0` on plugins alongside a core minor is fine by you.
+> **Peer-dep bump behaviour — settled, but know why.**
+> `content-local`, `gsap`, `tweak`, and `server` peer-depend on `modulato`.
+> `onlyUpdatePeerDependentsWhenOutOfRange` (in `.changeset/config.json`) keeps
+> a core bump from touching them *while it stays in range* — but a bump that
+> falls OUTSIDE the range makes Changesets bump those four, and per peer
+> semantics it bumps them **major → 1.0.0**. With a `^0.1.x` peer range, every
+> core minor would have done that.
+>
+> All four now declare `>=0.1.x <1.0.0`, so core minors stay in range and the
+> plugins stay quiet. `npx changeset status` before merging is the check:
+> if it reports a major on a plugin you did not intend to bump, a peer range
+> is the reason. The ranges become live again at `modulato@1.0.0`, which is
+> the right moment to revisit them.
 
 **To cut the release (default — fully automated):**
 

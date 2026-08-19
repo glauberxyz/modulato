@@ -58,6 +58,15 @@ jobs:
       - name: Build
         run: npm run build -w examples/demo
 
+      # The scaffold's dependency ranges are GENERATED from the versions in
+      # framework/*. Hand-maintained, they went six minors stale without
+      # anyone noticing — `npm create modulato` installed 0.1.7 while core was
+      # 0.7.0, and on a 0.x line caret never crosses a minor, so no amount of
+      # `npm update` could have reached it. Self-concealing, too: the site
+      # worked, just as an old framework.
+      - name: Scaffold deps in sync
+        run: node scripts/sync-template-deps.mjs --check
+
       # docs/MODULATO.md is copied into the scaffold and the llms.txt the site
       # serves. Editing it without running `npm run sync:docs` ships a reference
       # that disagrees with itself, and nothing else notices.

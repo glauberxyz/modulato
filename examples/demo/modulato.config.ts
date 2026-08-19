@@ -16,6 +16,13 @@ export default defineConfig({
     press: 'cubic-bezier(0.16, 1, 0.3, 1)',
     roller: 'cubic-bezier(0.62, 0.05, 0.01, 0.99)',
   },
+  // Runs once per SSR request, before the page renders — the one place a
+  // response header can be set. Server-only, so it may read secrets; it sees
+  // the request but not the matched route.
+  response({ headers }) {
+    headers.set('x-content-type-options', 'nosniff')
+    headers.set('referrer-policy', 'strict-origin-when-cross-origin')
+  },
   head: {
     lang: 'en',
     link: [

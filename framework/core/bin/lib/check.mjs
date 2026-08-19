@@ -248,6 +248,57 @@ function checkMotionKeywords(root, warn) {
   }
 }
 
+/**
+ * `ctx.request` in a page's config.ts must be guarded.
+ *
+ * `load()` and `meta()` run in BOTH places — server-side for the first paint,
+ * and in the BROWSER on every navigation after it — and `request` only exists
+ * in the first. So unguarded, the page works when you type its URL and throws
+ * the moment somebody reaches it by clicking a link, which is the one order
+ * nobody tests in. An error rather than a warning: the failure is total, and
+ * arrives after the code looked like it worked.
+ *
+ * Read from the source text, like everything else here — config.ts runs in
+ * Node and may hold secrets, so it is never imported.
+ */
+function checkLoaderRequest(root, error) {
+  const pagesDir = path.resolve(root, 'pages')
+  const files = []
+  const walk = (dir) => {
+    if (!fs.existsSync(dir)) return
+    for (const e of fs.readdirSync(dir, { withFileTypes: true })) {
+      const abs = path.join(dir, e.name)
+      if (e.isDirectory()) walk(abs)
+      else if (e.name === 'config.ts') files.push(abs)
+    }
+  }
+  walk(pagesDir)
+
+  for (const abs of files) {
+    const src = stripComments(fs.readFileSync(abs, 'utf8'))
+    if (!/\brequest\b/.test(src)) continue
+    // A locally-declared `request` is somebody else's variable — a Request
+    // being built to fetch something, most likely — not the loader's.
+    if (/\b(?:const|let|var|function)\s+request\b/.test(src)) continue
+
+    // A member access with no `?.` in front of it.
+    if (!/(?:^|[^?.\w])(?:\w+\.)?request\s*\./.test(src)) continue
+
+    const guarded =
+      /if\s*\(\s*!\s*(?:\w+\.)?request\b/.test(src) ||
+      /(?:\w+\.)?request\s*(?:===|!==)\s*undefined/.test(src) ||
+      /typeof\s+(?:\w+\.)?request\b/.test(src) ||
+      /(?:\w+\.)?request\s*&&/.test(src) ||
+      /(?:\w+\.)?request\s*\?[^.?]/.test(src)
+    if (guarded) continue
+
+    error(
+      path.relative(root, abs),
+      'reads `request` without handling its absence — `load()` and `meta()` also run in the BROWSER on every client navigation, where there is no request, so this throws on the first link click and not before. Guard it (`if (!request) …` for the client path) or reach it with `request?.`. It can never hold a secret either: whatever you derive from it becomes props, and props ship to the client.',
+    )
+  }
+}
+
 /** The object literal starting at `open`, body only. */
 function sliceBraces(source, open) {
   if (open === -1) return null
@@ -372,6 +423,7 @@ export function check(root) {
 
   checkEases(root, error)
   checkMotionKeywords(root, warn)
+  checkLoaderRequest(root, error)
 
   return { ok: errors.length === 0, errors, warnings }
 }

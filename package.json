@@ -11,9 +11,10 @@
     "dev": "npm run dev -w examples/demo",
     "check": "tsc -p examples/demo --noEmit && tsc -p framework/server --noEmit && tsc -p framework/tweak --noEmit && tsc -p docs/site --noEmit",
     "sync:docs": "cp docs/MODULATO.md framework/create/MODULATO.md && cp docs/MODULATO.md docs/site/public/llms-full.txt",
+    "sync:template": "node scripts/sync-template-deps.mjs",
     "dev:site": "npm run dev -w docs/site",
     "changeset": "changeset",
-    "changeset:version": "changeset version && npm install --package-lock-only",
+    "changeset:version": "changeset version && node scripts/sync-template-deps.mjs && npm install --package-lock-only",
     "changeset:publish": "changeset publish"
   },
   "devDependencies": {

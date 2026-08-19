@@ -4,7 +4,7 @@ import { useCallback, useEffect, useRef, useState } from 'react'
  * Inspect mode: hold Option (Alt) and click any element to open the line that
  * authored it in your editor.
  *
- * The @modulato/vite plugin stamps `data-modulato-source="/pages/home/page.tsx:78:9"`
+ * The @modulato/vite plugin stamps `data-modulato-source="/pages/home/page.tsx:78"`
  * on every host element in dev. This is the half that makes it a tool rather
  * than a string you read in devtools and retype.
  *
