@@ -18,6 +18,7 @@ import css from './overlay.css?inline'
 // @fontsource-variable/inter@5.3.0. Bundled so the overlay renders Inter even
 // on machines without it installed (or with only stray weights installed).
 import interUrl from './inter.woff2'
+import { Inspect } from './inspect'
 
 function useHandle(): ModulatoDevHandle | null {
   const [handle, setHandle] = useState<ModulatoDevHandle | null>(
@@ -1093,6 +1094,11 @@ export function mount(): void {
   root.style.fontSize = '16px'
   shadow.appendChild(root)
   void import('react-dom/client').then(({ createRoot }) => {
-    createRoot(root).render(<Overlay />)
+    createRoot(root).render(
+      <>
+        <Overlay />
+        <Inspect />
+      </>,
+    )
   })
 }

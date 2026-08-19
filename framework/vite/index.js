@@ -432,14 +432,20 @@ export default function modulato(options = {}) {
 
       // Tweak Mode writeback: POST /__modulato/tokens → AST-preserving edit
       // of a motion.ts. Dev only, and only when the site installed the tool.
+      //
+      // GET /__modulato/open resolves a `data-modulato-source` value to an
+      // absolute path for Vite's `/__open-in-editor`, which is what turns the
+      // attribute into an Option-click that lands in the editor.
       if (options.tweak !== false && resolvable('@modulato/tweak/middleware')) {
-        let handler
-        server.middlewares.use('/__modulato/tokens', (req, res, next) => {
-          handler ??= import('@modulato/tweak/middleware').then((m) =>
-            m.tokensMiddleware(root),
-          )
-          handler.then((h) => h(req, res, next)).catch(next)
-        })
+        const mount = (route, pick) => {
+          let handler
+          server.middlewares.use(route, (req, res, next) => {
+            handler ??= import('@modulato/tweak/middleware').then((m) => pick(m)(root))
+            handler.then((h) => h(req, res, next)).catch(next)
+          })
+        }
+        mount('/__modulato/tokens', (m) => m.tokensMiddleware)
+        mount('/__modulato/open', (m) => m.openMiddleware)
       }
 
       // SSR middleware, mounted after Vite's own (assets, HMR, transforms).

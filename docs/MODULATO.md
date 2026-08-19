@@ -315,6 +315,15 @@ Dev only: a production build compiles to a different JSX runtime and ships none
 of it. Turn it off with `modulato({ sourceAttribute: false })` if it makes
 snapshot diffs noisy. Host elements only — a component sees no extra prop.
 
+With `@modulato/tweak` installed, **hold Option (Alt) and click** any element to
+open that exact line in your editor. Holding the key outlines whatever is under
+the cursor and names it, so you can see what you are about to open; the click is
+swallowed, so the site's own handlers and the browser's Option-click behaviour
+never fire. Release the key, press Escape, or leave the window to disarm.
+
+If nothing opens, the note that appears says why — the usual causes are an
+editor Vite cannot detect (set `$EDITOR`) or a file that no longer exists.
+
 ## 7. Motion tokens & Tweak Mode
 
 ```ts
