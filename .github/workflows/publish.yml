@@ -49,6 +49,41 @@ jobs:
 
       - run: npm ci
 
+      # THE GATE — the same one check.yml runs, but here it actually blocks a
+      # release.
+      #
+      # check.yml does not gate this. GitHub refuses to trigger workflows on a
+      # pull request opened by its own GITHUB_TOKEN, so the Check run on the
+      # "Version Packages" PR sits at `action_required` and is skipped unless a
+      # human approves it — and that PR is the one whose merge publishes to npm.
+      # check.yml's `push: main` run is no help either: it races this workflow
+      # rather than blocking it, so it can go red *after* the packages are
+      # already on the registry, which is not a gate, it is a notification.
+      #
+      # Putting the gate in front of the publish step is the version that holds
+      # with no new credentials. A PAT would make the release PR trigger
+      # workflows normally, but this repo publishes over OIDC precisely so that
+      # no long-lived token exists — buying enforcement with a token would
+      # trade away the better property.
+      - name: Types
+        run: npm run check
+
+      - name: Contracts
+        run: npx modulato check
+        working-directory: examples/demo
+
+      - name: Build
+        run: npm run build -w examples/demo
+
+      - name: Scaffold deps in sync
+        run: node scripts/sync-template-deps.mjs --check
+
+      - name: Docs in sync
+        run: |
+          npm run sync:docs
+          git diff --exit-code -- framework/create/MODULATO.md docs/site/public/llms-full.txt \
+            || { echo '::error::docs/MODULATO.md changed without `npm run sync:docs`'; exit 1; }
+
       - uses: changesets/action@v1
         with:
           version: npm run changeset:version # bump versions + changelogs + lockfile
