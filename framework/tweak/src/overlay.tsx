@@ -235,6 +235,16 @@ function CopyIcon(props: React.SVGProps<SVGSVGElement>) {
     </svg>
   )
 }
+// lucide trash — discarding a colour row that was never saved.
+function TrashIcon(props: React.SVGProps<SVGSVGElement>) {
+  return (
+    <svg {...iconProps({ width: 13, height: 13, ...props })}>
+      <path d="M3 6h18" />
+      <path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6" />
+      <path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2" />
+    </svg>
+  )
+}
 function ChevronDownIcon(props: React.SVGProps<SVGSVGElement>) {
   return (
     <svg {...iconProps(props)}>
@@ -851,11 +861,19 @@ function ColorRow({
           aria-label={`discard ${name}`}
           onClick={onRemove}
         >
-          ×
+          <TrashIcon />
         </button>
       )}
+      {/* The unsaved marker sits in the card's own padding, left of the swatch
+          and on its centre line — a gutter mark rather than a badge stuck to
+          the control. Out there it costs the row no width, so a dirty row and
+          a clean one still line up. Red because for a colour it means "not in
+          the file yet", which is a thing you can lose. */}
       {dirty && (
-        <span className="absolute top-0 right-0 size-2.5 rounded-full bg-foreground ring-2 ring-background" />
+        <span
+          className="absolute top-1/2 -left-2 size-1.5 -translate-y-1/2 rounded-full bg-destructive"
+          title="unsaved"
+        />
       )}
     </div>
   )
