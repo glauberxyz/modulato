@@ -6,8 +6,10 @@ import {
   useSyncExternalStore,
   type ReactNode,
 } from 'react'
-import type { ModulatoDevHandle } from 'modulato/client'
 import type { DeclaredEase, TokenLeaf, TokenValue } from 'modulato'
+import { useHandle } from './handle'
+import { saveTokens } from './save'
+import { TypeMode, typeMode, useTypeMode } from './type'
 import { Button } from './ui/button'
 import { Input } from './ui/input'
 import { Slider } from './ui/slider'
@@ -19,23 +21,6 @@ import css from './overlay.css?inline'
 // on machines without it installed (or with only stray weights installed).
 import interUrl from './inter.woff2'
 import { Inspect } from './inspect'
-
-function useHandle(): ModulatoDevHandle | null {
-  const [handle, setHandle] = useState<ModulatoDevHandle | null>(
-    () => window.__MODULATO__ ?? null,
-  )
-  useEffect(() => {
-    if (handle) return undefined
-    const timer = setInterval(() => {
-      if (window.__MODULATO__) {
-        setHandle(window.__MODULATO__)
-        clearInterval(timer)
-      }
-    }, 100)
-    return () => clearInterval(timer)
-  }, [handle])
-  return handle
-}
 
 const fmt = (v: number) => String(parseFloat(v.toFixed(4)))
 
@@ -181,6 +166,9 @@ function PlayIcon(props: React.SVGProps<SVGSVGElement>) {
 
 /** What Loop replays — the Replay button most recently pressed. */
 type LoopTarget = 'intro' | 'shell' | 'motions'
+
+/** The project's typography module, as the registry keys it. */
+const TYPE_FILE = '/type.ts'
 
 const RING_R = 10
 const RING_C = 2 * Math.PI * RING_R
@@ -678,12 +666,21 @@ function Overlay() {
   const [status, setStatus] = useState('')
   const [forcedBp, setForcedBp] = useState<string | null>(null)
   const [forcedReduced, setForcedReduced] = useState(false)
+  const typing = useTypeMode()
   const loopRef = useRef(false)
   loopRef.current = loop
 
   const version = useSyncExternalStore(
     useCallback((cb) => handle?.tokens.subscribe(cb) ?? (() => {}), [handle]),
     () => handle?.tokens.version ?? 0,
+  )
+
+  // Guarded with a default: an older `modulato` next to a newer overlay has
+  // no typography channel, and the panel should degrade to no card rather
+  // than throw on first render.
+  const typeVersion = useSyncExternalStore(
+    useCallback((cb: () => void) => handle?.type?.subscribe(cb) ?? (() => {}), [handle]),
+    () => handle?.type?.version ?? 0,
   )
 
   // Speed lives in the core and can change without a click here (MCP remote).
@@ -766,15 +763,23 @@ function Overlay() {
     if (!changes.length) return
     setStatus('saving…')
     try {
-      const res = await fetch('/__modulato/tokens', {
-        method: 'POST',
-        headers: { 'content-type': 'application/json' },
-        body: JSON.stringify({ file, changes }),
-      })
-      const body = (await res.json()) as { ok: boolean; error?: string }
-      if (!body.ok) throw new Error(body.error)
+      await saveTokens(file, changes)
       handle.tokens.markSaved(file)
       setStatus(`saved ${file}`)
+    } catch (error) {
+      setStatus(`save failed: ${String(error)}`)
+    }
+    setTimeout(() => setStatus(''), 2500)
+  }
+
+  const saveType = async () => {
+    const changes = handle.type?.dirty(TYPE_FILE) ?? []
+    if (!handle.type || !changes.length) return
+    setStatus('saving…')
+    try {
+      await saveTokens(TYPE_FILE, changes)
+      handle.type.markSaved(TYPE_FILE)
+      setStatus(`saved ${TYPE_FILE}`)
     } catch (error) {
       setStatus(`save failed: ${String(error)}`)
     }
@@ -915,6 +920,85 @@ function Overlay() {
               ))}
             </div>
           </div>
+
+          {/* ── typography ──────────────────────────────────────────── */}
+          {/* The panel half of Type Mode. The popup on the page edits one
+              style where it sits; this is the whole system at once, with the
+              breakpoint tabs a click on a heading cannot reach. Both write the
+              same registry and save through the same endpoint. */}
+          {handle.type && handle.type.leaves(TYPE_FILE).length > 0 && (() => {
+            const leaves = handle.type.leaves(TYPE_FILE)
+            const typeDirty = new Set(
+              handle.type.dirty(TYPE_FILE).map((l) => l.path.join('.')),
+            )
+            const query = filter.trim().toLowerCase()
+            const groups = groupLeaves(leaves, overrideKeys, blockOrder).filter((g) =>
+              g.blocks.some((b) =>
+                b.leaves.some(
+                  (l) =>
+                    !query ||
+                    rowMatches(query, g.path, l) ||
+                    typeDirty.has(l.path.join('.')),
+                ),
+              ),
+            )
+            return (
+              <div className="rounded-xl bg-background p-3.5" data-version={typeVersion}>
+                <div className="flex items-center justify-between">
+                  <SectionTitle>Typography</SectionTitle>
+                  <label className="flex cursor-pointer items-center gap-2 text-xs text-muted-foreground">
+                    <Switch
+                      size="sm"
+                      checked={typing}
+                      onCheckedChange={(c: boolean) => typeMode.set(c === true)}
+                    />
+                    Click text
+                  </label>
+                </div>
+                {typing && (
+                  <div className="mt-1.5 text-[11px] text-muted-foreground">
+                    Click any text on the page to edit the style it is set in.
+                    Escape closes the card; Escape again leaves the mode.
+                  </div>
+                )}
+                <div>
+                  {groups.map((group) => (
+                    <GroupSection
+                      key={group.path.join('.') || '(root)'}
+                      group={group}
+                      dirtySet={typeDirty}
+                      query={query}
+                      groupHit={false}
+                      declared={[]}
+                      onChange={(leaf, value) =>
+                        handle.type?.set(TYPE_FILE, leaf.path, value)
+                      }
+                      onReset={(leaf) => handle.type?.resetLeaf(TYPE_FILE, leaf.path)}
+                    />
+                  ))}
+                </div>
+                <div className="mt-3 flex gap-1.5">
+                  <Button
+                    size="sm"
+                    className="h-9 flex-1 rounded-full text-xs"
+                    disabled={!typeDirty.size}
+                    onClick={() => void saveType()}
+                  >
+                    Save{typeDirty.size ? ` (${typeDirty.size})` : ''}
+                  </Button>
+                  <Button
+                    variant="secondary"
+                    size="sm"
+                    className="h-9 flex-1 rounded-full text-xs"
+                    disabled={!typeDirty.size}
+                    onClick={() => handle.type?.reset(TYPE_FILE)}
+                  >
+                    Reset
+                  </Button>
+                </div>
+              </div>
+            )
+          })()}
 
           {/* ── tokens ──────────────────────────────────────────────── */}
           <div className="rounded-xl bg-background p-3.5">
@@ -1098,6 +1182,7 @@ export function mount(): void {
       <>
         <Overlay />
         <Inspect />
+        <TypeMode />
       </>,
     )
   })

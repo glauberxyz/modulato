@@ -14,6 +14,7 @@ import {
 import { resolveEntry } from './resolve'
 import { ModulatoRoot } from './root'
 import { ticker } from './ticker'
+import { initTypography, typeRegistry, type TypographySpec } from './typography'
 import type { TransitionsManifest } from './transitions'
 import type { ContentSource, RouteDef } from './types'
 import { forceBreakpoint, forceReducedMotion, initViewport, viewportStore } from './viewport'
@@ -30,6 +31,8 @@ export interface ModulatoDevHandle {
   replayShellIntro: () => Promise<void>
   /** Curves declared in modulato.config.ts (Tweak's ease dropdown reads these). */
   eases: typeof easeRegistry
+  /** Typography tokens from `type.ts` — Tweak's type panel writes here. */
+  type: typeof typeRegistry
   viewport: {
     readonly breakpoint: string
     readonly reducedMotion: boolean
@@ -60,6 +63,7 @@ export async function boot({
   content = {},
   breakpoints,
   eases,
+  typography,
 }: {
   routes: RouteDef[]
   App: ComponentType
@@ -69,6 +73,8 @@ export async function boot({
   content?: ContentSource
   breakpoints?: Record<string, string> | null
   eases?: Record<string, string> | null
+  /** The project's `type.ts` default export, if it has one. */
+  typography?: TypographySpec | null
 }): Promise<void> {
   // Before ANYTHING else — including route-chunk resolution below, whose
   // module scope may register gsap's ScrollTrigger. ScrollTrigger snapshots
@@ -82,6 +88,10 @@ export async function boot({
   window.history.scrollRestoration = 'manual'
   initViewport(breakpoints)
   initEases(eases)
+  // Before hydration: SSR already inlined this stylesheet, so in production
+  // this is a no-op that confirms it. In dev it also registers the tokens, so
+  // Tweak has typography to edit from the first frame.
+  initTypography(typography, breakpoints)
 
   const container = document.getElementById('__modulato')
   if (!container) {
@@ -147,6 +157,7 @@ export async function boot({
       },
       tokens: motionRegistry,
       eases: easeRegistry,
+      type: typeRegistry,
       get speed() {
         return getMotionSpeed()
       },

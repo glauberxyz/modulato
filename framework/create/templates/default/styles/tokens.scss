@@ -1,12 +1,16 @@
-// Design tokens — the single source for colors, fonts and shared values.
+// Design tokens — the single source for colors and shared values.
 // New color? Add a variable here FIRST, then use var(--name) everywhere.
 // CSS custom properties are visible at runtime: themeable, and readable
 // from JS/WebGL (getComputedStyle) when a scene needs brand colors.
+//
+// TYPE IS NOT HERE. Fonts, sizes, leading and tracking live in `type.ts` at
+// the project root, as data — that is what lets the Tweak overlay edit them
+// live and write them back. This file is color and the odd shared curve.
 :root {
   --bg: #f5f3ee;
   --fg: #171717;
   --muted: #6f6f6f;
   --accent: #d96f4e;
-  --font-sans: ui-sans-serif, system-ui, sans-serif;
+  --rule: #e2ded5;
   --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
 }

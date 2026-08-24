@@ -1,22 +1,52 @@
-// Shared typography — every text style in the project, as mixins.
-// Page styles @use this file and @include; they never declare font
-// properties directly, so retypesetting the site is a one-file change.
+// The bridge between the type system and the stylesheets that use it.
+//
+// The VALUES are not here — they are in `type.ts`, which Modulato renders into
+// CSS custom properties (`--type-<style>-size`, `-leading`, `-tracking`, …)
+// and inlines into every SSR response. This file only reads them, which is
+// what keeps the two from drifting: rename a field here and nothing silently
+// keeps working with an old number, because there are no numbers here.
+//
+// Pages `@use` this file and `@include`; they never declare font properties
+// directly, so retypesetting the site is a one-file change — and that file is
+// type.ts, which the Tweak overlay can edit while you look at the page.
 
+// Wear a named style from type.ts. `@include type.style('headline')`.
+//
+// The last line is the important one: it stamps the style's name on the
+// element, so Type Mode can click a heading and know which style made it. The
+// generated `.type-<name>` classes set the same properties — this mixin is the
+// SCSS spelling of the same thing, for stylesheets that would rather compose
+// than add a class in JSX.
+//
+// The fallbacks matter: `var(--undeclared)` on an inherited property resolves
+// to `inherit`, so a style that says nothing about text-transform would pick
+// up an ancestor's uppercase. These match the generated `.type-*` classes.
+@mixin style($name) {
+  font-family: var(--type-#{$name}-family, inherit);
+  font-size: var(--type-#{$name}-size, inherit);
+  line-height: var(--type-#{$name}-leading, inherit);
+  letter-spacing: var(--type-#{$name}-tracking, inherit);
+  font-weight: var(--type-#{$name}-weight, inherit);
+  text-transform: var(--type-#{$name}-case, none);
+  text-wrap: var(--type-#{$name}-wrap, wrap);
+  --modulato-type: #{$name};
+}
+
+// Shorthands for the styles this project ships with. Add a style to type.ts
+// and add its one-liner here — or skip this file entirely and use the
+// generated `class="type-<name>"` in JSX.
 @mixin headline {
-  font-family: var(--font-sans);
-  font-size: clamp(3rem, 8vw, 6.5rem);
-  letter-spacing: -0.03em;
-  line-height: 1;
+  @include style('headline');
 }
 
 @mixin body {
-  font-family: var(--font-sans);
-  font-size: 1.125rem;
-  line-height: 1.7;
+  @include style('body');
 }
 
 @mixin small {
-  font-family: var(--font-sans);
-  font-size: 0.875rem;
-  line-height: 1.4;
+  @include style('small');
+}
+
+@mixin label {
+  @include style('label');
 }

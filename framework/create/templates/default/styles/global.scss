@@ -5,10 +5,13 @@
 
 html, body { margin: 0; padding: 0; }
 
+// The document's default text is the `body` style from type.ts — declared
+// once, here, so every element inherits it and page stylesheets only have to
+// name the styles that DEPART from it.
 body {
+  @include type.body;
   background: var(--bg);
   color: var(--fg);
-  font-family: var(--font-sans);
   -webkit-font-smoothing: antialiased;
   min-height: 100dvh;
 }

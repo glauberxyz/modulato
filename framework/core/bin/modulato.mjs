@@ -32,7 +32,7 @@ Usage
   modulato content [--json]             pull the content source → typed snapshot
                                           (.modulato/content.json + content.d.ts)
   modulato routes [--json]              list routes derived from pages/
-  modulato tokens [filter] [--json]     motion tokens from every motion.ts
+  modulato tokens [filter] [--json]     tokens from every motion.ts and type.ts
   modulato check [--json]               validate contracts (exit 1 on errors)
 
 Conventions

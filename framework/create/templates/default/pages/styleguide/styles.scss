@@ -1,0 +1,157 @@
+// Layout only. Every text style on this page comes from type.ts — either
+// through a `type.style()` include or, for the specimens themselves, through
+// the generated `.type-*` class, which is the point of the page.
+@use '../../styles/typography' as type;
+
+.guide {
+  padding: 10rem 6vw 8rem;
+  max-width: 62rem;
+
+  &__head {
+    margin-bottom: 5rem;
+  }
+
+  &__title {
+    @include type.headline;
+    margin: 0 0 1.5rem;
+  }
+
+  &__lede {
+    max-width: 38rem;
+    color: var(--muted);
+  }
+
+  &__section {
+    margin-bottom: 5rem;
+    border-top: 1px solid var(--rule);
+    padding-top: 1.5rem;
+  }
+
+  &__heading {
+    @include type.label;
+    color: var(--muted);
+    margin: 0 0 2rem;
+  }
+
+  &__note {
+    @include type.small;
+    max-width: 34rem;
+    color: var(--muted);
+    margin: -1rem 0 2rem;
+  }
+
+  // A specimen is its facts beside the type it describes.
+  &__specimen {
+    display: grid;
+    grid-template-columns: 12rem 1fr;
+    gap: 2rem;
+    align-items: start;
+    padding: 2rem 0;
+    border-bottom: 1px solid var(--rule);
+
+    &:last-child {
+      border-bottom: 0;
+    }
+
+    @media (max-width: 767px) {
+      grid-template-columns: 1fr;
+      gap: 1rem;
+    }
+  }
+
+  &__name {
+    @include type.small;
+    font-variant-numeric: tabular-nums;
+  }
+
+  &__facts {
+    @include type.small;
+    margin: 0.75rem 0 0;
+    color: var(--muted);
+  }
+
+  &__fact {
+    display: flex;
+    gap: 0.5rem;
+
+    dt {
+      min-width: 4.5rem;
+    }
+
+    dd {
+      margin: 0;
+      color: var(--fg);
+    }
+
+    // The measured line is the one that can contradict the others — set it
+    // apart so a mismatch is visible rather than buried in a list.
+    &--computed {
+      margin-top: 0.5rem;
+
+      dd {
+        color: var(--accent);
+      }
+    }
+  }
+
+  &__sample {
+    margin: 0;
+    // The specimen must be the style and nothing else: no color, no width, no
+    // opinion the type system did not express.
+  }
+
+  &__scale {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+  }
+
+  &__step {
+    display: grid;
+    grid-template-columns: 4rem 1fr 6rem;
+    gap: 1.5rem;
+    align-items: baseline;
+    padding: 0.75rem 0;
+    border-bottom: 1px solid var(--rule);
+  }
+
+  &__stepSample {
+    line-height: 1;
+    letter-spacing: -0.02em;
+  }
+
+  &__stepValue {
+    @include type.small;
+    color: var(--muted);
+    text-align: right;
+    font-variant-numeric: tabular-nums;
+  }
+
+  &__swatches {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(13rem, 1fr));
+    gap: 1.5rem;
+  }
+
+  &__swatch {
+    display: grid;
+    gap: 0.5rem;
+  }
+
+  &__chip {
+    display: block;
+    height: 4.5rem;
+    border-radius: 0.5rem;
+    // A hairline, so a swatch the same color as the page still has an edge.
+    box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.12);
+  }
+
+  code {
+    background: rgba(0, 0, 0, 0.06);
+    padding: 0.1em 0.35em;
+    border-radius: 0.3em;
+  }
+}

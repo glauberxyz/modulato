@@ -248,6 +248,128 @@ function checkMotionKeywords(root, warn) {
   }
 }
 
+
+/**
+ * Typography contracts, when the project has a `type.ts`.
+ *
+ * TWO failures, both of which look like nothing until somebody reads the page:
+ *
+ * 1. A stylesheet reads `--type-<style>-size` for a style that does not
+ *    exist. `var()` on an undeclared property falls back silently — the text
+ *    renders at the inherited size and nothing anywhere says why. This is what
+ *    a rename in type.ts leaves behind, and it is the single most likely way
+ *    the system breaks.
+ * 2. A page stylesheet declares font properties directly. It works, which is
+ *    the problem: the value is now outside the type system, invisible to the
+ *    styleguide and un-editable in Tweak, and the next retypesetting misses
+ *    it. A warning, not an error — a project is allowed to make an exception,
+ *    just not by accident.
+ */
+function checkTypography(root, error, warn) {
+  const typeFile = path.resolve(root, 'type.ts')
+  if (!fs.existsSync(typeFile)) return
+
+  const src = stripComments(fs.readFileSync(typeFile, 'utf8'))
+  const callAt = src.search(/\btypography\s*\(/)
+  if (callAt === -1) {
+    error('type.ts', 'no typography({...}) call — the default export must be one, or nothing reads it.')
+    return
+  }
+  const body = sliceBraces(src, src.indexOf('{', callAt))
+  if (body === null) return
+  const stylesBody = objectBody(body, 'styles')
+  if (stylesBody === null) {
+    error('type.ts', 'no `styles` — a type system with no named styles emits no CSS.')
+    return
+  }
+  const styles = new Set()
+  for (const entry of splitEntries(stylesBody)) {
+    const m = entry.match(/^\s*(?:(['"])([^'"]+)\1|([\w$]+))\s*:/)
+    if (m) styles.add(m[2] ?? m[3])
+  }
+  const scaleBody = objectBody(body, 'scale')
+  const steps = new Set()
+  if (scaleBody !== null)
+    for (const entry of splitEntries(scaleBody)) {
+      const m = entry.match(/^\s*(?:(['"])([^'"]+)\1|([\w$]+))\s*:/)
+      if (m) steps.add(m[2] ?? m[3])
+    }
+
+  // The suffixes typeCss emits. Anything else after a style name is a typo in
+  // its own right, but naming the known ones keeps this from firing on a
+  // project's unrelated `--type-` variable.
+  const SUFFIXES = ['family', 'size', 'leading', 'tracking', 'weight', 'case', 'wrap']
+  const sheets = []
+  const walk = (dir) => {
+    if (!fs.existsSync(dir)) return
+    for (const e of fs.readdirSync(dir, { withFileTypes: true })) {
+      const abs = path.join(dir, e.name)
+      if (e.isDirectory()) {
+        if (e.name !== 'node_modules' && !e.name.startsWith('.') && e.name !== 'dist') walk(abs)
+      } else if (e.name.endsWith('.scss') || e.name.endsWith('.css')) sheets.push(abs)
+    }
+  }
+  walk(root)
+
+  for (const abs of sheets) {
+    const rel = path.relative(root, abs).split(path.sep).join('/')
+    const text = fs.readFileSync(abs, 'utf8')
+    for (const m of text.matchAll(/--type-([a-zA-Z0-9_-]+)/g)) {
+      const name = m[1]
+      // Interpolated by SCSS (`--type-#{$name}-size`) — the shared mixin, and
+      // not something this can resolve without running Sass.
+      if (name.startsWith('#')) continue
+      if (name.startsWith('font-')) continue
+      if (name.startsWith('size-')) {
+        const step = name.slice('size-'.length)
+        if (steps.size && !steps.has(step))
+          error(
+            rel,
+            `--type-size-${step} is not a step in type.ts's scale (${[...steps].join(', ')}). var() falls back silently, so this renders at the inherited size with nothing to say why.`,
+          )
+        continue
+      }
+      const suffix = SUFFIXES.find((s) => name.endsWith(`-${s}`))
+      if (!suffix) continue
+      const style = name.slice(0, -(suffix.length + 1))
+      if (!styles.has(style))
+        error(
+          rel,
+          `--type-${style}-${suffix} names no style in type.ts (${[...styles].join(', ')}). A rename left this behind; var() falls back silently, so the text just renders wrong.`,
+        )
+    }
+  }
+
+  // Page stylesheets are layout. A `@include` of the shared mixin is how type
+  // arrives; a raw declaration is how it escapes.
+  //
+  // Only font-family and font-size, deliberately. Those two are unambiguous:
+  // a page has no business naming a face or a size the scale does not contain.
+  // line-height and letter-spacing are as often layout as they are type —
+  // `line-height: 1` on a box, tracking on a rendered specimen — and warning
+  // on them cried wolf often enough that the real warnings stopped reading as
+  // warnings.
+  const pagesDir = path.resolve(root, 'pages')
+  for (const abs of sheets) {
+    if (!abs.startsWith(pagesDir + path.sep)) continue
+    const rel = path.relative(root, abs).split(path.sep).join('/')
+    const text = stripComments(fs.readFileSync(abs, 'utf8'))
+    for (const property of ['font-family', 'font-size']) {
+      const re = new RegExp(`(^|[;{\\s])${property}\\s*:\\s*([^;}]+)`, 'g')
+      for (const m of text.matchAll(re)) {
+        // Reading a type variable IS using the system — that is the supported
+        // way to take one step off a style.
+        if (/var\(\s*--type-/.test(m[2])) continue
+        warn(
+          rel,
+          `declares ${property} directly — type belongs in type.ts, where the styleguide can show it and Tweak can edit it. Use @include type.style('<name>'), or var(--type-size-<step>) for one step off a style.`,
+        )
+        break
+      }
+    }
+  }
+}
+
 /**
  * `ctx.request` in a page's config.ts must be guarded.
  *
@@ -424,6 +546,7 @@ export function check(root) {
   checkEases(root, error)
   checkMotionKeywords(root, warn)
   checkLoaderRequest(root, error)
+  checkTypography(root, error, warn)
 
   return { ok: errors.length === 0, errors, warnings }
 }

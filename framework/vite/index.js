@@ -38,6 +38,7 @@ const VIRTUAL = {
   actions: 'virtual:modulato/actions',
   breakpoints: 'virtual:modulato/breakpoints',
   eases: 'virtual:modulato/eases',
+  typography: 'virtual:modulato/typography',
   app: 'virtual:modulato/app',
   clientEntry: 'virtual:modulato/client-entry',
   serverEntry: 'virtual:modulato/server-entry',
@@ -181,6 +182,14 @@ export default function modulato(options = {}) {
         return extractConfigStringMap(root, this, 'eases').then(
           (eases) => `export default ${JSON.stringify(eases)}\n`,
         )
+      // The project's type.ts, or null. A re-export rather than a direct
+      // import at each call site: typography is optional, and `null` here is
+      // what lets the client and server entries hold one unconditional import
+      // instead of two conditional code paths that could drift.
+      if (id === VIRTUAL.typography)
+        return fs.existsSync(path.resolve(root, 'type.ts'))
+          ? `export { default } from '/type.ts'\n`
+          : `export default null\n`
       if (id === VIRTUAL.app)
         return [
           `import { createElement } from 'react'`,
@@ -204,6 +213,7 @@ export default function modulato(options = {}) {
             `const content = () => import('${VIRTUAL.content}').then((m) => m.default)`,
             `import breakpoints from '${VIRTUAL.breakpoints}'`,
             `import eases from '${VIRTUAL.eases}'`,
+            `import typography from '${VIRTUAL.typography}'`,
             `import App from '${VIRTUAL.app}'`,
           ]
           // Config-declared eases only resolve in GSAP once @modulato/gsap has
@@ -221,7 +231,7 @@ export default function modulato(options = {}) {
               `[modulato] modulato.config.ts declares eases (${Object.keys(declaredEases).join(', ')}) but @modulato/gsap is not installed — GSAP tokens can't use them by name. Install @modulato/gsap, or reference the cubic-bezier() value directly.`,
             )
           lines.push(
-            `boot({ routes, App, transitions, intros, behaviors, content, breakpoints, eases })`,
+            `boot({ routes, App, transitions, intros, behaviors, content, breakpoints, eases, typography })`,
           )
           // Tweak Mode overlay — dev only, and only when the site installed it.
           if (isServe && options.tweak !== false && resolvable('@modulato/tweak/overlay'))
@@ -249,6 +259,11 @@ export default function modulato(options = {}) {
           `import content from '${VIRTUAL.content}'`,
           `import * as actions from '${VIRTUAL.actions}'`,
           `import App from '${VIRTUAL.app}'`,
+          // Typography is rendered into <head> server-side, so the document
+          // arrives already typeset — no flash of the browser's default face
+          // while a stylesheet loads.
+          `import __typography from '${VIRTUAL.typography}'`,
+          `import __breakpoints from '${VIRTUAL.breakpoints}'`,
           // Re-exported so the two callers — the dev middleware below and the
           // Vercel launcher — build the request and write the headers the
           // same way, without either needing @modulato/server as a dependency
@@ -258,7 +273,7 @@ export default function modulato(options = {}) {
         if (hasConfig) lines.push(`import __config from '/modulato.config.ts'`)
         const configArgs = hasConfig ? `, head: __config?.head, response: __config?.response` : ''
         lines.push(
-          `export const handle = (url, request) => render({ url, request, routes, App, content${configArgs}, ${flags}${assetArgs} })`,
+          `export const handle = (url, request) => render({ url, request, routes, App, content, typography: { spec: __typography, breakpoints: __breakpoints }${configArgs}, ${flags}${assetArgs} })`,
           `export const handleActionNode = (req, res) => nodeAction({ actions, req, res })`,
         )
         return lines.join('\n')
@@ -377,6 +392,23 @@ export default function modulato(options = {}) {
         }
       }
 
+      // Dev: the root type.ts self-registers into the typography registry and
+      // self-accepts HMR. Same shape as the motion.ts transform above, and for
+      // the same reason — re-registration merges into the live spec, so an
+      // edit in the editor repaints the type stylesheet without a reload.
+      if (isServe && file === path.resolve(root, 'type.ts')) {
+        return {
+          code: [
+            code,
+            `;import { __registerTypography as __modulatoRegisterType } from 'modulato'`,
+            `;import * as __modulatoTypeSelf from '/type.ts'`,
+            `;__modulatoRegisterType(__modulatoTypeSelf.default)`,
+            `;if (import.meta.hot) import.meta.hot.accept()`,
+          ].join('\n'),
+          map: null,
+        }
+      }
+
       // Auto-import a page's sibling styles.scss.
       // `undefined` means "unchanged", which would throw away a jsx-dev-runtime
       // rewrite made above. Hand back the code whenever it actually moved.
@@ -400,9 +432,11 @@ export default function modulato(options = {}) {
               ? [VIRTUAL.behaviors]
               : file === path.resolve(root, 'intro.ts')
                 ? [VIRTUAL.intros, VIRTUAL.serverEntry]
-                : file === path.resolve(root, CONTENT_SNAPSHOT)
-                  ? [VIRTUAL.content]
-                  : []
+                : file === path.resolve(root, 'type.ts')
+                  ? [VIRTUAL.typography]
+                  : file === path.resolve(root, CONTENT_SNAPSHOT)
+                    ? [VIRTUAL.content]
+                    : []
         if (!virtualIds.length) return
         for (const id of virtualIds) {
           const mod = server.moduleGraph.getModuleById(id)

@@ -34,6 +34,15 @@ non-interactive and JSON-friendly — prefer it over doing things by hand:
   `eases` (a `cubic-bezier()` string), then used in tokens by name in GSAP
   files (`ease: 'swoosh'`) and as the cubic-bezier in transition files (WAAPI
   only speaks CSS). Never register a CustomEase by hand.
+- **Typography is data**, in `type.ts` at the project root: the two font
+  stacks, the size scale, and every named style. Modulato renders it into CSS
+  custom properties plus a `.type-<name>` class per style and inlines the
+  result into every SSR response. `styles/typography.scss` is the SCSS
+  spelling — mixins that read those variables and hold no numbers.
+  A stylesheet **never declares `font-family` or `font-size`**: it includes a
+  style, or reads `var(--type-size-<step>)` for one step off one.
+  `npx modulato check` warns on the first and errors on a `--type-…` variable
+  that names nothing. `/styles` is the specimen, read from the live values.
 - The persistent shell (menu, marker) lives in `app.tsx` outside
   `<PageOutlet/>`; it reacts to `useRoute()` / `useNavigation()`.
 

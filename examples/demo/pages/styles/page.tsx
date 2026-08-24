@@ -1,4 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
+import type { TypeStyle } from 'modulato'
+import spec from '../../type'
 
 interface TypeSpec {
   family: string
@@ -8,41 +10,80 @@ interface TypeSpec {
   tracking: string
 }
 
-const TYPE_ROLES = [
-  {
-    key: 'display',
-    name: 'Title — display',
-    use: 'Chapter openers and the index claim. The Title style, scaled fluidly with the viewport rather than set at a size of its own.',
-    scale: 'clamp(44px, 9vw, 90px)',
-    sample: 'Four Screens',
-  },
-  {
-    key: 'title',
-    name: 'Title',
+/**
+ * The prose beside each specimen, keyed by the style's name in `type.ts`.
+ *
+ * The page iterates the type system, not this map: add a style to type.ts and
+ * it appears below, with a generic sample until somebody writes it one. What
+ * a style IS belongs in type.ts; what it is FOR belongs here, and neither is a
+ * copy of the other.
+ */
+const NOTES: Record<string, { use: string; sample: string }> = {
+  title: {
     use: 'Section headings, numerals, pull quotes. The style at its base size.',
     sample: 'The Binary Press',
   },
-  {
-    key: 'body-large',
-    name: 'Body — large',
+  display: {
+    use: 'Chapter openers and the index claim. The Title style, scaled fluidly with the viewport rather than set at a size of its own.',
+    sample: 'Four Screens',
+  },
+  subhead: {
+    use: 'Headings inside a chapter, and the section heads on this page. A Title at reading scale.',
+    sample: 'A screen is a grid of dots',
+  },
+  'plate-title': {
+    use: 'A plate’s title in the press diagrams. Its own step, because these are often whole sentences and want to break later than a subhead.',
+    sample: 'One hundred and seventy-five, two hundred, four hundred lines',
+  },
+  statement: {
+    use: 'The statement heading, filling the fold. The size below is a fallback — Statement.tsx measures the real one against the rendered line boxes.',
+    sample: 'Ink is binary',
+  },
+  'body-large': {
     use: 'Ledes and opening paragraphs: the step between a title and running prose. Tighter leading, since the lines are longer.',
     sample:
       'The trick is not tonal. It is spatial: break the image into dots of varying size.',
   },
-  {
-    key: 'body',
-    name: 'Body',
+  body: {
     use: 'All running prose. Measure does the work that a second size would.',
     sample:
       'A printing press is a binary device. It carries one film of ink at one density.',
   },
-  {
-    key: 'small',
-    name: 'Small',
+  small: {
     use: 'Captions, figure refs, running heads, metadata, footnotes, nav.',
     sample: 'Fig. 3 · 1904 · The Half-Tone Process, Iliffe & Sons',
   },
-] as const
+  label: {
+    use: 'Small uppercase copy — labels and running heads only. Set solid: the caps carry the distinction on their own.',
+    sample: 'Plate iii — magenta',
+  },
+  readout: {
+    use: 'Diagram readouts and the clamp expressions on this page. The smallest thing on the site.',
+    sample: 'screen 175 lpi · angle 75° · dot 0.14mm',
+  },
+}
+
+/** Every style in the type system, in the order type.ts declares them. */
+const TYPE_ROLES = Object.entries(spec.styles).map(([key, style]) => ({
+  key,
+  style: style as TypeStyle,
+  use: NOTES[key]?.use ?? 'No note yet — add one in pages/styles/page.tsx.',
+  sample: NOTES[key]?.sample ?? 'The quick brown fox jumps over the lazy dog. 0123456789',
+  // A fluid step is measured at whatever width the window happens to be, so
+  // the specimen has to say so — the number beside it is true for one width.
+  scale: fluidStep(style.size),
+}))
+
+/** The authored size, when it is a fluid step; null when it is a fixed one. */
+function fluidStep(size: unknown): string | null {
+  const raw =
+    typeof size === 'string' && size in (spec.scale ?? {})
+      ? String((spec.scale as Record<string, unknown>)[size])
+      : typeof size === 'string'
+        ? size
+        : null
+  return raw && /clamp\(|vw|vh|%/.test(raw) ? raw : null
+}
 
 const SURFACE = [
   { var: '--paper', name: 'Paper', note: 'Page surface' },
@@ -114,9 +155,10 @@ export default function Styles() {
         </div>
         <h1 className="styles__title col-full">Type &amp; Color</h1>
         <p className="styles__lede col-stack-b">
-          Four type styles and two surfaces. Everything on this site is built
-          from what is on this page — the values below are read from the live
-          stylesheet, so they cannot drift from what you are looking at.
+          One type system and two surfaces. Everything on this site is built
+          from what is on this page — the styles come from <code>type.ts</code>{' '}
+          and the measurements from the live stylesheet, so neither can drift
+          from what you are looking at.
         </p>
       </header>
 
@@ -125,16 +167,17 @@ export default function Styles() {
         <h2 className="col-aside styles__h">Typography</h2>
         <p className="col-text styles__note">
           Franklin Gothic sets the titles and the small copy; Adobe Garamond
-          sets every line of prose. Display is the Title style scaled with the
-          viewport, not a size of its own — so the system is really two faces,
-          four steps.
+          sets every line of prose. Every style below is read from{' '}
+          <code>type.ts</code>, and every measurement from the element beside
+          it — so this page cannot drift from the site. In dev, flip on the
+          Tweak overlay’s <b>Click text</b> and edit any of them here.
         </p>
       </section>
 
       {TYPE_ROLES.map((role) => (
         <section className="grid styles__type" key={role.key}>
           <div className="col-aside styles__typemeta">
-            <span className="label">{role.name}</span>
+            <span className="label">{role.key}</span>
             <p className="styles__use">{role.use}</p>
             <dl className="styles__spec">
               <dt>Family</dt>
@@ -147,14 +190,14 @@ export default function Styles() {
               <dd>{type[role.key]?.leading ?? '—'}</dd>
               <dt>Tracking</dt>
               <dd>{type[role.key]?.tracking ?? '—'}</dd>
-              {'scale' in role && (
+              {role.scale && (
                 <>
                   <dt>Scale</dt>
                   <dd className="styles__clamp">{role.scale}</dd>
                 </>
               )}
             </dl>
-            {'scale' in role && (
+            {role.scale && (
               <p className="styles__caveat">
                 Size above is measured at this window width — resize and it
                 moves.
@@ -162,7 +205,9 @@ export default function Styles() {
             )}
           </div>
           <div className="col-right">
-            <p className={`styles__sample styles__sample--${role.key}`} data-spec={role.key}>
+            {/* The class Modulato generates for the style — the specimen is
+                the real thing, not a copy of it. */}
+            <p className={`type-${role.key} styles__sample`} data-spec={role.key}>
               {role.sample}
             </p>
           </div>

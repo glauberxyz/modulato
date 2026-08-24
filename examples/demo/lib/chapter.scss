@@ -43,8 +43,7 @@
 }
 
 .movement__h {
-  @include type.title;
-  font-size: clamp(24px, 2.4vw, 32px);
+  @include type.subhead;
 }
 
 // An aside's heading is a LABEL, not a small heading — so it wears the global

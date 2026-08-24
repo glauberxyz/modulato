@@ -37,6 +37,7 @@ my-site/
   app.tsx                      ← the shell: persistent components + <PageOutlet/>
   intro.ts                     ← OPTIONAL shell intro (first-load choreography)
   motion.ts                    ← OPTIONAL shell motion tokens
+  type.ts                      ← OPTIONAL typography tokens (the site's type system)
   modulato.config.ts           ← content adapter, breakpoints, site-wide <head>
   pages/
     home/                      ← route "/"        (the folder named `home` is the index)
@@ -425,7 +426,8 @@ export default motion({
   Breakpoint/`reduced` override blocks appear as icon tabs on each token
   group; a tweaked row is dotted (click the dot to undo just that edit).
   **Save** writes only the changed values back into `motion.ts` with an
-  AST-preserving edit (comments and formatting survive).
+  AST-preserving edit (comments and formatting survive). The same panel edits
+  the type system — see §7b.
 - **Give each group its search terms.** A group is named for what it IS in the
   code and people search the overlay for what it DOES on the page — "main
   description" is the chapter lede at `flight.enter.lede`, and no substring of
@@ -530,6 +532,114 @@ NOT run check):
 - Springy curves (elastic/bounce) are **not** expressible as a single cubic:
   use GSAP's built-in `elastic.out`/`bounce.out` names in GSAP tokens, and
   keep transitions on a cubic.
+
+## 7b. Typography tokens (`type.ts`)
+
+Type is data, for the same reason motion is: a size or a leading is a number
+somebody wants to nudge while looking at the page, so it belongs in a file that
+can be read, edited and written back — not spread across stylesheets as
+literals.
+
+```ts
+// type.ts — at the project root, one per site
+import { typography } from 'modulato'
+
+export default typography({
+  fonts: { sans: 'ui-sans-serif, system-ui, sans-serif' },
+
+  // The size steps the project uses, and the only ones it uses.
+  scale: { xs: 13, sm: 15, base: 18, lg: 24, xl: 34, '2xl': 48, '3xl': 72 },
+
+  styles: {
+    headline: {
+      font: 'sans', size: '3xl', leading: 1, tracking: -0.03, weight: 600,
+      wrap: 'balance',
+      phone: { size: 'xl' },          // breakpoint override → a media query
+    },
+    body: { font: 'sans', size: 'base', leading: 1.7, wrap: 'pretty' },
+    label: { font: 'sans', size: 'xs', tracking: 0.08, case: 'uppercase' },
+  },
+})
+```
+
+A style's fields are `font`, `size`, `leading`, `tracking`, `weight`, `case`
+(text-transform) and `wrap` (text-wrap). `font` and `size` name a key from the
+catalogs above; anything that is not a key is passed through as raw CSS, so a
+one-off fluid size can be written in full — `size: 'clamp(3rem, 8vw, 6.5rem)'`
+— without inventing a scale step for it. A bare number is px for `size`, em for
+`tracking`, and unitless for `leading` and `weight`.
+
+**What Modulato generates.** `type.ts` is rendered to CSS and **inlined into
+every SSR response**, so the first painted glyph is already correct — there is
+no stylesheet request to wait for and no flash of the browser's default face:
+
+- `:root { --type-font-<name>; --type-size-<step>; --type-<style>-{family,size,leading,tracking,weight,case,wrap} }`
+- one class per style: `.type-headline`, `.type-body`, …
+- a `@media` block per breakpoint override block, using the query from
+  `modulato.config.ts` — CSS is where type is read, so CSS is where the width
+  is answered
+
+**Two ways to wear a style.** A class in JSX:
+
+```tsx
+<h1 className="type-headline">{title}</h1>
+```
+
+…or a mixin in SCSS, which is what the scaffold ships (`styles/typography.scss`)
+and what a page stylesheet should use:
+
+```scss
+@use '../../styles/typography' as type;
+
+.home__headline { @include type.headline; }
+// one step off a style, still inside the system:
+.about__title   { @include type.headline; font-size: var(--type-size-2xl); }
+```
+
+That file holds no numbers — only `var()` reads — so it cannot drift from
+`type.ts`. **Never declare `font-family` or `font-size` in a page stylesheet**;
+`modulato check` warns, because a value outside the type system is invisible to
+the styleguide, un-editable in Tweak, and missed by the next retypesetting. It
+also **errors** on a `--type-…` variable that names no style or scale step,
+which is what a rename leaves behind — `var()` falls back silently, so the text
+just renders wrong with nothing to say why.
+
+**Type Mode.** In dev, the Tweak panel's **Typography** card edits the whole
+system (breakpoint tabs and all), and its **Click text** toggle turns the page
+itself into the control: hover any text for a `Tt` badge naming its style,
+click for a card with the style name, the class carrying it, the file:line that
+authored the element, and controls for size, leading and kerning.
+
+Size steps through the `scale` — never a free pixel slider. That is the point
+of a closed scale: a site with six sizes reads as a system, and a site with a
+free slider ends up with forty-one sizes nobody chose.
+
+Each edit picks a target first, so the preview is what the save will keep:
+
+- **the style** — every element set in it moves;
+- **this class** — only elements carrying the selected class, written to
+  `overrides` in `type.ts`:
+
+  ```ts
+  overrides: { '.home__headline': { style: 'headline', leading: 1.05 } }
+  ```
+
+  Overrides are emitted as custom properties **scoped to the selector**, not as
+  font declarations, so they win wherever the element's own `font-size` came
+  from — no specificity fight and nothing to keep in stylesheet order.
+
+Save writes `type.ts` through the same AST-preserving endpoint a `motion.ts`
+uses, matching the file's own indentation; an editor edit HMR-repaints the
+stylesheet without a reload. It's a mode, not a bare click handler, so links
+keep working while the tool is installed.
+
+**Given a design to implement, encode it in `type.ts` first.** A new size is a
+scale step; a new kind of text is a style. `create-modulato` scaffolds a
+`/styleguide` page that renders the styles, the scale and the color variables
+from the live values — delete `pages/styleguide/` if you don't want it.
+
+Colors stay CSS custom properties in `styles/tokens.scss`. Only type is tokens
+today.
 
 ## 8. Behaviors (enhancers)
 

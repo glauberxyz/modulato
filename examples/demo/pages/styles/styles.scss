@@ -42,8 +42,7 @@
 }
 
 .styles__h {
-  @include type.title;
-  font-size: clamp(24px, 2.4vw, 32px);
+  @include type.subhead;
 }
 
 .styles__note {
@@ -52,7 +51,7 @@
   max-width: 58ch;
 
   code {
-    font-family: var(--font-sans);
+    font-family: var(--type-font-sans);
     color: var(--ink);
   }
 }
@@ -84,7 +83,7 @@
 }
 
 .styles__clamp {
-  font-size: 12px;
+  @include type.readout;
   color: var(--muted);
 }
 
@@ -113,26 +112,18 @@
   }
 }
 
+// A specimen wears the `.type-<name>` class Modulato generates from type.ts,
+// so there is nothing here to keep in step with the type system — only the
+// measures, which are this page's own layout.
 .styles__sample {
   margin: 0;
 
-  // The chapter-opener size — the Title style, scaled with the viewport.
-  &--display {
-    @include type.display;
-  }
-  &--title {
-    @include type.title;
-  }
-  &--body-large {
-    @include type.body-large;
+  &.type-body-large {
     max-width: 40ch;
   }
-  &--body {
-    @include type.body;
+
+  &.type-body {
     max-width: 46ch;
-  }
-  &--small {
-    @include type.small;
   }
 }
 

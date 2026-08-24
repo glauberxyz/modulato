@@ -3,6 +3,8 @@ import type { ComponentType } from 'react'
 import {
   ModulatoRoot,
   resolveEntry,
+  typeCss as renderTypeCss,
+  TYPE_STYLE_ID,
   type HeadConfig,
   type HeadLink,
   type HeadMeta,
@@ -10,6 +12,7 @@ import {
   type MetaResult,
   type ModulatoConfig,
   type RouteDef,
+  type TypographySpec,
 } from 'modulato'
 import { createCookies } from './cookies'
 
@@ -70,6 +73,7 @@ function htmlDocument({
   payload,
   clientSrc,
   styles = [],
+  typeCss = '',
   intro,
   shellIntro,
   head,
@@ -79,6 +83,8 @@ function htmlDocument({
   payload: string
   clientSrc: string
   styles?: string[]
+  /** The type system's generated CSS — see `typography` on render(). */
+  typeCss?: string
   intro?: boolean
   shellIntro?: boolean
   head?: HeadConfig
@@ -99,6 +105,14 @@ function htmlDocument({
   // the intro animations. With a shell intro (root intro.ts) the whole app is
   // hidden so the persistent shell can be choreographed in too. <noscript>
   // guarantees content is never invisible when JS is off.
+  // Typography, inlined rather than linked: it is a handful of custom
+  // properties the very first painted glyph depends on, so a request of its
+  // own would be a round trip spent to arrive at the wrong size. Emitted
+  // BEFORE the page stylesheets so a page's own rules can still out-cascade
+  // the `.type-*` utility classes, which are a floor, not a ceiling.
+  const typeStyle = typeCss
+    ? `<style id="${TYPE_STYLE_ID}">${typeCss.replaceAll('</', '<\\/')}</style>\n`
+    : ''
   const hideSelector = shellIntro ? '#__modulato' : '[data-modulato-outlet]'
   const introStyle = intro
     ? `<style id="__modulato-intro">${hideSelector}{visibility:hidden}</style>\n<noscript><style>${hideSelector}{visibility:visible !important}</style></noscript>\n`
@@ -109,7 +123,7 @@ function htmlDocument({
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 <title>${escapeHtml(title)}</title>
-${meta.description ? `<meta name="description" content="${escapeHtml(meta.description)}" />\n` : ''}${siteMeta}${pageMeta}${siteLinks}${pageLinks}${styleLinks}${scripts}${introStyle}<script type="application/json" id="__MODULATO_DATA__">${payload}</script>
+${meta.description ? `<meta name="description" content="${escapeHtml(meta.description)}" />\n` : ''}${siteMeta}${pageMeta}${siteLinks}${pageLinks}${typeStyle}${styleLinks}${scripts}${introStyle}<script type="application/json" id="__MODULATO_DATA__">${payload}</script>
 </head>
 <body>
 <div id="__modulato">${appHtml}</div>
@@ -124,6 +138,7 @@ export async function render({
   App,
   clientSrc = '/@id/virtual:modulato/client-entry',
   styles = [],
+  typography,
   intro = true,
   shellIntro = false,
   content = {},
@@ -137,6 +152,12 @@ export async function render({
   clientSrc?: string
   /** Built stylesheet hrefs to link in <head> (production builds). */
   styles?: string[]
+  /**
+   * The project's `type.ts` tokens, with the config's breakpoints. Rendered
+   * to CSS here so the document arrives already typeset — the client's
+   * `initTypography` then finds the tag and leaves it alone.
+   */
+  typography?: { spec?: TypographySpec | null; breakpoints?: Record<string, string> | null }
   /** Inject the first-load intro hiding style. Enabled by default. */
   intro?: boolean
   /** A root intro.ts exists — hide the whole app, not just the outlet. */
@@ -155,6 +176,7 @@ export async function render({
   response?: ModulatoConfig['response']
 }): Promise<RenderResult> {
   const parsed = new URL(url, 'http://modulato.internal')
+  const typeCss = renderTypeCss(typography?.spec, typography?.breakpoints)
 
   // The response hook runs BEFORE rendering, and outside the 404 branch: a
   // security header or a session refresh is not something a missing page
@@ -183,6 +205,7 @@ export async function render({
         payload: '{}',
         clientSrc,
         styles,
+        typeCss,
         head,
       }),
       status: 404,
@@ -203,6 +226,7 @@ export async function render({
       payload,
       clientSrc,
       styles,
+      typeCss,
       intro,
       shellIntro,
       head,

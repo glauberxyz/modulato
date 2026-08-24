@@ -53,6 +53,18 @@ export {
   __registerMotion,
 } from './motion'
 export type { TokenLeaf, TokenValue } from './motion'
+export {
+  typography,
+  typeRegistry,
+  typeCss,
+  initTypography,
+  __registerTypography,
+  TYPE_FILE,
+  TYPE_STYLE_ID,
+  TYPE_MARKER,
+} from './typography'
+export type { TypographySpec, TypeStyle, TypeOverride, TypeValue } from './typography'
+export type { TokenRegistry } from './registry'
 export type { IntroDef, IntroRunContext, IntroEntry, IntrosManifest } from './intro'
 export type { PageApi, PagePhase, ScrollEvent } from './page'
 export type { TickerCallback } from './ticker'

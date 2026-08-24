@@ -40,11 +40,32 @@ CustomEase by hand. Use them in tokens by name in GSAP files (`ease:
 'swoosh'`) and as the cubic-bezier in transition files (WAAPI only speaks
 CSS); the Tweak overlay writes the right spelling for you.
 
-Design tokens mirror motion tokens: colors/fonts are CSS variables in
-`styles/tokens.scss` (new color = add a variable there FIRST), and every
-text style is a mixin in `styles/typography.scss` (pages `@use` and
-`@include` — never declare font properties in a page stylesheet). Page
-`styles.scss` files are layout only.
+**Typography is data, in `type.ts` at the project root.** It holds the font
+stacks, the size scale and the named styles; Modulato renders it into CSS
+custom properties and one `.type-<name>` class per style, inlined into every
+SSR response. Page stylesheets `@use 'styles/typography'` and
+`@include type.style('body')`, or JSX uses `class="type-body"` — either way
+they never declare font-family, font-size, line-height or letter-spacing
+themselves. Page `styles.scss` files are layout only, and `modulato check`
+warns when one declares type.
+
+**Given a design to implement, or an instruction that changes how the site is
+set — encode it in `type.ts` FIRST.** A new size becomes a scale step; a new
+kind of text becomes a style. Never reach for a literal `font-size` in a page
+stylesheet because the design has one more size than the scale does: add the
+step. The scale is deliberately closed, and that is what keeps a site to a
+type system instead of to forty-one accidental sizes.
+
+Colors stay CSS variables in `styles/tokens.scss` (new color = add a variable
+there FIRST, then use `var(--name)`).
+
+`pages/styleguide/` is a specimen of both, read from the live values —
+**delete the folder** (and its Menu entry) if the project does not want it.
+
+In dev, the ✦ Tweak overlay's Typography card edits `type.ts` live, and its
+"Click text" toggle lets you click any text on the page to edit the style it
+is set in — saving either to the style (everything wearing it moves) or to
+just that class.
 
 Dev server: `npm run dev` serves **https://<project-name>.localhost** (stable,
 port-free, via portless — needs Node >= 24). In non-TTY/CI contexts or on

@@ -1,6 +1,10 @@
-// Design tokens — the single source for color, type and the grid.
-// CSS custom properties on :root: readable at runtime (from JS/WebGL),
-// usable from any stylesheet without an import.
+// Design tokens — color and the grid.
+//
+// TYPE IS NOT HERE. Fonts, sizes, leading and tracking live in `type.ts` at
+// the project root, as data — that is what lets the Tweak overlay edit them
+// live and write them back. What is left below is color and layout, as CSS
+// custom properties on :root: readable at runtime (from JS/WebGL), and usable
+// from any stylesheet without an import.
 :root {
   // Two worlds. Chapters print dark-on-paper; the index and the darkroom
   // invert — the site's own "plate" and "proof".
@@ -32,18 +36,6 @@
   --select-bg: #ffffff;
   --select-fg: #231f20;
 
-  --font-sans: 'franklin-gothic-urw', 'Helvetica Neue', sans-serif;
-  --font-serif: 'adobe-garamond-pro', Georgia, serif;
-
-  // Prose size, in one step: 24px on a large screen, 22px below it.
-  //
-  // A custom property rather than a media query inside the `body` mixin,
-  // because `body-large` INCLUDES that mixin and then overrides the size —
-  // Sass hoists a nested @media below the rule it came from, so it would
-  // out-cascade the lede's 30px and shrink every lede to body size at the
-  // same breakpoint. A variable is read where it is used and cannot do that.
-  --type-body: 24px;
-
   // 12 columns everywhere; 6 on phones. Every block is placed by column.
   --cols: 12;
   --gutter: 20px;
@@ -65,14 +57,6 @@
 
 .is-dark {
   @include dark;
-}
-
-// Anything that is not a large screen — the config's `tablet` breakpoint
-// begins at 768px and runs to 1279px, so this is phone and tablet together.
-@media (max-width: 1279px) {
-  :root {
-    --type-body: 22px;
-  }
 }
 
 @media (max-width: 767px) {

@@ -108,7 +108,7 @@ server.registerTool(
   'list_motion_tokens',
   {
     description:
-      'Read every motion.ts token module (file → token tree). Tokens are the tweakable numbers of the site’s animations.',
+      'Read every token module (file → token tree): each motion.ts / *.motion.ts, holding the tweakable numbers of the site’s animations, plus the root type.ts, holding its type system (fonts, size scale, named styles).',
     inputSchema: {},
   },
   run(() =>
@@ -120,12 +120,14 @@ server.registerTool(
   'set_motion_tokens',
   {
     description:
-      'Set token values in a motion.ts (AST-preserving file edit). With the dev server running, values apply to the page live via HMR — follow with replay to see them.',
+      'Set token values in a motion.ts or in the root type.ts (AST-preserving file edit; the file’s own indentation is preserved). With the dev server running, values apply to the page live via HMR — follow with replay to see motion changes; type changes repaint on their own.',
     inputSchema: {
-      file: z.string().describe('root-relative, e.g. /pages/home/motion.ts'),
+      file: z.string().describe('root-relative, e.g. /pages/home/motion.ts or /type.ts'),
       changes: z.array(
         z.object({
-          path: z.array(z.string()).describe('e.g. ["intro","headline","duration"]'),
+          path: z
+            .array(z.string())
+            .describe('e.g. ["intro","headline","duration"] or ["styles","headline","size"]'),
           value: z.union([z.number(), z.string(), z.boolean()]),
         }),
       ),

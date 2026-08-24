@@ -4,6 +4,8 @@ import { useNavigation, useRoute } from 'modulato'
 const ITEMS = [
   { href: '/', label: 'Home', id: 'home' },
   { href: '/about', label: 'About', id: 'about' },
+  // Delete this entry along with pages/styleguide/ when you drop the page.
+  { href: '/styleguide', label: 'Styles', id: 'styleguide' },
 ]
 
 /** Persistent nav — the indicator slides the moment navigation starts. */

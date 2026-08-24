@@ -4,14 +4,13 @@
   padding: 12rem 6vw 6rem;
   max-width: 38rem;
 
+  // The headline style, one step down. A page stylesheet never declares font
+  // properties of its own — it names a style from type.ts and, at most,
+  // reaches for another step of the same scale.
   &__title {
-    font-size: clamp(2.5rem, 6vw, 4rem);
-    letter-spacing: -0.02em;
+    @include type.headline;
+    font-size: var(--type-size-2xl);
     margin: 0 0 2rem;
-  }
-
-  p {
-    @include type.body;
   }
 
   code {

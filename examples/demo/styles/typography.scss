@@ -1,74 +1,76 @@
-// The type system. Pages @use this file and @include; they never declare
-// font properties directly, so changing type here changes it everywhere.
+// The bridge between the type system and the stylesheets that use it.
 //
-// Every style below carries `text-wrap: balance`. Three of them say so —
-// `title`, `body` and `small` — and the other three get it by composition:
-// `display` includes `title`, `body-large` includes `body`, `label` includes
-// `small`. Declaring it in the type system rather than leaning on inheritance
-// from <body> means a style keeps its wrapping wherever it is used, including
-// inside anything that sets `text-wrap` for its own reasons. Browsers cap
-// balancing at a few lines and fall back on long prose, so this is a setting
-// for headings and short blocks that costs paragraphs nothing.
+// The VALUES are not here — they are in `type.ts`, which Modulato renders into
+// CSS custom properties and inlines into every SSR response. This file only
+// reads them, which is what keeps the two from drifting: there are no numbers
+// here to go stale.
+//
+// Pages @use this file and @include; they never declare font properties
+// directly, so changing type is a one-file change — and that file is type.ts,
+// which the Tweak overlay can edit while you look at the page.
 
-// Franklin Gothic, heavy. Chapter titles, numerals, pull quotes.
+// Wear a named style from type.ts. `@include type.style('title')`.
+//
+// The last line stamps the style's name on the element, which is what lets
+// Type Mode click a heading and know which style made it. The generated
+// `.type-<name>` classes set exactly the same properties; this is the SCSS
+// spelling, for stylesheets that would rather compose than add a class in JSX.
+//
+// The fallbacks matter: `var(--undeclared)` on an inherited property resolves
+// to `inherit`, so a style silent about text-transform would pick up an
+// ancestor's uppercase.
+@mixin style($name) {
+  font-family: var(--type-#{$name}-family, inherit);
+  font-size: var(--type-#{$name}-size, inherit);
+  line-height: var(--type-#{$name}-leading, inherit);
+  letter-spacing: var(--type-#{$name}-tracking, inherit);
+  font-weight: var(--type-#{$name}-weight, inherit);
+  text-transform: var(--type-#{$name}-case, none);
+  text-wrap: var(--type-#{$name}-wrap, wrap);
+  --modulato-type: #{$name};
+}
+
 @mixin title {
-  font-family: var(--font-sans);
-  font-weight: 900;
-  font-size: 40px;
-  line-height: 0.95;
-  letter-spacing: -0.03em;
-  text-wrap: balance;
+  @include style('title');
 }
 
-// The Title style at display scale — chapter openers and the index claim.
-// Not a separate style: same face and weight, sized fluidly. Declared once
-// here so the ceiling is a single edit.
 @mixin display {
-  @include title;
-  font-size: clamp(44px, 9vw, 90px);
+  @include style('display');
 }
 
-// Adobe Garamond. All prose. The size steps down below a large screen — see
-// `--type-body` in tokens.scss, which is where that step is declared.
+@mixin subhead {
+  @include style('subhead');
+}
+
+@mixin plate-title {
+  @include style('plate-title');
+}
+
+@mixin statement {
+  @include style('statement');
+}
+
 @mixin body {
-  font-family: var(--font-serif);
-  font-weight: 400;
-  font-size: var(--type-body);
-  line-height: 1.32;
-  letter-spacing: -0.01em;
-  text-wrap: balance;
+  @include style('body');
 }
 
-// Garamond, larger. Ledes and opening paragraphs — the step between a title
-// and running prose. Tighter leading than body, since the lines are longer.
 @mixin body-large {
-  @include body;
-  font-size: 30px;
-  line-height: 1.2;
+  @include style('body-large');
 }
 
-// Franklin Gothic, regular. Captions, figure refs, running heads, metadata,
-// footnotes, nav — the layer that does most of the editorial work.
 @mixin small {
-  font-family: var(--font-sans);
-  font-weight: 400;
-  font-size: 14px;
-  line-height: 1.5;
-  letter-spacing: 0;
-  text-wrap: balance;
+  @include style('small');
 }
 
-// Small uppercase copy — labels and running heads only. Set solid: the caps
-// carry the distinction on their own, and tracking them out turned every
-// label into a texture you read letter by letter.
-//
-// The ONE definition of this style. Everything that is a label wears the
-// global `.label` class (global.scss) rather than including this mixin again
-// — so a change here reaches the running head, the contents and sources
-// headings, the next-chapter card, the diagram readouts and the plate meta
-// in one edit.
+// The ONE definition of the label style is in type.ts. Everything that is a
+// label wears the global `.label` class (global.scss) rather than including
+// this again — so a change reaches the running head, the contents and sources
+// headings, the next-chapter card, the diagram readouts and the plate meta in
+// one edit.
 @mixin label {
-  @include small;
-  text-transform: uppercase;
-  letter-spacing: 0;
+  @include style('label');
+}
+
+@mixin readout {
+  @include style('readout');
 }
