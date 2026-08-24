@@ -53,7 +53,13 @@ non-interactive and JSON-friendly — prefer it over doing things by hand:
 
 ## Commands
 
-- `npm run dev` — dev server with SSR + HMR (long-running)
+- `npm run dev` — dev server with SSR + HMR at a stable
+  **https://modulato-demo.localhost** (portless; Node >= 24). The name lives in
+  `portless.json`. The proxy binds :443, so it needs sudo ONCE per machine —
+  `sudo portless proxy start --https` in a real terminal — after which every
+  run reuses it.
+- `npm run dev:plain` — plain Vite on a port. For non-TTY/CI contexts, or
+  before the proxy has been set up.
 - `npm run build` — production build; `npm run preview` serves it
 - `npm run check` (repo root) — TypeScript across demo + framework
 
