@@ -7,7 +7,7 @@ This is the Modulato framework itself (animation-first React, LLM-first DX).
   tokens-are-data), the check gate, and the release ritual.
 - **API reference**: [docs/MODULATO.md](./docs/MODULATO.md) — the entire
   framework in one read. After editing it, run `npm run sync:docs`.
-- **Commands**: `npm run dev` (demo, at https://modulato-demo.localhost via
+- **Commands**: `npm run dev` (demo, at a stable modulato-demo.localhost via
   portless — `npm run dev:plain` for a plain port), `npm run check` (the gate),
   `npm run dev:site` (modulato.org), `npm run sync:docs`.
 - **Releasing** (when Glauber says "publish"/"release" a new version): the repo
