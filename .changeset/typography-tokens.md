@@ -54,3 +54,6 @@ The overlay is now tabbed — **Motion**, **Typography** and **Colors** — rath
 than one scroll holding all three. Colors is read-only: colors are CSS custom
 properties in a stylesheet, not a token module, so there is nothing to write
 back to; it lists the `:root` palette and copies a `var()` on click.
+
+**Escape** backs out one step at a time — the type card, then Type Mode, then
+the panel — and blurs a focused panel field before any of that.

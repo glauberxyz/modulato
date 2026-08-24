@@ -4,6 +4,7 @@ import type { TokenValue } from 'modulato'
 import { Button } from './ui/button'
 import { Slider } from './ui/slider'
 import { cn } from './ui/utils'
+import { OVERLAY_HOST } from './dom'
 import { useHandle } from './handle'
 import { openInEditor, saveTokens } from './save'
 
@@ -29,7 +30,6 @@ import { openInEditor, saveTokens } from './save'
  * swallowed.
  */
 
-const OVERLAY_HOST = '__modulato-tweak'
 const SOURCE_ATTR = 'data-modulato-source'
 const MARKER = '--modulato-type'
 const TYPE_FILE = '/type.ts'

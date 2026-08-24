@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
+import { isTyping, OVERLAY_HOST } from './dom'
 
 /**
  * Inspect mode: hold Option (Alt) and click any element to open the line that
@@ -30,26 +31,10 @@ import { useCallback, useEffect, useRef, useState } from 'react'
  */
 
 const ATTR = 'data-modulato-source'
-/** The overlay's own shadow host. Its contents are ours, not the site's. */
-const OVERLAY_HOST = '__modulato-tweak'
 
 interface Hit {
   at: string
   rect: DOMRect
-}
-
-/**
- * Typing an Option-character into a field is not an attempt to inspect.
- *
- * `activeElement` retargets to the shadow HOST, so a focused field inside a
- * shadow tree reads as the host `<div>` and passes the check. The Tweak panel's
- * own inputs live in exactly such a tree, so walk in.
- */
-function isTyping(): boolean {
-  let el: Element | null = document.activeElement
-  while (el?.shadowRoot?.activeElement) el = el.shadowRoot.activeElement
-  if (!(el instanceof HTMLElement)) return false
-  return el.isContentEditable || el.tagName === 'INPUT' || el.tagName === 'TEXTAREA'
 }
 
 /**

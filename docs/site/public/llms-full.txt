@@ -611,7 +611,15 @@ just renders wrong with nothing to say why.
 launcher: press it and the page itself becomes the control — hover any text for
 a badge naming its style, click for a card with the style name, the class
 carrying it, the file:line that authored the element, and controls for size,
-leading and kerning. Escape closes the card; Escape again leaves the mode. The
+leading and kerning.
+
+**Escape backs out one step at a time**, most specific first: the type card,
+then Type Mode, then the panel. A press while typing in one of the panel's own
+fields blurs that field instead — "never mind, this edit", not "throw away the
+panel I opened" — and a press while focus is in one of the SITE's fields is
+left alone entirely, since that key is the page's.
+
+The
 panel's **Typography** tab is the other half: the whole system at once, with
 the breakpoint tabs a click on a heading cannot reach. Both edit the same
 tokens. The button is the ONLY control for the mode — there is deliberately no

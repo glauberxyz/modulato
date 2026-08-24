@@ -9,6 +9,7 @@ import {
 import type { DeclaredEase, TokenLeaf, TokenValue } from 'modulato'
 import { useHandle } from './handle'
 import { saveTokens } from './save'
+import { focusedOverlayField } from './dom'
 import { TypeIcon, TypeMode, typeMode, useTypeMode } from './type'
 import { Button } from './ui/button'
 import { Input } from './ui/input'
@@ -894,6 +895,36 @@ function Overlay() {
       alive = false
     }
   }, [loop, handle, loopTarget])
+
+  /**
+   * Escape closes the panel.
+   *
+   * ONE key press does ONE thing, so this defers rather than racing. Type Mode
+   * already owns Escape while it is on, where it means two different things in
+   * sequence — close the card, then leave the mode — and it must finish both
+   * before the panel is allowed to hear the key at all. Checking the mode's
+   * state here, rather than stopping propagation over there, is what makes the
+   * rule readable: two listeners on `window` can't be ordered reliably, but a
+   * flag can be read.
+   *
+   * A field inside the PANEL gets the first press to itself: Escape while
+   * typing means "never mind, this edit", not "throw away the panel I opened".
+   * A field on the SITE is left alone entirely — that key is the page's.
+   */
+  useEffect(() => {
+    if (!open) return undefined
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.key !== 'Escape' || typeMode.enabled) return
+      const field = focusedOverlayField()
+      if (field) {
+        field.blur()
+        return
+      }
+      setOpen(false)
+    }
+    window.addEventListener('keydown', onKeyDown)
+    return () => window.removeEventListener('keydown', onKeyDown)
+  }, [open])
 
   // With Loop on a press re-aims the loop; with it off it fires once.
   const onReplay = (target: LoopTarget, run: () => void | Promise<void>) => () => {
