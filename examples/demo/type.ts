@@ -43,14 +43,6 @@ export default typography({
     statement: 'clamp(40px, 13vw, 190px)',
   },
 
-  // Type Mode's "save to this class" adds an `overrides` block here — one
-  // selector departing from its style:
-  //
-  //   overrides: { '.styles__title': { style: 'display', size: 'plate' } }
-  //
-  // They are emitted as custom properties SCOPED to the selector, so they win
-  // wherever the element's own font declarations came from — no specificity
-  // fight, and nothing to keep in stylesheet order.
   styles: {
     // Franklin Gothic, heavy. Chapter titles, numerals, pull quotes.
     title: {
@@ -174,4 +166,13 @@ export default typography({
       tracking: 0,
     },
   },
+
+  // Type Mode's "save to this class" adds an `overrides` block here — one
+  // selector departing from its style:
+  //
+  //   overrides: { '.styles__title': { style: 'display', size: 'plate' } }
+  //
+  // They are emitted as custom properties SCOPED to the selector, so they win
+  // wherever the element's own font declarations came from — no specificity
+  // fight, and nothing to keep in stylesheet order.
 })

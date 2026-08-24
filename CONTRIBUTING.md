@@ -87,6 +87,29 @@ worked; it was just an old framework that disagreed with MODULATO.md.
 `changeset:version` runs the script after the bump, so the Version Packages PR
 carries the new ranges, and the Check gate fails on drift.
 
+## The overlay's CSS is a checked-in build artifact
+
+`framework/tweak/src/overlay.css` is compiled from `theme.css` by Tailwind and
+committed. **Changing a class in any overlay component means rebuilding it:**
+
+```sh
+npm run build:css -w @modulato/tweak
+```
+
+Nothing errors if you forget. Tailwind only emits rules for classes it found in
+the files `theme.css` lists as `@source`, so a class with no rule is simply
+absent — the element renders unstyled and the app runs. That cost a whole
+review cycle once: `type.tsx` was not a source, so its `pointer-events-auto`
+never compiled, the Type Mode popup inherited `pointer-events: none` from its
+layer, and every click fell THROUGH the card to the page underneath. The tabs
+looked dead and the size control retargeted the card. The sources are globbed
+now (`./*.tsx`), which fixes forgetting to LIST a file — but not forgetting to
+rebuild.
+
+Note also that a synthetic `element.click()` cannot catch this class of bug: it
+dispatches straight at the node and skips hit-testing entirely. Verify overlay
+interactions with real pointer events at real coordinates.
+
 ## Docs have three lives
 
 `docs/MODULATO.md` is copied into two distribution channels:

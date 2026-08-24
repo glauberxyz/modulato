@@ -5,8 +5,14 @@
    Inter: the overlay bundles the variable latin subset (inter.woff2, ~48KB,
    dev-only) as 'Inter Tweak' — the @font-face is injected into the document
    head by mount(), since shadow-tree font faces don't load in Chromium. */
-@source "./ui";
-@source "./overlay.tsx";
+/* Globbed, not listed file-by-file. A named list silently drops a new
+   component's classes: type.tsx shipped with no `pointer-events-auto` rule,
+   so the Type Mode popup inherited `pointer-events: none` from its layer and
+   every click fell THROUGH it to the page underneath — the tabs looked dead
+   and the size control retargeted the card. Nothing errors; the class just
+   isn't in the output. A glob cannot forget. */
+@source "./*.tsx";
+@source "./ui/*.tsx";
 @import "tailwindcss";
 @import "tw-animate-css";
 @import "shadcn/tailwind.css";

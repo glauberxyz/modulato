@@ -86,17 +86,27 @@ function markerOf(el: Element): string {
 }
 
 /**
- * Class selectors for an element, longest first.
+ * Class selectors an override could reasonably be scoped to, best first.
  *
- * Longest-first is a proxy for most-specific that happens to be right for the
- * conventions this framework scaffolds: in BEM, `home__headline` is longer
- * than `home`, and an element's block class is exactly the one you do NOT want
- * an override written against.
+ * "Longest wins" was the first rule and it was wrong in the ordinary case:
+ * `.styles__h` and `.col-aside` are both nine characters, so a heading offered
+ * to scope its type to a GRID COLUMN — a class that says where the element
+ * sits, not what it is. Rank by what the class means instead:
+ *
+ * - a BEM element (`block__element`) names this thing, so it leads;
+ * - a modifier (`block--variant`) names a variant of it;
+ * - everything else is a block, a layout class or a utility, and only gets a
+ *   turn when there is nothing better.
+ *
+ * The generated `type-<style>` classes are dropped outright. Scoping an
+ * override to `.type-subhead` would mean "every element in the subhead style,
+ * except written as an override" — the style tab already does that, better.
  */
 function selectorsOf(el: Element): string[] {
+  const rank = (c: string) => (c.includes('__') ? 0 : c.includes('--') ? 1 : 2)
   return [...el.classList]
-    .filter((c) => !!c)
-    .sort((a, b) => b.length - a.length)
+    .filter((c) => !!c && !c.startsWith('type-'))
+    .sort((a, b) => rank(a) - rank(b) || b.length - a.length)
     .map((c) => `.${CSS.escape(c)}`)
 }
 
@@ -213,6 +223,26 @@ function asNumber(value: unknown): number | null {
 
 // ————— controls —————
 
+/** lucide chevron-down — the same glyph the panel's ease control carries. */
+function ChevronDownIcon(props: React.SVGProps<SVGSVGElement>) {
+  return (
+    <svg
+      xmlns="http://www.w3.org/2000/svg"
+      width={14}
+      height={14}
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth={2}
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      {...props}
+    >
+      <path d="m6 9 6 6 6-6" />
+    </svg>
+  )
+}
+
 function Row({ label, children }: { label: string; children: React.ReactNode }) {
   return (
     <div className="flex items-center gap-1.5 py-1">
@@ -223,73 +253,47 @@ function Row({ label, children }: { label: string; children: React.ReactNode }) 
 }
 
 /**
- * Font size, as steps through the project's scale — never a pixel slider.
+ * Font size, as a pick from the project's scale — never a pixel slider.
  *
  * That is the whole point of a scale: a site with six sizes stays legible as a
  * system, and a site with a free slider ends up with forty-one sizes that
- * nobody chose. A value the scale doesn't contain still shows (a one-off
- * `clamp()` is legitimate); pressing a step moves it onto the nearest one.
+ * nobody chose. A select rather than steppers, because a scale is a short list
+ * you choose FROM — stepping through it one press at a time is the same
+ * decision made slowly, and it hides the other steps while you make it.
+ *
+ * A value the scale does not contain (a legitimate one-off `clamp()`) leads
+ * the list as its own option rather than being silently snapped away.
  */
-function SizeStepper({
+function SizeSelect({
   keys,
   value,
   scale,
-  computed,
   onChange,
 }: {
   keys: string[]
   value: unknown
   scale: Record<string, TokenValue>
-  computed: string
   onChange: (key: string) => void
 }) {
-  const index = typeof value === 'string' ? keys.indexOf(value) : -1
-  // Off-scale: enter at the step nearest what the element actually renders,
-  // so the first press is a small move rather than a jump to the top or
-  // bottom of the scale.
-  const nearest = () => {
-    const px = Number.parseFloat(computed)
-    if (!Number.isFinite(px) || !keys.length) return 0
-    let best = 0
-    let delta = Number.POSITIVE_INFINITY
-    keys.forEach((key, i) => {
-      const n = Number.parseFloat(String(scale[key]))
-      if (!Number.isFinite(n)) return
-      if (Math.abs(n - px) < delta) {
-        delta = Math.abs(n - px)
-        best = i
-      }
-    })
-    return best
-  }
-  const step = (delta: number) => {
-    const from = index === -1 ? nearest() : index + delta
-    const next = keys[Math.max(0, Math.min(keys.length - 1, from))]
-    if (next) onChange(next)
-  }
-  const label =
-    index === -1 ? (typeof value === 'string' ? value : '—') : `${value} · ${scale[value as string]}`
+  const current = typeof value === 'string' ? value : ''
+  const options = keys.map((key) => ({ value: key, label: `${key} · ${scale[key]}` }))
+  if (current && !keys.includes(current))
+    options.unshift({ value: current, label: `${current} (not in the scale)` })
   return (
-    <div className="flex h-9 min-w-0 flex-1 items-center rounded-full border border-border bg-background">
-      <button
-        className="flex size-8 shrink-0 cursor-pointer items-center justify-center rounded-full text-muted-foreground hover:text-foreground disabled:opacity-30"
-        title="one step down the scale"
-        aria-label="smaller"
-        disabled={!keys.length || index === 0}
-        onClick={() => step(-1)}
+    <div className="relative flex h-9 min-w-0 flex-1 items-center rounded-full border border-border bg-background">
+      <select
+        className="size-full cursor-pointer appearance-none rounded-full bg-transparent pr-8 pl-3.5 text-xs text-foreground outline-none focus-visible:ring-2 focus-visible:ring-ring/50"
+        value={current}
+        onChange={(e) => onChange(e.target.value)}
       >
-        −
-      </button>
-      <span className="min-w-0 flex-1 truncate text-center text-xs">{label}</span>
-      <button
-        className="flex size-8 shrink-0 cursor-pointer items-center justify-center rounded-full text-muted-foreground hover:text-foreground disabled:opacity-30"
-        title="one step up the scale"
-        aria-label="larger"
-        disabled={!keys.length || index === keys.length - 1}
-        onClick={() => step(1)}
-      >
-        +
-      </button>
+        {!current && <option value="">—</option>}
+        {options.map((o) => (
+          <option key={o.value} value={o.value}>
+            {o.label}
+          </option>
+        ))}
+      </select>
+      <ChevronDownIcon className="pointer-events-none absolute right-3 text-muted-foreground" />
     </div>
   )
 }
@@ -356,7 +360,6 @@ function Popup({
   const [scope, setScope] = useState<'style' | 'selector'>('style')
   const [selector, setSelector] = useState(target.selectors[0] ?? '')
   const [status, setStatus] = useState('')
-  const [computed, setComputed] = useState('')
 
   const version = useSyncExternalStore(
     useCallback((cb: () => void) => handle.type?.subscribe(cb) ?? (() => {}), [handle]),
@@ -368,13 +371,6 @@ function Popup({
   const overrideDef = selector ? (spec?.overrides?.[selector] ?? null) : null
   const keys = scaleKeys(spec)
   const dirty = handle.type?.dirty(TYPE_FILE) ?? []
-
-  // What the element really renders at, re-read after every edit repaints the
-  // stylesheet. The authored value is a scale key; this is the consequence.
-  useEffect(() => {
-    const style = getComputedStyle(target.el)
-    setComputed(`${style.fontSize} / ${style.lineHeight} · ${style.fontFamily.split(',')[0].replace(/["']/g, '')}`)
-  }, [target.el, version])
 
   // A breakpoint block shadows the base value at this width, so an edit here
   // would write a number the reader cannot see move. Say so rather than
@@ -444,9 +440,6 @@ function Popup({
           >
             ×
           </button>
-        </div>
-        <div className="mt-1 truncate text-[11px] text-muted-foreground" title={computed}>
-          {computed}
         </div>
         {target.source && (
           <button
@@ -528,11 +521,10 @@ function Popup({
 
           <div className="rounded-xl bg-background p-3">
             <Row label="Size">
-              <SizeStepper
+              <SizeSelect
                 keys={keys}
                 value={read('size')}
                 scale={(spec.scale ?? {}) as Record<string, TokenValue>}
-                computed={computed}
                 onChange={(key) => write('size', key)}
               />
             </Row>
