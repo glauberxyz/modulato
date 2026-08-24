@@ -14,6 +14,7 @@ import {
 import { resolveEntry } from './resolve'
 import { ModulatoRoot } from './root'
 import { ticker } from './ticker'
+import { colorRegistry, initColors, type ColorSpec } from './colors'
 import { initTypography, typeRegistry, type TypographySpec } from './typography'
 import type { TransitionsManifest } from './transitions'
 import type { ContentSource, RouteDef } from './types'
@@ -33,6 +34,8 @@ export interface ModulatoDevHandle {
   eases: typeof easeRegistry
   /** Typography tokens from `type.ts` — Tweak's type panel writes here. */
   type: typeof typeRegistry
+  /** Color tokens from `color.ts` — Tweak's Colors panel writes here. */
+  colors: typeof colorRegistry
   viewport: {
     readonly breakpoint: string
     readonly reducedMotion: boolean
@@ -64,6 +67,7 @@ export async function boot({
   breakpoints,
   eases,
   typography,
+  palette,
 }: {
   routes: RouteDef[]
   App: ComponentType
@@ -75,6 +79,8 @@ export async function boot({
   eases?: Record<string, string> | null
   /** The project's `type.ts` default export, if it has one. */
   typography?: TypographySpec | null
+  /** The project's `color.ts` default export, if it has one. */
+  palette?: ColorSpec | null
 }): Promise<void> {
   // Before ANYTHING else — including route-chunk resolution below, whose
   // module scope may register gsap's ScrollTrigger. ScrollTrigger snapshots
@@ -92,6 +98,7 @@ export async function boot({
   // this is a no-op that confirms it. In dev it also registers the tokens, so
   // Tweak has typography to edit from the first frame.
   initTypography(typography, breakpoints)
+  initColors(palette)
 
   const container = document.getElementById('__modulato')
   if (!container) {
@@ -158,6 +165,7 @@ export async function boot({
       tokens: motionRegistry,
       eases: easeRegistry,
       type: typeRegistry,
+      colors: colorRegistry,
       get speed() {
         return getMotionSpeed()
       },

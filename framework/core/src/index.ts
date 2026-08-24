@@ -64,6 +64,16 @@ export {
   TYPE_MARKER,
 } from './typography'
 export type { TypographySpec, TypeStyle, TypeOverride, TypeValue } from './typography'
+export {
+  colors,
+  colorRegistry,
+  colorCss,
+  initColors,
+  __registerColors,
+  COLOR_FILE,
+  COLOR_STYLE_ID,
+} from './colors'
+export type { ColorSpec } from './colors'
 export type { TokenRegistry } from './registry'
 export type { IntroDef, IntroRunContext, IntroEntry, IntrosManifest } from './intro'
 export type { PageApi, PagePhase, ScrollEvent } from './page'

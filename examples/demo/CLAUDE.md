@@ -44,6 +44,10 @@ non-interactive and JSON-friendly — prefer it over doing things by hand:
   `npx modulato check` warns on the first and errors on a `--type-…` variable
   that names nothing. `/styles` is the specimen, read from the live values; the round **Aa**
   button beside the ✦ Tweak launcher edits any text where it sits.
+- **The palette is data**, in `color.ts` at the project root — each key is a
+  `--variable`, inlined into every SSR response. `styles/tokens.scss` keeps
+  only the grid and the `.is-dark` surface switch, which points back at the
+  palette's own `dark-*` entries rather than duplicating them.
 - The persistent shell (menu, marker) lives in `app.tsx` outside
   `<PageOutlet/>`; it reacts to `useRoute()` / `useNavigation()`.
 

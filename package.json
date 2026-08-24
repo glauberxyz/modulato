@@ -9,7 +9,7 @@
   ],
   "scripts": {
     "dev": "npm run dev -w examples/demo",
-    "check": "tsc -p examples/demo --noEmit && tsc -p framework/server --noEmit && tsc -p framework/tweak --noEmit && tsc -p docs/site --noEmit",
+    "check": "tsc -p examples/demo --noEmit && tsc -p framework/server --noEmit && tsc -p framework/tweak --noEmit && tsc -p docs/site --noEmit && tsc -p framework/create/templates/default --noEmit",
     "sync:docs": "cp docs/MODULATO.md framework/create/MODULATO.md && cp docs/MODULATO.md docs/site/public/llms-full.txt",
     "sync:template": "node scripts/sync-template-deps.mjs",
     "dev:site": "npm run dev -w docs/site",

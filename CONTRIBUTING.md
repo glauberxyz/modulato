@@ -68,6 +68,26 @@ Version Packages PR. Verifying such a change locally needs `npm ci` too —
    build and the docs-sync check), and it's verified running (browser for
    anything visual — SSR curl + DOM-state checks at minimum).
 
+## The gate typechecks the scaffold TEMPLATE, not just the demo
+
+`npm run check` ends with `tsc -p framework/create/templates/default`, and that
+last project is the one nobody thinks of. The template is not a workspace — it
+is copied to disk by `create-modulato` and only then installed — so for a long
+time nothing typechecked it, and a scaffolded site could fail its own
+`npm run check` on the first command a new user runs.
+
+That is not hypothetical: `pages/styleguide/page.tsx` shipped in
+create-modulato@0.2.0 indexing a literal object type with a `string`, which
+`tsc` rejects. It was caught by scaffolding a project by hand and running `tsc`
+in it — the gate had no opinion.
+
+Two things follow. Keep the template's own `tsconfig.json` `include` list
+current when you add a root file (`type.ts` and `color.ts` had to be added to
+it), since a file outside that list is invisible to both this gate and the
+user's. And when a change touches the template, scaffold one for real —
+`node framework/create/index.mjs /tmp/x` — because `include` drift is exactly
+the kind of thing an in-place typecheck cannot see.
+
 ## The scaffold's dependency ranges are generated
 
 `framework/create/templates/default/package.json` pins the Modulato packages,

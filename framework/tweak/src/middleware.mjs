@@ -1,6 +1,6 @@
 import fs from 'node:fs'
 import path from 'node:path'
-import { writeTokens } from './tokens.mjs'
+import { renameColor, writeTokens } from './tokens.mjs'
 
 function readBody(req) {
   return new Promise((resolve, reject) => {
@@ -34,6 +34,27 @@ export function tokensMiddleware(root) {
       const { file, changes } = JSON.parse(await readBody(req))
       const applied = writeTokens(root, file, changes)
       send(res, 200, { ok: true, applied })
+    } catch (error) {
+      send(res, 400, { ok: false, error: String(error?.message ?? error) })
+    }
+  }
+}
+
+/**
+ * POST { from: "--muted", to: "--subtle" }
+ *
+ * Renames a color token: the key in color.ts AND every `var(--muted)` read and
+ * `--muted:` declaration across the project. Its own endpoint rather than a
+ * `changes` entry, because it is not a value edit — it rewrites files the
+ * token module does not own, and the caller needs to be told how many.
+ */
+export function renameColorMiddleware(root) {
+  return async (req, res, next) => {
+    if (req.method !== 'POST') return next()
+    try {
+      const { from, to } = JSON.parse(await readBody(req))
+      const result = renameColor(root, from, to)
+      send(res, 200, { ok: true, ...result })
     } catch (error) {
       send(res, 400, { ok: false, error: String(error?.message ?? error) })
     }

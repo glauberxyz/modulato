@@ -38,6 +38,7 @@ my-site/
   intro.ts                     ← OPTIONAL shell intro (first-load choreography)
   motion.ts                    ← OPTIONAL shell motion tokens
   type.ts                      ← OPTIONAL typography tokens (the site's type system)
+  color.ts                     ← OPTIONAL color tokens (the site's palette)
   modulato.config.ts           ← content adapter, breakpoints, site-wide <head>
   pages/
     home/                      ← route "/"        (the folder named `home` is the index)
@@ -420,8 +421,7 @@ export default motion({
   so it lands last. The Tweak overlay dims the row that is never read.
 - **Tweak Mode** (dev, with `@modulato/tweak` installed): the ✦ Tweak
   overlay is tabbed — **Motion**, **Typography** (§7b, when the project has a
-  `type.ts`) and **Colors** (a read-only list of the `:root` custom properties,
-  since colors are a stylesheet rather than a token module). Motion shows the
+  `type.ts`) and **Colors** (§7c, when the project has a `color.ts`). Motion shows the
   token files for the current view (shell + this page +
   transitions touching this route; "Show all" reveals the rest) — edit live,
   replay Intro/Shell/Motions, loop, 0.1x–1x slow-mo (GSAP, WAAPI, and
@@ -663,8 +663,62 @@ scale step; a new kind of text is a style. `create-modulato` scaffolds a
 `/styleguide` page that renders the styles, the scale and the color variables
 from the live values — delete `pages/styleguide/` if you don't want it.
 
-Colors stay CSS custom properties in `styles/tokens.scss`. Only type is tokens
-today.
+## 7c. Color tokens (`color.ts`)
+
+The palette is data too, for the same reason type is.
+
+```ts
+// color.ts — at the project root, one per site
+import { colors } from 'modulato'
+
+export default colors({
+  bg: '#f5f3ee',
+  fg: '#171717',
+  muted: '#6f6f6f',
+  accent: '#d96f4e',
+})
+```
+
+Each key becomes a `:root` custom property — `accent` is `--accent`, read
+anywhere as `var(--accent)` — and Modulato **inlines the whole block into every
+SSR response**, so the first paint is already in the right colors. Moving a
+palette out of a stylesheet changes only where it is DECLARED; every `var()`
+already written keeps working untouched.
+
+**Theme overrides stay in CSS.** A `.is-dark { --bg: … }` block redefines these
+same variables for a surface, which is a question about where a color applies
+rather than what the color is. It keeps working by out-specifying the `:root`
+this generates — and it can point back at the palette rather than duplicating
+it, since a custom property may reference another:
+
+```scss
+.is-dark {
+  --bg: var(--dark-bg);
+  --fg: var(--dark-fg);
+}
+```
+
+**In the overlay's Colors tab** each row is a swatch (a real colour picker), the
+variable name, the value, and a copy button for `var(--name)`. The **+** adds a
+row: name it and the variable exists — in the running page immediately, and in
+`color.ts` on Save. That is the part a stylesheet cannot do at all.
+
+**Renaming rewrites the references.** Renaming only the declaration would leave
+every `var(--old)` pointing at a property nobody declares, and `var()` on an
+undeclared name is a silent fallback, not an error — the colour would just stop
+applying. So a rename from the overlay also rewrites every `var(--old)` read
+and every `--old:` declaration across the project's stylesheets and components,
+and reports how many it touched:
+
+```
+--muted → --quiet · 27 references in 9 files
+```
+
+It lands immediately rather than waiting for Save, because it is not a value
+edit — it changed files the token module does not own. Renaming a key **by
+hand** in `color.ts` does none of this; search for the old name yourself.
+
+
 
 ## 8. Behaviors (enhancers)
 

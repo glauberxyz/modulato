@@ -6,6 +6,7 @@ import {
   useSyncExternalStore,
   type ReactNode,
 } from 'react'
+import type { ModulatoDevHandle } from 'modulato/client'
 import type { DeclaredEase, TokenLeaf, TokenValue } from 'modulato'
 import { useHandle } from './handle'
 import { saveTokens } from './save'
@@ -222,6 +223,15 @@ function FileStackIcon(props: React.SVGProps<SVGSVGElement>) {
       <path d="M21 6v6.5c0 .8-.7 1.5-1.5 1.5h-7c-.8 0-1.5-.7-1.5-1.5v-9c0-.8.7-1.5 1.5-1.5H17Z" />
       <path d="M7 8v8.8c0 .3.2.6.4.8.2.2.5.4.8.4H15" />
       <path d="M3 12v8.8c0 .3.2.6.4.8.2.2.5.4.8.4H11" />
+    </svg>
+  )
+}
+// lucide copy — the palette's copy-the-var() glyph.
+function CopyIcon(props: React.SVGProps<SVGSVGElement>) {
+  return (
+    <svg {...iconProps({ width: 13, height: 13, ...props })}>
+      <rect width="14" height="14" x="8" y="8" rx="2" ry="2" />
+      <path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2" />
     </svg>
   )
 }
@@ -714,99 +724,300 @@ function GroupSection({
   )
 }
 
-/**
- * The project's color variables, read from the live stylesheet.
- *
- * Walking the CSSOM rather than keeping a list: a list would be a second copy
- * of the project's tokens file, and the first time somebody added a color
- * without updating it this panel would start lying. Same-origin sheets only —
- * a cross-origin one throws on `.cssRules`, so the try/catch is load-bearing.
- *
- * `--type-*` is skipped: those are the type system's, and they have their own
- * tab where they are editable rather than merely listed.
- */
-function useRootColors(): Array<[string, string]> {
-  const [vars, setVars] = useState<Array<[string, string]>>([])
-  useEffect(() => {
-    const names = new Set<string>()
-    for (const sheet of Array.from(document.styleSheets)) {
-      let rules: CSSRuleList
-      try {
-        rules = sheet.cssRules
-      } catch {
-        continue
-      }
-      for (const rule of Array.from(rules)) {
-        if (!(rule instanceof CSSStyleRule) || rule.selectorText !== ':root') continue
-        for (const property of Array.from(rule.style))
-          if (property.startsWith('--') && !property.startsWith('--type-'))
-            names.add(property)
-      }
-    }
-    const computed = getComputedStyle(document.documentElement)
-    setVars(
-      [...names]
-        .map((name) => [name, computed.getPropertyValue(name).trim()] as [string, string])
-        // Colors only: an easing curve and a column count are tokens too, but
-        // they are not swatches.
-        .filter(([, value]) => /^(#|rgb|hsl|oklch|lab|lch|color\()/i.test(value))
-        .sort(),
-    )
-  }, [])
-  return vars
+const COLOR_FILE = '/color.ts'
+
+/** A CSS custom-property name, without the leading dashes. */
+const COLOR_NAME = /^[a-zA-Z_][a-zA-Z0-9_-]*$/
+
+/** Six- or three-digit hex, or any CSS colour function the browser parses. */
+function isColor(value: string): boolean {
+  if (!value.trim()) return false
+  const probe = new Option().style
+  probe.color = ''
+  probe.color = value.trim()
+  return probe.color !== ''
 }
 
 /**
- * Colors — READ-ONLY, and labeled as such.
+ * One palette row: the swatch, the variable name, the value, and a copy.
  *
- * Colors are CSS custom properties in a stylesheet, not a token module, so
- * there is nothing here to write back to: the overlay's whole save path is an
- * AST edit of a default-exported literal, and a `.scss` file is not that.
- * Listing them is still worth a tab — it is the fastest way to find the name
- * of the color you are looking at — but the panel must not imply an editor it
- * does not have. Click a swatch to copy its `var()` reference.
+ * The swatch is a real `<input type="color">` — the OS picker is better than
+ * anything worth rebuilding here, and it is the control people expect when
+ * they see a circle of colour. It only speaks 6-digit hex, so a value it
+ * cannot represent (a `color-mix()`, an `oklch()` with alpha) still shows in
+ * the text field and simply is not pickable; the field is the source of truth.
  */
-function ColorsCard() {
-  const colors = useRootColors()
-  const [copied, setCopied] = useState<string | null>(null)
+function ColorRow({
+  name,
+  value,
+  dirty,
+  renaming,
+  onValue,
+  onRename,
+  onRemove,
+}: {
+  name: string
+  value: string
+  dirty: boolean
+  /** A row the user just added: its name is still being typed. */
+  renaming: boolean
+  onValue: (v: string) => void
+  onRename: (next: string) => void
+  onRemove?: () => void
+}) {
+  const [draftName, setDraftName] = useState<string | null>(renaming ? name : null)
+  const [draftValue, setDraftValue] = useState<string | null>(null)
+  const [copied, setCopied] = useState(false)
   useEffect(() => {
     if (!copied) return undefined
-    const id = setTimeout(() => setCopied(null), 1200)
+    const id = setTimeout(() => setCopied(false), 1200)
     return () => clearTimeout(id)
   }, [copied])
 
+  const shown = draftValue ?? value
+  const valid = isColor(shown)
+  const nameShown = draftName ?? name
+  const nameValid = COLOR_NAME.test(nameShown.replace(/^--/, ''))
+
   return (
-    <div className="rounded-xl bg-background p-3.5">
-      <SectionTitle>Colors</SectionTitle>
-      <div className="mt-1.5 text-[11px] text-muted-foreground">
-        {colors.length
-          ? 'Read from the :root custom properties — click one to copy its var(). Not editable here: colors live in a stylesheet, not a token module.'
-          : 'No color custom properties on :root. Declare them in your tokens stylesheet and they appear here.'}
-      </div>
-      {colors.length > 0 && (
-        <div className="mt-2.5 flex flex-col">
-          {colors.map(([name, value]) => (
-            <button
-              key={name}
-              className="-mx-1 flex cursor-pointer items-center gap-2 rounded-lg px-1 py-1 text-left hover:bg-muted"
-              title={`copy var(${name})`}
-              onClick={() => {
-                void navigator.clipboard?.writeText(`var(${name})`)
-                setCopied(name)
-              }}
-            >
-              <span
-                className="size-5 shrink-0 rounded-full ring-1 ring-foreground/15 ring-inset"
-                style={{ background: value }}
-              />
-              <span className="min-w-0 flex-1 truncate text-xs">{name}</span>
-              <span className="shrink-0 text-[11px] text-muted-foreground tabular-nums">
-                {copied === name ? 'copied' : value}
-              </span>
-            </button>
-          ))}
-        </div>
+    <div className="relative flex items-center gap-1.5 py-1">
+      <label
+        className="relative size-7 shrink-0 cursor-pointer overflow-hidden rounded-full ring-1 ring-foreground/15 ring-inset"
+        style={{ background: valid ? shown : 'transparent' }}
+        title={valid ? `pick a colour for --${name}` : `${shown} — not a colour the picker can show`}
+      >
+        <input
+          type="color"
+          className="absolute -inset-2 cursor-pointer opacity-0"
+          value={/^#[0-9a-f]{6}$/i.test(shown) ? shown : '#000000'}
+          onChange={(e) => onValue(e.target.value)}
+        />
+      </label>
+
+      <input
+        className={cn(
+          'h-9 min-w-0 flex-1 rounded-full border bg-background px-3 text-xs outline-none',
+          nameValid ? 'border-border' : 'border-destructive',
+        )}
+        value={nameShown.startsWith('--') ? nameShown : `--${nameShown}`}
+        spellCheck={false}
+        title="the variable name — renaming rewrites every var() that reads it"
+        onFocus={() => setDraftName(nameShown)}
+        onChange={(e) => setDraftName(e.target.value)}
+        onKeyDown={(e) => {
+          if (e.key === 'Enter') (e.target as HTMLInputElement).blur()
+        }}
+        onBlur={() => {
+          const next = (draftName ?? '').replace(/^--/, '').trim()
+          setDraftName(null)
+          if (next && next !== name && COLOR_NAME.test(next)) onRename(next)
+        }}
+      />
+
+      <input
+        className={cn(
+          'h-9 w-24 shrink-0 rounded-full border bg-background px-3 text-center text-xs outline-none',
+          valid ? 'border-border' : 'border-destructive',
+        )}
+        value={shown}
+        spellCheck={false}
+        onFocus={() => setDraftValue(shown)}
+        onBlur={() => setDraftValue(null)}
+        onKeyDown={(e) => {
+          if (e.key === 'Enter') (e.target as HTMLInputElement).blur()
+        }}
+        onChange={(e) => {
+          setDraftValue(e.target.value)
+          if (isColor(e.target.value)) onValue(e.target.value.trim())
+        }}
+      />
+
+      <button
+        className="shrink-0 cursor-pointer px-1 text-muted-foreground hover:text-foreground"
+        title={`copy var(--${name})`}
+        aria-label={`copy var(--${name})`}
+        onClick={() => {
+          void navigator.clipboard?.writeText(`var(--${name})`)
+          setCopied(true)
+        }}
+      >
+        {copied ? <span className="text-[10px]">ok</span> : <CopyIcon />}
+      </button>
+
+      {onRemove && (
+        <button
+          className="shrink-0 cursor-pointer px-1 text-muted-foreground hover:text-destructive"
+          title="discard this new colour"
+          aria-label={`discard ${name}`}
+          onClick={onRemove}
+        >
+          ×
+        </button>
       )}
+      {dirty && (
+        <span className="absolute top-0 right-0 size-2.5 rounded-full bg-foreground ring-2 ring-background" />
+      )}
+    </div>
+  )
+}
+
+/**
+ * Colors — the palette from `color.ts`, editable.
+ *
+ * This used to be a read-only list, because colors lived in a stylesheet and
+ * the overlay can only write token modules. They are a token module now, so
+ * the whole loop closes: pick a colour and the page changes, press + and a
+ * variable that did not exist is added to the project, Save writes color.ts.
+ *
+ * Renaming goes through its own endpoint, not through Save. It is not a value
+ * edit — it rewrites every `var(--old)` in the project — so it lands
+ * immediately and reports how many files it touched, rather than hiding inside
+ * a batch labelled with a number of changed values.
+ */
+function ColorsCard({ handle }: { handle: ModulatoDevHandle }) {
+  const [status, setStatus] = useState('')
+  // Rows added with + but not yet named. They live here, not in the registry,
+  // until they have a name — a token keyed '' would be written to the file.
+  const [drafts, setDrafts] = useState<Array<{ id: number; value: string }>>([])
+  const nextId = useRef(0)
+
+  const version = useSyncExternalStore(
+    useCallback((cb: () => void) => handle.colors?.subscribe(cb) ?? (() => {}), [handle]),
+    () => handle.colors?.version ?? 0,
+  )
+
+  const leaves = handle.colors?.leaves(COLOR_FILE) ?? []
+  const dirty = new Set(
+    (handle.colors?.dirty(COLOR_FILE) ?? []).map((l) => l.path.join('.')),
+  )
+
+  const save = async () => {
+    const changes = handle.colors?.dirty(COLOR_FILE) ?? []
+    if (!handle.colors || !changes.length) return
+    setStatus('saving…')
+    try {
+      await saveTokens(COLOR_FILE, changes)
+      handle.colors.markSaved(COLOR_FILE)
+      setStatus(`saved ${COLOR_FILE}`)
+    } catch (error) {
+      setStatus(`save failed: ${error instanceof Error ? error.message : String(error)}`)
+    }
+    setTimeout(() => setStatus(''), 3000)
+  }
+
+  const rename = async (from: string, to: string) => {
+    setStatus(`renaming --${from}…`)
+    try {
+      const res = await fetch('/__modulato/rename-color', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ from, to }),
+      })
+      const body = (await res.json()) as {
+        ok: boolean
+        error?: string
+        renamed?: number
+        files?: Array<{ file: string; hits: number }>
+      }
+      if (!body.ok) throw new Error(body.error)
+      // Say what it touched. A rename that quietly reports success is exactly
+      // the thing that makes a project-wide rewrite feel unsafe.
+      const n = body.renamed ?? 0
+      setStatus(
+        n
+          ? `--${from} → --${to} · ${n} reference${n === 1 ? '' : 's'} in ${body.files?.length} file${body.files?.length === 1 ? '' : 's'}`
+          : `--${from} → --${to} · no references found`,
+      )
+    } catch (error) {
+      setStatus(`rename failed: ${error instanceof Error ? error.message : String(error)}`)
+    }
+    setTimeout(() => setStatus(''), 5000)
+  }
+
+  if (!handle.colors || !leaves.length) {
+    return (
+      <div className="rounded-xl bg-background p-3.5 text-muted-foreground">
+        No <code>color.ts</code> in this project. Create one at the root —
+        <code>{` export default colors({ ink: '#231f20' })`}</code> — and every
+        key becomes a <code>--variable</code> you can edit here.
+      </div>
+    )
+  }
+
+  return (
+    <div className="rounded-xl bg-background p-3.5" data-version={version}>
+      {leaves.map((leaf) => {
+        const name = leaf.path[leaf.path.length - 1]
+        return (
+          <ColorRow
+            key={name}
+            name={name}
+            value={String(leaf.value)}
+            dirty={dirty.has(leaf.path.join('.'))}
+            renaming={false}
+            onValue={(v) => handle.colors?.set(COLOR_FILE, leaf.path, v)}
+            onRename={(to) => void rename(name, to)}
+          />
+        )
+      })}
+
+      {drafts.map((d) => (
+        <ColorRow
+          key={d.id}
+          name=""
+          value={d.value}
+          dirty
+          renaming
+          onValue={(v) =>
+            setDrafts((list) => list.map((x) => (x.id === d.id ? { ...x, value: v } : x)))
+          }
+          // Naming a draft is what promotes it into the token file — up to
+          // then it is a row on screen and nothing else.
+          onRename={(to) => {
+            handle.colors?.set(COLOR_FILE, [to], d.value)
+            setDrafts((list) => list.filter((x) => x.id !== d.id))
+          }}
+          onRemove={() => setDrafts((list) => list.filter((x) => x.id !== d.id))}
+        />
+      ))}
+
+      <div className="mt-2 flex justify-center">
+        <button
+          className="flex size-8 cursor-pointer items-center justify-center rounded-full border border-border text-muted-foreground hover:text-foreground"
+          title="add a colour — name it to add it to color.ts"
+          aria-label="add a colour"
+          onClick={() => {
+            nextId.current += 1
+            setDrafts((list) => [...list, { id: nextId.current, value: '#808080' }])
+          }}
+        >
+          +
+        </button>
+      </div>
+
+      <div className="mt-3 flex gap-1.5">
+        <Button
+          size="sm"
+          className="h-9 flex-1 rounded-full text-xs"
+          disabled={!dirty.size}
+          onClick={() => void save()}
+        >
+          Save{dirty.size ? ` (${dirty.size})` : ''}
+        </Button>
+        <Button
+          variant="secondary"
+          size="sm"
+          className="h-9 flex-1 rounded-full text-xs"
+          disabled={!dirty.size && !drafts.length}
+          onClick={() => {
+            handle.colors?.reset(COLOR_FILE)
+            setDrafts([])
+          }}
+        >
+          Reset
+        </Button>
+      </div>
+      {status && <div className="mt-1.5 text-[11px] text-muted-foreground">{status}</div>}
     </div>
   )
 }
@@ -1441,7 +1652,7 @@ function Overlay() {
             </>
           )}
 
-          {active === 'colors' && <ColorsCard />}
+          {active === 'colors' && <ColorsCard handle={handle} />}
 
           {status && <div className="px-2 pb-1 text-[11px] text-muted-foreground">{status}</div>}
         </div>

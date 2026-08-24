@@ -25,6 +25,8 @@
     "app.tsx",
     "intro.ts",
     "motion.ts",
+    "color.ts",
+    "type.ts",
     "shell",
     "pages",
     "content",

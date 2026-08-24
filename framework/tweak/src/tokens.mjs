@@ -5,18 +5,23 @@ import fs from 'node:fs'
 import path from 'node:path'
 import { generateCode, parseModule } from 'magicast'
 
+/** The project's palette module, as the registry keys it. */
+const COLOR_FILE = '/color.ts'
+
 /**
  * Root-relative ids of every token module in the project (registry keys).
  *
  * A token module is a file whose default export is plain data: `motion.ts`
- * and `*.motion.ts` (motion tokens, per page and per transition) and the root
- * `type.ts` (the type system). Same shape, same AST-preserving writeback — the
- * only difference is which registry the running page keeps them in.
+ * and `*.motion.ts` (motion tokens, per page and per transition), the root
+ * `type.ts` (the type system) and the root `color.ts` (the palette). Same
+ * shape, same AST-preserving writeback — the only difference is which registry
+ * the running page keeps them in.
  */
 export function scanMotionFiles(root) {
   const files = []
   if (fs.existsSync(path.join(root, 'motion.ts'))) files.push('/motion.ts')
   if (fs.existsSync(path.join(root, 'type.ts'))) files.push('/type.ts')
+  if (fs.existsSync(path.join(root, 'color.ts'))) files.push('/color.ts')
   const walk = (dir, prefix) => {
     if (!fs.existsSync(dir)) return
     for (const dirent of fs.readdirSync(dir, { withFileTypes: true })) {
@@ -37,12 +42,14 @@ export function resolveMotionFile(root, file) {
   if (typeof file !== 'string') throw new Error('file must be a string')
   const abs = path.resolve(root, `.${path.sep}${file.replace(/^\//, '')}`)
   const base = path.basename(abs)
-  // type.ts is the ROOT one only: a stray pages/x/type.ts is not a token
-  // module, and writing to it would be writing to a file nothing reads.
-  const isRootType = base === 'type.ts' && abs === path.join(root, 'type.ts')
+  // type.ts and color.ts are the ROOT ones only: a stray pages/x/type.ts is
+  // not a token module, and writing to it would be writing to a file nothing
+  // reads.
+  const isRootSingleton =
+    (base === 'type.ts' || base === 'color.ts') && abs === path.join(root, base)
   if (
     !abs.startsWith(root + path.sep) ||
-    !(base === 'motion.ts' || base.endsWith('.motion.ts') || isRootType) ||
+    !(base === 'motion.ts' || base.endsWith('.motion.ts') || isRootSingleton) ||
     !fs.existsSync(abs)
   )
     throw new Error(`not a token module in this project: ${file}`)
@@ -92,7 +99,10 @@ function detectFormat(source) {
 function unwrap(mod) {
   let target = mod.exports.default
   if (target && target.$type === 'function-call') target = target.$args[0]
-  if (!target) throw new Error('no default-exported motion({...}) or typography({...}) found')
+  if (!target)
+    throw new Error(
+      'no default-exported motion({...}), typography({...}) or colors({...}) found',
+    )
   return target
 }
 
@@ -130,6 +140,111 @@ function evalLiteral(node) {
     default:
       return undefined
   }
+}
+
+
+/** A CSS custom-property name, without the leading dashes. */
+const VALID_NAME = /^[a-zA-Z_][a-zA-Z0-9_-]*$/
+
+/** Files a `var(--name)` could plausibly appear in. */
+const REFERENCING = ['.scss', '.css', '.sass', '.ts', '.tsx', '.js', '.jsx']
+
+function walkProject(dir, out = []) {
+  for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
+    if (entry.name.startsWith('.') || entry.name === 'node_modules') continue
+    const abs = path.join(dir, entry.name)
+    if (entry.isDirectory()) {
+      if (entry.name === 'dist' || entry.name === 'build') continue
+      walkProject(abs, out)
+    } else if (REFERENCING.includes(path.extname(entry.name))) out.push(abs)
+  }
+  return out
+}
+
+/**
+ * Rename a color token — the key in color.ts AND every reference to it.
+ *
+ * This is the largest-blast-radius thing the overlay does, and it exists
+ * because the alternative is worse. Renaming only the declaration leaves every
+ * `var(--old)` in the project pointing at a property nobody declares any more:
+ * `var()` on an undeclared name is not an error, it is a silent fallback, so
+ * the color simply stops applying with nothing to say why. In the demo,
+ * `--muted` is referenced 26 times.
+ *
+ * Two rewrites per file, because a custom property appears two ways: as a
+ * READ (`var(--old)`) and as a DECLARATION (`--old:`, e.g. a `.is-dark` block
+ * overriding it). Missing the second would leave a dead override behind.
+ *
+ * `(?![\w-])` rather than `\b` for the boundary: `\b` sits happily between
+ * `d` and `-`, so renaming `muted` would also rewrite `--muted-strong`.
+ *
+ * Returns what it touched, so the overlay can show the blast radius rather
+ * than claim a quiet success.
+ */
+export function renameColor(root, from, to) {
+  if (typeof from !== 'string' || typeof to !== 'string')
+    throw new Error('from and to must be strings')
+  const oldName = from.replace(/^--/, '')
+  const newName = to.replace(/^--/, '')
+  if (!VALID_NAME.test(oldName) || !VALID_NAME.test(newName))
+    throw new Error(
+      `not a usable custom-property name: "${to}" — letters, digits, _ and - only, starting with a letter`,
+    )
+  if (oldName === newName) return { renamed: 0, files: [] }
+
+  const abs = resolveMotionFile(root, COLOR_FILE)
+  const source = fs.readFileSync(abs, 'utf8')
+
+  // Scope the key rename to the colors({...}) literal, so a color NAMED in a
+  // comment or a string elsewhere in the file is left alone.
+  const callAt = source.search(/\bcolors\s*\(/)
+  if (callAt === -1) throw new Error('no colors({...}) call in color.ts')
+  const open = source.indexOf('{', callAt)
+  let depth = 0
+  let close = -1
+  for (let i = open; i < source.length; i += 1) {
+    if (source[i] === '{') depth += 1
+    else if (source[i] === '}') {
+      depth -= 1
+      if (depth === 0) {
+        close = i
+        break
+      }
+    }
+  }
+  if (close === -1) throw new Error('unbalanced braces in color.ts')
+
+  const body = source.slice(open, close)
+  const keyRe = new RegExp(`(^|[\\s,{])(['"]?)${oldName}\\2(\\s*:)`, 'm')
+  if (!keyRe.test(body)) throw new Error(`no color named "${oldName}" in color.ts`)
+  if (new RegExp(`(^|[\\s,{])(['"]?)${newName}\\2(\\s*:)`, 'm').test(body))
+    throw new Error(`color.ts already has a color named "${newName}"`)
+  // Quote the new key only when it needs it — a dashed name is not an
+  // identifier, and an unquoted one would be a syntax error.
+  const quoted = VALID_NAME.test(newName) && !newName.includes('-')
+  const replacement = quoted ? `$1${newName}$3` : `$1'${newName}'$3`
+  fs.writeFileSync(
+    abs,
+    source.slice(0, open) + body.replace(keyRe, replacement) + source.slice(close),
+  )
+
+  const readRe = new RegExp(`(var\\(\\s*--)${oldName}(?![\\w-])`, 'g')
+  const declRe = new RegExp(`(--)${oldName}(?![\\w-])(\\s*:)`, 'g')
+  const files = []
+  let renamed = 0
+  for (const file of walkProject(root)) {
+    if (file === abs) continue
+    const text = fs.readFileSync(file, 'utf8')
+    let hits = 0
+    const next = text
+      .replace(readRe, (...m) => (hits += 1, `${m[1]}${newName}`))
+      .replace(declRe, (...m) => (hits += 1, `${m[1]}${newName}${m[2]}`))
+    if (!hits) continue
+    fs.writeFileSync(file, next)
+    files.push({ file: `/${path.relative(root, file).split(path.sep).join('/')}`, hits })
+    renamed += hits
+  }
+  return { renamed, files }
 }
 
 /** Read a motion.ts's token object from source (no execution). */

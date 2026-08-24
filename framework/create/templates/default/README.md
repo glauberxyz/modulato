@@ -21,7 +21,7 @@ writes back into the motion.ts files. The same panel edits the type system in
 the page to change the style it is set in, where it sits.
 
 `/styleguide` is a specimen of the type styles, the size scale and the colors,
-read from the live values. Delete `pages/styleguide/` (and its entry in
+read from `type.ts` and `color.ts` — the same data the overlay edits. Delete `pages/styleguide/` (and its entry in
 `shell/Menu.tsx`) if you don't want it.
 
 The full framework reference is in **MODULATO.md**. If you work with Claude

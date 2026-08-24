@@ -56,8 +56,11 @@ stylesheet because the design has one more size than the scale does: add the
 step. The scale is deliberately closed, and that is what keeps a site to a
 type system instead of to forty-one accidental sizes.
 
-Colors stay CSS variables in `styles/tokens.scss` (new color = add a variable
-there FIRST, then use `var(--name)`).
+**Colors are data too**, in `color.ts` at the project root: each key is a
+`--variable`. Add one there, or press **+** in the overlay's Colors tab and name
+it. Renaming a color in the overlay rewrites every `var()` that reads it;
+renaming it by hand in the file does not. Theme overrides (`.is-dark { --bg: … }`)
+stay in CSS — that is a selector question, not a palette one.
 
 `pages/styleguide/` is a specimen of both, read from the live values —
 **delete the folder** (and its Menu entry) if the project does not want it.

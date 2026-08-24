@@ -4,7 +4,9 @@ import {
   ModulatoRoot,
   resolveEntry,
   typeCss as renderTypeCss,
+  colorCss as renderColorCss,
   TYPE_STYLE_ID,
+  COLOR_STYLE_ID,
   type HeadConfig,
   type HeadLink,
   type HeadMeta,
@@ -13,6 +15,7 @@ import {
   type ModulatoConfig,
   type RouteDef,
   type TypographySpec,
+  type ColorSpec,
 } from 'modulato'
 import { createCookies } from './cookies'
 
@@ -74,6 +77,7 @@ function htmlDocument({
   clientSrc,
   styles = [],
   typeCss = '',
+  colorCss = '',
   intro,
   shellIntro,
   head,
@@ -85,6 +89,8 @@ function htmlDocument({
   styles?: string[]
   /** The type system's generated CSS — see `typography` on render(). */
   typeCss?: string
+  /** The palette's generated CSS — see `palette` on render(). */
+  colorCss?: string
   intro?: boolean
   shellIntro?: boolean
   head?: HeadConfig
@@ -113,6 +119,13 @@ function htmlDocument({
   const typeStyle = typeCss
     ? `<style id="${TYPE_STYLE_ID}">${typeCss.replaceAll('</', '<\\/')}</style>\n`
     : ''
+  // Before the type styles: a color is referenced BY them (a style could name
+  // `var(--ink)`), and custom properties resolve at use time regardless of
+  // order — but reading the document top-down, the palette coming first is
+  // the order somebody would write it in.
+  const colorStyle = colorCss
+    ? `<style id="${COLOR_STYLE_ID}">${colorCss.replaceAll('</', '<\\/')}</style>\n`
+    : ''
   const hideSelector = shellIntro ? '#__modulato' : '[data-modulato-outlet]'
   const introStyle = intro
     ? `<style id="__modulato-intro">${hideSelector}{visibility:hidden}</style>\n<noscript><style>${hideSelector}{visibility:visible !important}</style></noscript>\n`
@@ -123,7 +136,7 @@ function htmlDocument({
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 <title>${escapeHtml(title)}</title>
-${meta.description ? `<meta name="description" content="${escapeHtml(meta.description)}" />\n` : ''}${siteMeta}${pageMeta}${siteLinks}${pageLinks}${typeStyle}${styleLinks}${scripts}${introStyle}<script type="application/json" id="__MODULATO_DATA__">${payload}</script>
+${meta.description ? `<meta name="description" content="${escapeHtml(meta.description)}" />\n` : ''}${siteMeta}${pageMeta}${siteLinks}${pageLinks}${colorStyle}${typeStyle}${styleLinks}${scripts}${introStyle}<script type="application/json" id="__MODULATO_DATA__">${payload}</script>
 </head>
 <body>
 <div id="__modulato">${appHtml}</div>
@@ -139,6 +152,7 @@ export async function render({
   clientSrc = '/@id/virtual:modulato/client-entry',
   styles = [],
   typography,
+  palette,
   intro = true,
   shellIntro = false,
   content = {},
@@ -158,6 +172,8 @@ export async function render({
    * `initTypography` then finds the tag and leaves it alone.
    */
   typography?: { spec?: TypographySpec | null; breakpoints?: Record<string, string> | null }
+  /** The project's `color.ts` tokens, rendered to a `:root` block here. */
+  palette?: ColorSpec | null
   /** Inject the first-load intro hiding style. Enabled by default. */
   intro?: boolean
   /** A root intro.ts exists — hide the whole app, not just the outlet. */
@@ -177,6 +193,7 @@ export async function render({
 }): Promise<RenderResult> {
   const parsed = new URL(url, 'http://modulato.internal')
   const typeCss = renderTypeCss(typography?.spec, typography?.breakpoints)
+  const colorCss = renderColorCss(palette)
 
   // The response hook runs BEFORE rendering, and outside the 404 branch: a
   // security header or a session refresh is not something a missing page
@@ -206,6 +223,7 @@ export async function render({
         clientSrc,
         styles,
         typeCss,
+        colorCss,
         head,
       }),
       status: 404,
@@ -227,6 +245,7 @@ export async function render({
       clientSrc,
       styles,
       typeCss,
+      colorCss,
       intro,
       shellIntro,
       head,

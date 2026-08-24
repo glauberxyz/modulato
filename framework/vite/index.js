@@ -39,6 +39,7 @@ const VIRTUAL = {
   breakpoints: 'virtual:modulato/breakpoints',
   eases: 'virtual:modulato/eases',
   typography: 'virtual:modulato/typography',
+  palette: 'virtual:modulato/palette',
   app: 'virtual:modulato/app',
   clientEntry: 'virtual:modulato/client-entry',
   serverEntry: 'virtual:modulato/server-entry',
@@ -190,6 +191,12 @@ export default function modulato(options = {}) {
         return fs.existsSync(path.resolve(root, 'type.ts'))
           ? `export { default } from '/type.ts'\n`
           : `export default null\n`
+      // The project's color.ts, or null — same shape and same reason as the
+      // typography module above.
+      if (id === VIRTUAL.palette)
+        return fs.existsSync(path.resolve(root, 'color.ts'))
+          ? `export { default } from '/color.ts'\n`
+          : `export default null\n`
       if (id === VIRTUAL.app)
         return [
           `import { createElement } from 'react'`,
@@ -214,6 +221,7 @@ export default function modulato(options = {}) {
             `import breakpoints from '${VIRTUAL.breakpoints}'`,
             `import eases from '${VIRTUAL.eases}'`,
             `import typography from '${VIRTUAL.typography}'`,
+            `import palette from '${VIRTUAL.palette}'`,
             `import App from '${VIRTUAL.app}'`,
           ]
           // Config-declared eases only resolve in GSAP once @modulato/gsap has
@@ -231,7 +239,7 @@ export default function modulato(options = {}) {
               `[modulato] modulato.config.ts declares eases (${Object.keys(declaredEases).join(', ')}) but @modulato/gsap is not installed — GSAP tokens can't use them by name. Install @modulato/gsap, or reference the cubic-bezier() value directly.`,
             )
           lines.push(
-            `boot({ routes, App, transitions, intros, behaviors, content, breakpoints, eases, typography })`,
+            `boot({ routes, App, transitions, intros, behaviors, content, breakpoints, eases, typography, palette })`,
           )
           // Tweak Mode overlay — dev only, and only when the site installed it.
           if (isServe && options.tweak !== false && resolvable('@modulato/tweak/overlay'))
@@ -263,6 +271,7 @@ export default function modulato(options = {}) {
           // arrives already typeset — no flash of the browser's default face
           // while a stylesheet loads.
           `import __typography from '${VIRTUAL.typography}'`,
+          `import __palette from '${VIRTUAL.palette}'`,
           `import __breakpoints from '${VIRTUAL.breakpoints}'`,
           // Re-exported so the two callers — the dev middleware below and the
           // Vercel launcher — build the request and write the headers the
@@ -273,7 +282,7 @@ export default function modulato(options = {}) {
         if (hasConfig) lines.push(`import __config from '/modulato.config.ts'`)
         const configArgs = hasConfig ? `, head: __config?.head, response: __config?.response` : ''
         lines.push(
-          `export const handle = (url, request) => render({ url, request, routes, App, content, typography: { spec: __typography, breakpoints: __breakpoints }${configArgs}, ${flags}${assetArgs} })`,
+          `export const handle = (url, request) => render({ url, request, routes, App, content, typography: { spec: __typography, breakpoints: __breakpoints }, palette: __palette${configArgs}, ${flags}${assetArgs} })`,
           `export const handleActionNode = (req, res) => nodeAction({ actions, req, res })`,
         )
         return lines.join('\n')
@@ -409,6 +418,21 @@ export default function modulato(options = {}) {
         }
       }
 
+      // Dev: the root color.ts self-registers and self-accepts HMR, exactly
+      // as type.ts does above.
+      if (isServe && file === path.resolve(root, 'color.ts')) {
+        return {
+          code: [
+            code,
+            `;import { __registerColors as __modulatoRegisterColors } from 'modulato'`,
+            `;import * as __modulatoColorSelf from '/color.ts'`,
+            `;__modulatoRegisterColors(__modulatoColorSelf.default)`,
+            `;if (import.meta.hot) import.meta.hot.accept()`,
+          ].join('\n'),
+          map: null,
+        }
+      }
+
       // Auto-import a page's sibling styles.scss.
       // `undefined` means "unchanged", which would throw away a jsx-dev-runtime
       // rewrite made above. Hand back the code whenever it actually moved.
@@ -434,9 +458,11 @@ export default function modulato(options = {}) {
                 ? [VIRTUAL.intros, VIRTUAL.serverEntry]
                 : file === path.resolve(root, 'type.ts')
                   ? [VIRTUAL.typography]
-                  : file === path.resolve(root, CONTENT_SNAPSHOT)
-                    ? [VIRTUAL.content]
-                    : []
+                  : file === path.resolve(root, 'color.ts')
+                    ? [VIRTUAL.palette]
+                    : file === path.resolve(root, CONTENT_SNAPSHOT)
+                      ? [VIRTUAL.content]
+                      : []
         if (!virtualIds.length) return
         for (const id of virtualIds) {
           const mod = server.moduleGraph.getModuleById(id)
@@ -501,6 +527,9 @@ export default function modulato(options = {}) {
         }
         mount('/__modulato/tokens', (m) => m.tokensMiddleware)
         mount('/__modulato/open', (m) => m.openMiddleware)
+        // Renaming a color rewrites files beyond the token module — its own
+        // endpoint, so its result can report what it touched.
+        mount('/__modulato/rename-color', (m) => m.renameColorMiddleware)
       }
 
       // SSR middleware, mounted after Vite's own (assets, HMR, transforms).

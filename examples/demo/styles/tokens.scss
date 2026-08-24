@@ -1,41 +1,15 @@
-// Design tokens — color and the grid.
+// Layout tokens, and the surface switch.
 //
-// TYPE IS NOT HERE. Fonts, sizes, leading and tracking live in `type.ts` at
-// the project root, as data — that is what lets the Tweak overlay edit them
-// live and write them back. What is left below is color and layout, as CSS
-// custom properties on :root: readable at runtime (from JS/WebGL), and usable
-// from any stylesheet without an import.
+// NEITHER TYPE NOR COLOR IS HERE. Fonts, sizes, leading and tracking live in
+// `type.ts`; the palette lives in `color.ts`. Both are data at the project
+// root, which is what lets the Tweak overlay edit them live and write them
+// back — a stylesheet is not something it can safely author.
+//
+// What is left is the grid, and `.is-dark`: a SELECTOR that redefines the
+// palette's variables for an inverted surface. That is a question about where
+// a color applies rather than what the color is, so it stays in CSS and works
+// by out-specifying the `:root` block color.ts generates.
 :root {
-  // Two worlds. Chapters print dark-on-paper; the index and the darkroom
-  // invert — the site's own "plate" and "proof".
-  --paper: #f4f1ea;
-  --ink: #231f20;
-  --muted: #7a7a75;
-  --rule: #d6d1c6;
-  // A second, brighter sheet for apparatus laid UNDER the argument — the
-  // chapter's sources band. Paper is warm and slightly gray; this is the
-  // white it would be printed on, so the change of surface reads as a
-  // change of register rather than as a panel.
-  --paper-bright: #ffffff;
-
-  --dark-paper: #14110f;
-  --dark-ink: #f4f1ea;
-  --dark-muted: #8b857c;
-  --dark-rule: #332e29;
-
-  // The four plates. Used ONLY where CMYK is the subject (chapter III and
-  // the plate-colored link dots) — everywhere else the site is monochrome,
-  // so the color arrives as an argument, not as decoration.
-  --plate-c: #00a0c6;
-  --plate-m: #d81e78;
-  --plate-y: #f5c400;
-  --plate-k: #231f20;
-
-  // Selection: white paper, dark ink — the same two values the site is
-  // printed with, whichever surface you are on.
-  --select-bg: #ffffff;
-  --select-fg: #231f20;
-
   // 12 columns everywhere; 6 on phones. Every block is placed by column.
   --cols: 12;
   --gutter: 20px;
@@ -46,13 +20,16 @@
 // every component below reads --paper/--ink and needs no dark variant.
 // The mixin exists so the framework's page wrapper can adopt the same
 // surface without the class — see global.scss.
+// Indirection, not duplication: each line points at the palette's own
+// `dark-*` entry, so an inverted surface has no colors of its own to keep in
+// step with color.ts. A custom property may reference another, and the read
+// resolves through.
 @mixin dark {
-  --paper: #14110f;
-  --ink: #f4f1ea;
-  --muted: #8b857c;
-  --rule: #332e29;
-  // Brighter than the surface, same as on paper — a lift, not a white.
-  --paper-bright: #1c1916;
+  --paper: var(--dark-paper);
+  --ink: var(--dark-ink);
+  --muted: var(--dark-muted);
+  --rule: var(--dark-rule);
+  --paper-bright: var(--dark-paper-bright);
 }
 
 .is-dark {

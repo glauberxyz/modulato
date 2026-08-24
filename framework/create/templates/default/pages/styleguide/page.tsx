@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import type { CSSProperties } from 'react'
 import type { TypeStyle } from 'modulato'
 import spec from '../../type'
+import palette from '../../color'
 
 /**
  * The styleguide: what this site is built out of.
@@ -18,8 +19,8 @@ import spec from '../../type'
  * `getComputedStyle` — so the page cannot drift from what you are looking at,
  * and a wrong number here is a real bug rather than a stale copy.
  *
- * Colors are read the same way, from the custom properties `styles/tokens.scss`
- * declares on `:root`.
+ * Colors come from `color.ts` the same way, so adding one there — or with the
+ * + button in the overlay's Colors tab — makes it appear here.
  */
 
 /** Fields worth showing per style, in the order a typographer reads them. */
@@ -78,51 +79,10 @@ function useMeasured(deps: unknown[]): [
   return [scope, measured]
 }
 
-/**
- * The color variables declared on `:root`, read from the live stylesheet.
- *
- * Walking the CSSOM rather than keeping a list here: a list would be a second
- * copy of tokens.scss, and the first time somebody added a color without
- * updating it, this page would start lying. Same-origin stylesheets only —
- * a cross-origin one throws on `.cssRules`, which is why the try/catch is not
- * optional.
- */
-function useRootColors(): Array<[string, string]> {
-  const [vars, setVars] = useState<Array<[string, string]>>([])
-  useEffect(() => {
-    const names = new Set<string>()
-    for (const sheet of Array.from(document.styleSheets)) {
-      let rules: CSSRuleList
-      try {
-        rules = sheet.cssRules
-      } catch {
-        continue
-      }
-      for (const rule of Array.from(rules)) {
-        if (!(rule instanceof CSSStyleRule) || rule.selectorText !== ':root') continue
-        for (const property of Array.from(rule.style)) {
-          // The type system's own variables have their own section above.
-          if (property.startsWith('--') && !property.startsWith('--type-'))
-            names.add(property)
-        }
-      }
-    }
-    const computed = getComputedStyle(document.documentElement)
-    setVars(
-      [...names]
-        .map((name) => [name, computed.getPropertyValue(name).trim()] as [string, string])
-        // Colors only: an easing curve is a token, but it is not a swatch.
-        .filter(([, value]) => /^(#|rgb|hsl|oklch|color\()/i.test(value))
-        .sort(),
-    )
-  }, [])
-  return vars
-}
-
 export default function Styleguide() {
   const styleNames = Object.keys(spec.styles)
   const [scope, measured] = useMeasured([styleNames.join()])
-  const colors = useRootColors()
+  const colors = Object.entries(palette)
   const scale = Object.entries(spec.scale ?? {})
 
   return (
@@ -140,7 +100,9 @@ export default function Styleguide() {
       <section className="guide__section">
         <h2 className="guide__heading">Type styles</h2>
         {styleNames.map((name) => {
-          const style = spec.styles[name] as TypeStyle
+          // `styles` infers as a literal object, so a string index needs the
+          // cast — the keys ARE the style names, `Object.keys` just loses that.
+          const style = spec.styles[name as keyof typeof spec.styles] as TypeStyle
           const m = measured[name]
           return (
             <article className="guide__specimen" key={name}>
@@ -206,14 +168,15 @@ export default function Styleguide() {
       <section className="guide__section">
         <h2 className="guide__heading">Color</h2>
         <p className="guide__note">
-          Read from the custom properties <code>styles/tokens.scss</code>{' '}
-          declares on <code>:root</code> — add one there and it appears here.
+          Every entry in <code>color.ts</code>, read as{' '}
+          <code>var(--name)</code> anywhere in the project. Add one there — or
+          with the <b>+</b> in the overlay’s Colors tab — and it appears here.
         </p>
         <ul className="guide__swatches">
           {colors.map(([name, value]) => (
             <li className="guide__swatch" key={name}>
               <span className="guide__chip" style={{ background: value }} />
-              <span className="guide__name">{name}</span>
+              <span className="guide__name">--{name}</span>
               <span className="guide__stepValue">{value}</span>
             </li>
           ))}
