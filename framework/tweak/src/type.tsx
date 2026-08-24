@@ -719,10 +719,11 @@ export function TypeMode() {
               left: marked.rect.left,
               width: marked.rect.width,
               height: marked.rect.height,
-              // Same achromatic marker Inspect draws, so the two modes read as
-              // one tool rather than two overlays that happened to ship together.
-              boxShadow:
-                '0 0 0 1px oklch(0.15 0 0), inset 0 0 0 1px oklch(0.15 0 0), 0 0 0 2px oklch(0.99 0 0), 0 0 0 3px oklch(0.15 0 0)',
+              // Same marker Inspect draws, so the two modes read as one tool
+              // rather than two overlays that happened to ship together — see
+              // the note there for why it is one dotted mid-tone line.
+              outline: '1px dotted oklch(0.55 0 0)',
+              outlineOffset: '1px',
             }}
           />
           {/* The Tt badge: tiny, at the element's corner, naming the style. */}

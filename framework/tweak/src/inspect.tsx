@@ -213,11 +213,19 @@ export function Inspect() {
               width: hit.rect.width,
               height: hit.rect.height,
               // The overlay's palette is deliberately achromatic, so the
-              // marker is too: a white line sandwiched in black reads on any
-              // background a site might put behind it, without inventing an
-              // accent colour the rest of the tool does not have.
-              boxShadow:
-                '0 0 0 1px oklch(0.15 0 0), inset 0 0 0 1px oklch(0.15 0 0), 0 0 0 2px oklch(0.99 0 0), 0 0 0 3px oklch(0.15 0 0)',
+              // marker is too. A dotted hairline rather than a solid frame:
+              // this thing sits ON the reader's page, and a heavy border made
+              // the element look like the tool's rather than the site's.
+              //
+              // ONE mid-tone line, not the white-in-black sandwich this used
+              // to be. The sandwich guaranteed contrast against any backdrop,
+              // but it cost 4px of chrome to do it; a mid grey clears both
+              // ends of the range instead — it reads dark on paper and light
+              // on a dark surface, which the demo genuinely has. The trade is
+              // a busy mid-grey photograph, where it is faint. Offset by 1px
+              // so the dots never sit on the glyphs they are describing.
+              outline: '1px dotted oklch(0.55 0 0)',
+              outlineOffset: '1px',
             }}
           />
           <Label rect={hit.rect} text={hit.at} />
