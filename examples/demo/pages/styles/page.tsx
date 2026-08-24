@@ -169,8 +169,9 @@ export default function Styles() {
           Franklin Gothic sets the titles and the small copy; Adobe Garamond
           sets every line of prose. Every style below is read from{' '}
           <code>type.ts</code>, and every measurement from the element beside
-          it — so this page cannot drift from the site. In dev, flip on the
-          Tweak overlay’s <b>Click text</b> and edit any of them here.
+          it — so this page cannot drift from the site. In dev, press the round
+          <b>Tt</b> button by the Tweak launcher and click any of them to edit
+          it where it sits.
         </p>
       </section>
 

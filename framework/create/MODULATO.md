@@ -604,11 +604,14 @@ also **errors** on a `--type-…` variable that names no style or scale step,
 which is what a rename leaves behind — `var()` falls back silently, so the text
 just renders wrong with nothing to say why.
 
-**Type Mode.** In dev, the Tweak panel's **Typography** card edits the whole
-system (breakpoint tabs and all), and its **Click text** toggle turns the page
-itself into the control: hover any text for a `Tt` badge naming its style,
-click for a card with the style name, the class carrying it, the file:line that
-authored the element, and controls for size, leading and kerning.
+**Type Mode.** In dev, a small round **Tt** button sits beside the ✦ Tweak
+launcher: press it and the page itself becomes the control — hover any text for
+a `Tt` badge naming its style, click for a card with the style name, the class
+carrying it, the file:line that authored the element, and controls for size,
+leading and kerning. Escape closes the card; Escape again leaves the mode. The
+panel's **Typography** card is the other half: the whole system at once, with
+the breakpoint tabs a click on a heading cannot reach. Both edit the same
+tokens, and the panel's **Click text** switch is the same toggle as the button.
 
 Size steps through the `scale` — never a free pixel slider. That is the point
 of a closed scale: a site with six sizes reads as a system, and a site with a

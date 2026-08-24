@@ -62,10 +62,10 @@ there FIRST, then use `var(--name)`).
 `pages/styleguide/` is a specimen of both, read from the live values —
 **delete the folder** (and its Menu entry) if the project does not want it.
 
-In dev, the ✦ Tweak overlay's Typography card edits `type.ts` live, and its
-"Click text" toggle lets you click any text on the page to edit the style it
-is set in — saving either to the style (everything wearing it moves) or to
-just that class.
+In dev, the round **Tt** button beside the ✦ Tweak launcher turns the page into
+the control: click any text to edit the style it is set in, saving either to the
+style (everything wearing it moves) or to just that class. The panel's
+Typography card is the same tokens with the breakpoint tabs.
 
 Dev server: `npm run dev` serves **https://<project-name>.localhost** (stable,
 port-free, via portless — needs Node >= 24). In non-TTY/CI contexts or on

@@ -43,3 +43,6 @@ can be read, edited and written back.
 - **`create-modulato`** scaffolds `type.ts`, a numbers-free
   `styles/typography.scss`, and a `/styleguide` page rendering the styles, the
   scale and the color variables from the live values — deletable in one folder.
+
+Type Mode is also reachable without the panel: a round **Tt** button beside the
+✦ Tweak launcher arms it in one press, and fills in while it is on.

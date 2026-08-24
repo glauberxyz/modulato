@@ -786,16 +786,46 @@ function Overlay() {
     setTimeout(() => setStatus(''), 2500)
   }
 
+  // Type Mode is reachable without the panel: it is a MODE you enter to look at
+  // the page, and making that a two-step trip through a panel that then covers
+  // the page was the wrong shape. Only offered when the project has a type.ts —
+  // without one every click would answer "this text wears no style", which is
+  // a tool that only knows how to say no.
+  const hasType = !!handle.type && handle.type.leaves(TYPE_FILE).length > 0
+
   return (
     <>
-      <Button
-        variant="outline"
-        size="sm"
-        className="fixed right-3 bottom-3 z-50 rounded-full bg-background text-xs shadow-lg"
-        onClick={() => setOpen((o) => !o)}
-      >
-        {open ? '× Tweak' : '✦ Tweak'}
-      </Button>
+      {/* One row, so the Tt sits beside the launcher instead of being placed
+          against it by a hand-counted offset that breaks when either resizes. */}
+      <div className="fixed right-3 bottom-3 z-50 flex items-center gap-1.5">
+        {hasType && (
+          <Button
+            variant={typing ? 'default' : 'outline'}
+            size="icon-sm"
+            className={cn('rounded-full shadow-lg', !typing && 'bg-background')}
+            title={
+              typing
+                ? 'type inspection on — click any text to edit its style (Escape leaves)'
+                : 'inspect type — click any text on the page to edit the style it is set in'
+            }
+            aria-label="type inspection"
+            aria-pressed={typing}
+            onClick={() => typeMode.toggle()}
+          >
+            {/* The same two letters the on-page badge carries, so the button
+                and the thing it summons read as one tool. */}
+            <span className="text-xs leading-none font-semibold">Tt</span>
+          </Button>
+        )}
+        <Button
+          variant="outline"
+          size="sm"
+          className="rounded-full bg-background text-xs shadow-lg"
+          onClick={() => setOpen((o) => !o)}
+        >
+          {open ? '× Tweak' : '✦ Tweak'}
+        </Button>
+      </div>
       {open && (
         // data-lenis-prevent: the page's Lenis must not intercept wheel/touch
         // over the panel, or its own scrollbar never moves.

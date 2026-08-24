@@ -42,7 +42,8 @@ non-interactive and JSON-friendly — prefer it over doing things by hand:
   A stylesheet **never declares `font-family` or `font-size`**: it includes a
   style, or reads `var(--type-size-<step>)` for one step off one.
   `npx modulato check` warns on the first and errors on a `--type-…` variable
-  that names nothing. `/styles` is the specimen, read from the live values.
+  that names nothing. `/styles` is the specimen, read from the live values; the round **Tt**
+  button beside the ✦ Tweak launcher edits any text where it sits.
 - The persistent shell (menu, marker) lives in `app.tsx` outside
   `<PageOutlet/>`; it reacts to `useRoute()` / `useNavigation()`.
 
