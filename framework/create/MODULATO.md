@@ -612,9 +612,10 @@ launcher: press it and the page itself becomes the control — hover any text fo
 a badge naming its style, click for a card with the style name, the class
 carrying it, the file:line that authored the element, and controls for size,
 leading and kerning. Escape closes the card; Escape again leaves the mode. The
-panel's **Typography** card is the other half: the whole system at once, with
+panel's **Typography** tab is the other half: the whole system at once, with
 the breakpoint tabs a click on a heading cannot reach. Both edit the same
-tokens, and the panel's **Click text** switch is the same toggle as the button.
+tokens. The button is the ONLY control for the mode — there is deliberately no
+second switch in the panel to read it from and forget to update.
 
 Size steps through the `scale` — never a free pixel slider. That is the point
 of a closed scale: a site with six sizes reads as a system, and a site with a

@@ -65,7 +65,7 @@ there FIRST, then use `var(--name)`).
 In dev, the round **Aa** button beside the ✦ Tweak launcher turns the page into
 the control: click any text to edit the style it is set in, saving either to the
 style (everything wearing it moves) or to just that class. The panel's
-Typography card is the same tokens with the breakpoint tabs.
+Typography tab is the same tokens with the breakpoint tabs.
 
 Dev server: `npm run dev` serves **https://<project-name>.localhost** (stable,
 port-free, via portless — needs Node >= 24). In non-TTY/CI contexts or on

@@ -1363,24 +1363,11 @@ function Overlay() {
                 ),
               )
               return (
+                // No heading and no toggle: the tab above already says
+                // Typography, and the Aa button beside the launcher already
+                // arms Type Mode. Two controls for one state is two places to
+                // read it from and one of them to forget to update.
                 <div className="rounded-xl bg-background p-3.5" data-version={typeVersion}>
-                  <div className="flex items-center justify-between">
-                    <SectionTitle>Typography</SectionTitle>
-                    <label className="flex cursor-pointer items-center gap-2 text-xs text-muted-foreground">
-                      <Switch
-                        size="sm"
-                        checked={typing}
-                        onCheckedChange={(c: boolean) => typeMode.set(c === true)}
-                      />
-                      Click text
-                    </label>
-                  </div>
-                  {typing && (
-                    <div className="mt-1.5 text-[11px] text-muted-foreground">
-                      Click any text on the page to edit the style it is set in.
-                      Escape closes the card; Escape again leaves the mode.
-                    </div>
-                  )}
                   <div>
                     {groups.map((group) => (
                       <GroupSection
