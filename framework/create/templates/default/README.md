@@ -17,7 +17,7 @@ environment? `npm run dev:plain` starts the plain Vite server on a port.
 
 Open the ✦ Tweak button (dev) to tweak every animation number live — Save
 writes back into the motion.ts files. The same panel edits the type system in
-`type.ts` — or press the round **Tt** button beside it and click any heading on
+`type.ts` — or press the round **Aa** button beside it and click any heading on
 the page to change the style it is set in, where it sits.
 
 `/styleguide` is a specimen of the type styles, the size scale and the colors,

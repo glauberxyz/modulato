@@ -221,6 +221,42 @@ function asNumber(value: unknown): number | null {
   return Number.isFinite(n) && /^-?[\d.]+(?:em|rem|px)?$/.test(value.trim()) ? n : null
 }
 
+/**
+ * lucide a-large-small — the type glyph, shared by the launcher button, the
+ * on-page badge and the popup's header.
+ *
+ * Was the literal characters "Tt". They rendered correctly and read as one
+ * letter anyway: at 12px in a 32px circle the lowercase t is a stem and a
+ * crossbar, and the pair is 10px wide. Lucide's own `type` glyph is a capital
+ * T and would have had the same problem; this one is two letterforms at
+ * DIFFERENT sizes, which is the subject — a scale — rather than a letter
+ * somebody typed.
+ *
+ * Inlined, like every other icon here: an icon library is not worth a
+ * dependency for a dev overlay.
+ */
+export function TypeIcon(props: React.SVGProps<SVGSVGElement>) {
+  return (
+    <svg
+      xmlns="http://www.w3.org/2000/svg"
+      width={16}
+      height={16}
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth={2}
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      {...props}
+    >
+      <path d="M21 14h-5" />
+      <path d="M16 16v-3.5a2.5 2.5 0 0 1 5 0V16" />
+      <path d="M4.5 13h6" />
+      <path d="m3 16 4.5-9 4.5 9" />
+    </svg>
+  )
+}
+
 // ————— controls —————
 
 /** lucide chevron-down — the same glyph the panel's ease control carries. */
@@ -427,7 +463,7 @@ function Popup({
       <div className="rounded-xl bg-background p-3">
         <div className="flex items-center justify-between gap-2">
           <span className="flex min-w-0 items-center gap-1.5">
-            <span className="font-[system-ui] text-sm leading-none font-semibold">Tt</span>
+            <TypeIcon className="size-4 shrink-0" />
             <span className="truncate text-[13px] font-semibold">
               {target.style || 'no type style'}
             </span>
@@ -706,7 +742,7 @@ export function TypeMode() {
               whiteSpace: 'nowrap',
             }}
           >
-            <span style={{ font: '600 12px/1 ui-sans-serif, system-ui, sans-serif' }}>Tt</span>
+            <TypeIcon width={12} height={12} />
             {marked.style && <span>{marked.style}</span>}
           </div>
         </>

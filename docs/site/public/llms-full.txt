@@ -604,9 +604,9 @@ also **errors** on a `--type-…` variable that names no style or scale step,
 which is what a rename leaves behind — `var()` falls back silently, so the text
 just renders wrong with nothing to say why.
 
-**Type Mode.** In dev, a small round **Tt** button sits beside the ✦ Tweak
+**Type Mode.** In dev, a small round **Aa** button sits beside the ✦ Tweak
 launcher: press it and the page itself becomes the control — hover any text for
-a `Tt` badge naming its style, click for a card with the style name, the class
+a badge naming its style, click for a card with the style name, the class
 carrying it, the file:line that authored the element, and controls for size,
 leading and kerning. Escape closes the card; Escape again leaves the mode. The
 panel's **Typography** card is the other half: the whole system at once, with
@@ -630,6 +630,12 @@ Each edit picks a target first, so the preview is what the save will keep:
   Overrides are emitted as custom properties **scoped to the selector**, not as
   font declarations, so they win wherever the element's own `font-size` came
   from — no specificity fight and nothing to keep in stylesheet order.
+
+Font stacks are shown but **not editable** in the overlay. A stack is a
+comma-separated list of quoted family names, and a free-text box over one turns
+a stray character into a site that silently falls back to Times — no error, no
+red, just the wrong face everywhere. Changing a typeface is a decision made once
+in `type.ts`, next to the `@font-face` or webfont link it depends on.
 
 Save writes `type.ts` through the same AST-preserving endpoint a `motion.ts`
 uses, matching the file's own indentation; an editor edit HMR-repaints the

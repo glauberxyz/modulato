@@ -9,7 +9,7 @@ import {
 import type { DeclaredEase, TokenLeaf, TokenValue } from 'modulato'
 import { useHandle } from './handle'
 import { saveTokens } from './save'
-import { TypeMode, typeMode, useTypeMode } from './type'
+import { TypeIcon, TypeMode, typeMode, useTypeMode } from './type'
 import { Button } from './ui/button'
 import { Input } from './ui/input'
 import { Slider } from './ui/slider'
@@ -812,9 +812,9 @@ function Overlay() {
             aria-pressed={typing}
             onClick={() => typeMode.toggle()}
           >
-            {/* The same two letters the on-page badge carries, so the button
-                and the thing it summons read as one tool. */}
-            <span className="text-xs leading-none font-semibold">Tt</span>
+            {/* The same glyph the on-page badge and the popup header carry,
+                so the button and the thing it summons read as one tool. */}
+            <TypeIcon className="size-4" />
           </Button>
         )}
         <Button
@@ -957,7 +957,19 @@ function Overlay() {
               breakpoint tabs a click on a heading cannot reach. Both write the
               same registry and save through the same endpoint. */}
           {handle.type && handle.type.leaves(TYPE_FILE).length > 0 && (() => {
-            const leaves = handle.type.leaves(TYPE_FILE)
+            // Font stacks are READ-ONLY here — deliberately not offered.
+            //
+            // A stack is a comma-separated list of quoted family names, and a
+            // free-text box over it turns one stray character into a site that
+            // silently falls back to Times: no error, no red, just the wrong
+            // face everywhere. Nothing else in this panel can do damage of
+            // that shape — a bad number is visible and a slider can be dragged
+            // back. Changing a typeface is a decision made once, in type.ts,
+            // next to the @font-face or the Typekit link it depends on; it is
+            // not a thing to fat-finger while looking at a heading.
+            const leaves = handle.type
+              .leaves(TYPE_FILE)
+              .filter((l) => l.path[0] !== 'fonts')
             const typeDirty = new Set(
               handle.type.dirty(TYPE_FILE).map((l) => l.path.join('.')),
             )

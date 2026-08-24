@@ -170,7 +170,7 @@ export default function Styles() {
           sets every line of prose. Every style below is read from{' '}
           <code>type.ts</code>, and every measurement from the element beside
           it — so this page cannot drift from the site. In dev, press the round
-          <b>Tt</b> button by the Tweak launcher and click any of them to edit
+          <b>Aa</b> button by the Tweak launcher and click any of them to edit
           it where it sits.
         </p>
       </section>

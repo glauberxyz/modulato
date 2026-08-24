@@ -44,5 +44,8 @@ can be read, edited and written back.
   `styles/typography.scss`, and a `/styleguide` page rendering the styles, the
   scale and the color variables from the live values — deletable in one folder.
 
-Type Mode is also reachable without the panel: a round **Tt** button beside the
-✦ Tweak launcher arms it in one press, and fills in while it is on.
+Type Mode is also reachable without the panel: a round **Aa** button beside the
+✦ Tweak launcher arms it in one press, and fills in while it is on. Font stacks
+are shown but not editable in the overlay — a stray character in one silently
+falls the whole site back to Times, and a typeface is a decision made once in
+`type.ts`, next to the webfont link it depends on.
