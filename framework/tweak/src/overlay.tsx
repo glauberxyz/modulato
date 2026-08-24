@@ -170,6 +170,8 @@ type LoopTarget = 'intro' | 'shell' | 'motions'
 /** The project's typography module, as the registry keys it. */
 const TYPE_FILE = '/type.ts'
 
+type PanelTab = 'motion' | 'type' | 'colors'
+
 const RING_R = 10
 const RING_C = 2 * Math.PI * RING_R
 
@@ -282,6 +284,45 @@ function EaseControl({
   )
 }
 
+/**
+ * A closed set of values, as a select.
+ *
+ * The ease control below is the same idea for one specific vocabulary; this is
+ * the general one, used wherever a token field is a KEY into a catalog the
+ * file already declares — a type style's `size` naming a scale step, its
+ * `font` naming a font stack. Those were free-text boxes, and a free-text box
+ * over a closed set is a typo generator: `var(--type-size-lgg)` is not an
+ * error, it is a silent fallback to the inherited size.
+ *
+ * A value outside the catalog still shows, as its own leading option, because
+ * the file is allowed to contain one and hiding it would make the row lie.
+ */
+function OptionControl({
+  value,
+  options,
+  onChange,
+}: {
+  value: string
+  options: Array<{ label: string; value: string }>
+  onChange: (v: string) => void
+}) {
+  const known = options.some((o) => o.value === value)
+  const list = known ? options : [{ label: `${value} (unknown)`, value }, ...options]
+  return (
+    <select
+      className="size-full cursor-pointer appearance-none rounded-full bg-transparent pr-8 pl-16 text-right text-xs text-foreground outline-none focus-visible:ring-2 focus-visible:ring-ring/50"
+      value={value}
+      onChange={(e) => onChange(e.target.value)}
+    >
+      {list.map((o) => (
+        <option key={o.value} value={o.value}>
+          {o.label}
+        </option>
+      ))}
+    </select>
+  )
+}
+
 function NumberControl({
   label,
   value,
@@ -351,12 +392,15 @@ function LeafRow({
   leaf,
   dirty,
   declared,
+  options,
   onChange,
   onReset,
 }: {
   leaf: TokenLeaf
   dirty: boolean
   declared: DeclaredEase[]
+  /** The closed set this field draws from, when it has one. */
+  options: Array<{ label: string; value: string }> | null
   onChange: (value: TokenValue) => void
   onReset: () => void
 }) {
@@ -397,6 +441,15 @@ function LeafRow({
           <span className="flex flex-1 justify-end pr-2">
             <Switch checked={leaf.value} onCheckedChange={(c: boolean) => onChange(c === true)} />
           </span>
+        ) : options ? (
+          <>
+            <OptionControl
+              value={leaf.value as string}
+              options={options}
+              onChange={onChange}
+            />
+            <ChevronDownIcon className="pointer-events-none absolute right-3 text-muted-foreground" />
+          </>
         ) : isEase ? (
           <>
             <EaseControl value={leaf.value as string} declared={declared} onChange={onChange} />
@@ -522,6 +575,7 @@ function GroupSection({
   query,
   groupHit,
   declared,
+  optionsFor,
   onChange,
   onReset,
 }: {
@@ -535,6 +589,8 @@ function GroupSection({
    *  contents missing. */
   groupHit: boolean
   declared: DeclaredEase[]
+  /** Per-leaf closed sets, when the file declares catalogs a field draws from. */
+  optionsFor?: (leaf: TokenLeaf) => Array<{ label: string; value: string }> | null
   onChange: (leaf: TokenLeaf, value: TokenValue) => void
   onReset: (leaf: TokenLeaf) => void
 }) {
@@ -645,6 +701,7 @@ function GroupSection({
                 leaf={leaf}
                 dirty={dirtySet.has(key)}
                 declared={declared}
+                options={optionsFor?.(leaf) ?? null}
                 onChange={(value) => onChange(leaf, value)}
                 onReset={() => onReset(leaf)}
               />
@@ -652,6 +709,103 @@ function GroupSection({
           )
         })
       })()}
+    </div>
+  )
+}
+
+/**
+ * The project's color variables, read from the live stylesheet.
+ *
+ * Walking the CSSOM rather than keeping a list: a list would be a second copy
+ * of the project's tokens file, and the first time somebody added a color
+ * without updating it this panel would start lying. Same-origin sheets only —
+ * a cross-origin one throws on `.cssRules`, so the try/catch is load-bearing.
+ *
+ * `--type-*` is skipped: those are the type system's, and they have their own
+ * tab where they are editable rather than merely listed.
+ */
+function useRootColors(): Array<[string, string]> {
+  const [vars, setVars] = useState<Array<[string, string]>>([])
+  useEffect(() => {
+    const names = new Set<string>()
+    for (const sheet of Array.from(document.styleSheets)) {
+      let rules: CSSRuleList
+      try {
+        rules = sheet.cssRules
+      } catch {
+        continue
+      }
+      for (const rule of Array.from(rules)) {
+        if (!(rule instanceof CSSStyleRule) || rule.selectorText !== ':root') continue
+        for (const property of Array.from(rule.style))
+          if (property.startsWith('--') && !property.startsWith('--type-'))
+            names.add(property)
+      }
+    }
+    const computed = getComputedStyle(document.documentElement)
+    setVars(
+      [...names]
+        .map((name) => [name, computed.getPropertyValue(name).trim()] as [string, string])
+        // Colors only: an easing curve and a column count are tokens too, but
+        // they are not swatches.
+        .filter(([, value]) => /^(#|rgb|hsl|oklch|lab|lch|color\()/i.test(value))
+        .sort(),
+    )
+  }, [])
+  return vars
+}
+
+/**
+ * Colors — READ-ONLY, and labeled as such.
+ *
+ * Colors are CSS custom properties in a stylesheet, not a token module, so
+ * there is nothing here to write back to: the overlay's whole save path is an
+ * AST edit of a default-exported literal, and a `.scss` file is not that.
+ * Listing them is still worth a tab — it is the fastest way to find the name
+ * of the color you are looking at — but the panel must not imply an editor it
+ * does not have. Click a swatch to copy its `var()` reference.
+ */
+function ColorsCard() {
+  const colors = useRootColors()
+  const [copied, setCopied] = useState<string | null>(null)
+  useEffect(() => {
+    if (!copied) return undefined
+    const id = setTimeout(() => setCopied(null), 1200)
+    return () => clearTimeout(id)
+  }, [copied])
+
+  return (
+    <div className="rounded-xl bg-background p-3.5">
+      <SectionTitle>Colors</SectionTitle>
+      <div className="mt-1.5 text-[11px] text-muted-foreground">
+        {colors.length
+          ? 'Read from the :root custom properties — click one to copy its var(). Not editable here: colors live in a stylesheet, not a token module.'
+          : 'No color custom properties on :root. Declare them in your tokens stylesheet and they appear here.'}
+      </div>
+      {colors.length > 0 && (
+        <div className="mt-2.5 flex flex-col">
+          {colors.map(([name, value]) => (
+            <button
+              key={name}
+              className="-mx-1 flex cursor-pointer items-center gap-2 rounded-lg px-1 py-1 text-left hover:bg-muted"
+              title={`copy var(${name})`}
+              onClick={() => {
+                void navigator.clipboard?.writeText(`var(${name})`)
+                setCopied(name)
+              }}
+            >
+              <span
+                className="size-5 shrink-0 rounded-full ring-1 ring-foreground/15 ring-inset"
+                style={{ background: value }}
+              />
+              <span className="min-w-0 flex-1 truncate text-xs">{name}</span>
+              <span className="shrink-0 text-[11px] text-muted-foreground tabular-nums">
+                {copied === name ? 'copied' : value}
+              </span>
+            </button>
+          ))}
+        </div>
+      )}
     </div>
   )
 }
@@ -667,6 +821,11 @@ function Overlay() {
   const [forcedBp, setForcedBp] = useState<string | null>(null)
   const [forcedReduced, setForcedReduced] = useState(false)
   const typing = useTypeMode()
+  // Which section the panel is showing. The three are genuinely different
+  // jobs — choreographing motion, setting type, reading the palette — and
+  // stacking them in one scroll meant the one you wanted was always below
+  // the one you didn't.
+  const [tab, setTab] = useState<PanelTab>('motion')
   const loopRef = useRef(false)
   loopRef.current = loop
 
@@ -793,6 +952,10 @@ function Overlay() {
   // a tool that only knows how to say no.
   const hasType = !!handle.type && handle.type.leaves(TYPE_FILE).length > 0
 
+  // `tab` is what was CLICKED; `active` is what can actually be shown. Deleting
+  // type.ts while the Typography tab is open must not leave the panel blank.
+  const active: PanelTab = tab === 'type' && !hasType ? 'motion' : tab
+
   return (
     <>
       {/* One row, so the Tt sits beside the launcher instead of being placed
@@ -834,327 +997,404 @@ function Overlay() {
           data-version={version}
           data-lenis-prevent=""
         >
-          {/* ── replay: what to play ─────────────────────────────────── */}
-          <div className="rounded-xl bg-background p-3.5">
-            <div className="mb-2.5 flex items-center justify-between">
-              <SectionTitle>Replay</SectionTitle>
-              <label className="flex cursor-pointer items-center gap-2 text-xs text-muted-foreground">
-                <Switch size="sm" checked={loop} onCheckedChange={(c: boolean) => setLoop(c === true)} />
-                Loop
-              </label>
-            </div>
-            <div className="flex gap-1.5">
-              {/* The ring marks the button the loop is currently aimed at. */}
-              {(
-                [
-                  ['intro', 'Intro', () => handle.replayIntro()],
-                  ['shell', 'Shell', () => handle.replayShellIntro()],
-                  ['motions', 'Motions', () => handle.replayMotions()],
-                ] as Array<[LoopTarget, string, () => void | Promise<void>]>
-              ).map(([target, label, run]) => (
-                <Button
-                  key={target}
-                  size="sm"
-                  className="h-9 flex-1 rounded-full text-xs"
-                  title={loop ? `loop ${label.toLowerCase()}` : `replay ${label.toLowerCase()}`}
-                  onClick={onReplay(target, run)}
-                >
-                  {loop && loopTarget === target ? (
-                    <LoopRingIcon ms={cycle.ms} n={cycle.n} />
-                  ) : (
-                    <PlayIcon className="size-2.5" />
-                  )}{' '}
-                  {label}
-                </Button>
-              ))}
-            </div>
+          {/* Sections, not one scroll. Only the tabs that have something
+              behind them: a project with no type.ts gets no Typography tab
+              rather than an empty one. */}
+          <div className="flex items-center justify-center gap-4 pt-1 pb-0.5">
+            {(
+              [
+                ['motion', 'Motion'],
+                ...(hasType ? ([['type', 'Typography']] as Array<[PanelTab, string]>) : []),
+                ['colors', 'Colors'],
+              ] as Array<[PanelTab, string]>
+            ).map(([id, label]) => (
+              <button
+                key={id}
+                className={cn(
+                  'cursor-pointer text-[13px] transition-colors',
+                  active === id
+                    ? 'font-medium text-foreground'
+                    : 'text-muted-foreground hover:text-foreground',
+                )}
+                aria-pressed={active === id}
+                onClick={() => setTab(id)}
+              >
+                {label}
+              </button>
+            ))}
           </div>
 
-          {/* ── preview context: replays run AS this breakpoint/speed ──── */}
-          <div className="rounded-xl bg-background p-3.5">
-            <div className="flex items-center justify-between gap-2">
-              <SectionTitle>Preview as</SectionTitle>
-              <div className="flex shrink-0 items-center gap-0.5">
-                <button
-                  className={cn(
-                    'h-6 cursor-pointer rounded-full px-1.5 text-xs',
-                    forcedBp === null
-                      ? 'font-medium text-foreground'
-                      : 'text-muted-foreground/60 hover:text-muted-foreground',
-                  )}
-                  title="auto (follow the real viewport)"
-                  onClick={() => {
-                    setForcedBp(null)
-                    handle.viewport.force(null)
-                    queueReplay()
-                  }}
-                >
-                  Auto
-                </button>
-                {bpNames.map((name) => (
+          {active === 'motion' && (
+            <>
+            {/* ── replay: what to play ─────────────────────────────────── */}
+            <div className="rounded-xl bg-background p-3.5">
+              <div className="mb-2.5 flex items-center justify-between">
+                <SectionTitle>Replay</SectionTitle>
+                <label className="flex cursor-pointer items-center gap-2 text-xs text-muted-foreground">
+                  <Switch size="sm" checked={loop} onCheckedChange={(c: boolean) => setLoop(c === true)} />
+                  Loop
+                </label>
+              </div>
+              <div className="flex gap-1.5">
+                {/* The ring marks the button the loop is currently aimed at. */}
+                {(
+                  [
+                    ['intro', 'Intro', () => handle.replayIntro()],
+                    ['shell', 'Shell', () => handle.replayShellIntro()],
+                    ['motions', 'Motions', () => handle.replayMotions()],
+                  ] as Array<[LoopTarget, string, () => void | Promise<void>]>
+                ).map(([target, label, run]) => (
+                  <Button
+                    key={target}
+                    size="sm"
+                    className="h-9 flex-1 rounded-full text-xs"
+                    title={loop ? `loop ${label.toLowerCase()}` : `replay ${label.toLowerCase()}`}
+                    onClick={onReplay(target, run)}
+                  >
+                    {loop && loopTarget === target ? (
+                      <LoopRingIcon ms={cycle.ms} n={cycle.n} />
+                    ) : (
+                      <PlayIcon className="size-2.5" />
+                    )}{' '}
+                    {label}
+                  </Button>
+                ))}
+              </div>
+            </div>
+
+            {/* ── preview context: replays run AS this breakpoint/speed ──── */}
+            <div className="rounded-xl bg-background p-3.5">
+              <div className="flex items-center justify-between gap-2">
+                <SectionTitle>Preview as</SectionTitle>
+                <div className="flex shrink-0 items-center gap-0.5">
                   <button
-                    key={name}
                     className={cn(
-                      'flex size-6 cursor-pointer items-center justify-center rounded-full',
-                      forcedBp === name
-                        ? 'text-foreground'
+                      'h-6 cursor-pointer rounded-full px-1.5 text-xs',
+                      forcedBp === null
+                        ? 'font-medium text-foreground'
                         : 'text-muted-foreground/60 hover:text-muted-foreground',
                     )}
-                    title={name}
-                    aria-label={name}
-                    aria-pressed={forcedBp === name}
+                    title="auto (follow the real viewport)"
                     onClick={() => {
-                      setForcedBp(name)
-                      handle.viewport.force(name)
+                      setForcedBp(null)
+                      handle.viewport.force(null)
                       queueReplay()
                     }}
                   >
-                    {breakpointIcon(name) ?? <span className="px-1 text-xs">{name}</span>}
+                    Auto
+                  </button>
+                  {bpNames.map((name) => (
+                    <button
+                      key={name}
+                      className={cn(
+                        'flex size-6 cursor-pointer items-center justify-center rounded-full',
+                        forcedBp === name
+                          ? 'text-foreground'
+                          : 'text-muted-foreground/60 hover:text-muted-foreground',
+                      )}
+                      title={name}
+                      aria-label={name}
+                      aria-pressed={forcedBp === name}
+                      onClick={() => {
+                        setForcedBp(name)
+                        handle.viewport.force(name)
+                        queueReplay()
+                      }}
+                    >
+                      {breakpointIcon(name) ?? <span className="px-1 text-xs">{name}</span>}
+                    </button>
+                  ))}
+                  <button
+                    className={cn(
+                      'flex size-6 cursor-pointer items-center justify-center rounded-full',
+                      forcedReduced
+                        ? 'text-foreground'
+                        : 'text-muted-foreground/60 hover:text-muted-foreground',
+                    )}
+                    title="prefers-reduced-motion"
+                    aria-label="prefers-reduced-motion"
+                    aria-pressed={forcedReduced}
+                    onClick={() => {
+                      const next = !forcedReduced
+                      setForcedReduced(next)
+                      handle.viewport.forceReduced(next ? true : null)
+                      queueReplay()
+                    }}
+                  >
+                    <ReducedIcon />
+                  </button>
+                </div>
+              </div>
+              <div className="mt-2.5 flex h-9 rounded-full bg-secondary">
+                {[0.1, 0.25, 0.5, 1].map((s) => (
+                  <button
+                    key={s}
+                    className={cn(
+                      'h-full flex-1 cursor-pointer rounded-full text-xs transition-colors',
+                      speed === s
+                        ? 'bg-primary font-medium text-primary-foreground'
+                        : 'text-muted-foreground hover:text-foreground',
+                    )}
+                    onClick={() => handle.setSpeed(s)}
+                  >
+                    {fmt(s)}x
                   </button>
                 ))}
-                <button
-                  className={cn(
-                    'flex size-6 cursor-pointer items-center justify-center rounded-full',
-                    forcedReduced
-                      ? 'text-foreground'
-                      : 'text-muted-foreground/60 hover:text-muted-foreground',
-                  )}
-                  title="prefers-reduced-motion"
-                  aria-label="prefers-reduced-motion"
-                  aria-pressed={forcedReduced}
-                  onClick={() => {
-                    const next = !forcedReduced
-                    setForcedReduced(next)
-                    handle.viewport.forceReduced(next ? true : null)
-                    queueReplay()
-                  }}
-                >
-                  <ReducedIcon />
-                </button>
               </div>
             </div>
-            <div className="mt-2.5 flex h-9 rounded-full bg-secondary">
-              {[0.1, 0.25, 0.5, 1].map((s) => (
-                <button
-                  key={s}
-                  className={cn(
-                    'h-full flex-1 cursor-pointer rounded-full text-xs transition-colors',
-                    speed === s
-                      ? 'bg-primary font-medium text-primary-foreground'
-                      : 'text-muted-foreground hover:text-foreground',
-                  )}
-                  onClick={() => handle.setSpeed(s)}
-                >
-                  {fmt(s)}x
-                </button>
-              ))}
-            </div>
-          </div>
-
-          {/* ── typography ──────────────────────────────────────────── */}
-          {/* The panel half of Type Mode. The popup on the page edits one
-              style where it sits; this is the whole system at once, with the
-              breakpoint tabs a click on a heading cannot reach. Both write the
-              same registry and save through the same endpoint. */}
-          {handle.type && handle.type.leaves(TYPE_FILE).length > 0 && (() => {
-            // Font stacks are READ-ONLY here — deliberately not offered.
-            //
-            // A stack is a comma-separated list of quoted family names, and a
-            // free-text box over it turns one stray character into a site that
-            // silently falls back to Times: no error, no red, just the wrong
-            // face everywhere. Nothing else in this panel can do damage of
-            // that shape — a bad number is visible and a slider can be dragged
-            // back. Changing a typeface is a decision made once, in type.ts,
-            // next to the @font-face or the Typekit link it depends on; it is
-            // not a thing to fat-finger while looking at a heading.
-            const leaves = handle.type
-              .leaves(TYPE_FILE)
-              .filter((l) => l.path[0] !== 'fonts')
-            const typeDirty = new Set(
-              handle.type.dirty(TYPE_FILE).map((l) => l.path.join('.')),
-            )
-            const query = filter.trim().toLowerCase()
-            const groups = groupLeaves(leaves, overrideKeys, blockOrder).filter((g) =>
-              g.blocks.some((b) =>
-                b.leaves.some(
-                  (l) =>
-                    !query ||
-                    rowMatches(query, g.path, l) ||
-                    typeDirty.has(l.path.join('.')),
-                ),
-              ),
-            )
-            return (
-              <div className="rounded-xl bg-background p-3.5" data-version={typeVersion}>
-                <div className="flex items-center justify-between">
-                  <SectionTitle>Typography</SectionTitle>
-                  <label className="flex cursor-pointer items-center gap-2 text-xs text-muted-foreground">
-                    <Switch
-                      size="sm"
-                      checked={typing}
-                      onCheckedChange={(c: boolean) => typeMode.set(c === true)}
-                    />
-                    Click text
-                  </label>
-                </div>
-                {typing && (
-                  <div className="mt-1.5 text-[11px] text-muted-foreground">
-                    Click any text on the page to edit the style it is set in.
-                    Escape closes the card; Escape again leaves the mode.
-                  </div>
-                )}
-                <div>
-                  {groups.map((group) => (
-                    <GroupSection
-                      key={group.path.join('.') || '(root)'}
-                      group={group}
-                      dirtySet={typeDirty}
-                      query={query}
-                      groupHit={false}
-                      declared={[]}
-                      onChange={(leaf, value) =>
-                        handle.type?.set(TYPE_FILE, leaf.path, value)
-                      }
-                      onReset={(leaf) => handle.type?.resetLeaf(TYPE_FILE, leaf.path)}
-                    />
-                  ))}
-                </div>
-                <div className="mt-3 flex gap-1.5">
-                  <Button
-                    size="sm"
-                    className="h-9 flex-1 rounded-full text-xs"
-                    disabled={!typeDirty.size}
-                    onClick={() => void saveType()}
-                  >
-                    Save{typeDirty.size ? ` (${typeDirty.size})` : ''}
-                  </Button>
-                  <Button
-                    variant="secondary"
-                    size="sm"
-                    className="h-9 flex-1 rounded-full text-xs"
-                    disabled={!typeDirty.size}
-                    onClick={() => handle.type?.reset(TYPE_FILE)}
-                  >
-                    Reset
-                  </Button>
-                </div>
-              </div>
-            )
-          })()}
-
-          {/* ── tokens ──────────────────────────────────────────────── */}
-          <div className="rounded-xl bg-background p-3.5">
-            <div className="flex items-center justify-between">
-              <SectionTitle>Tokens</SectionTitle>
-              {(hiddenCount > 0 || showAll) && (
-                <button
-                  className="cursor-pointer text-xs text-muted-foreground hover:text-foreground"
-                  onClick={() => setShowAll(!showAll)}
-                >
-                  {showAll ? 'Current view' : `Show all (+${hiddenCount})`}
-                </button>
-              )}
-            </div>
-            {allFiles.length > 0 && (
-              <div className="relative mt-2.5">
-                <Input
-                  className="h-9 rounded-full border-border bg-background px-8 text-center text-xs"
-                  type="text"
-                  value={filter}
-                  onFocus={() => setFilterFocus(true)}
-                  onBlur={() => setFilterFocus(false)}
-                  onChange={(e) => setFilter(e.target.value)}
-                />
-                {/* The placeholder is a centered text+icon cluster, so the
-                    magnifier travels with the label instead of hugging the
-                    field's edge. */}
-                {!filter && !filterFocus && (
-                  <span className="pointer-events-none absolute inset-0 flex items-center justify-center gap-1.5 text-xs text-muted-foreground">
-                    Filter tokens <SearchIcon />
-                  </span>
-                )}
-                {filter && (
+            {/* ── tokens ──────────────────────────────────────────────── */}
+            <div className="rounded-xl bg-background p-3.5">
+              <div className="flex items-center justify-between">
+                <SectionTitle>Tokens</SectionTitle>
+                {(hiddenCount > 0 || showAll) && (
                   <button
-                    className="absolute top-1/2 right-3 -translate-y-1/2 cursor-pointer text-muted-foreground hover:text-foreground"
-                    title="clear filter"
-                    onClick={() => setFilter('')}
+                    className="cursor-pointer text-xs text-muted-foreground hover:text-foreground"
+                    onClick={() => setShowAll(!showAll)}
                   >
-                    ×
+                    {showAll ? 'Current view' : `Show all (+${hiddenCount})`}
                   </button>
                 )}
               </div>
-            )}
-          </div>
-
-          {!allFiles.length && (
-            <div className="rounded-xl bg-background p-3.5 text-muted-foreground">
-              no motion tokens registered — create a motion.ts next to a page and
-              read it from your intro/useMotion code.
+              {allFiles.length > 0 && (
+                <div className="relative mt-2.5">
+                  <Input
+                    className="h-9 rounded-full border-border bg-background px-8 text-center text-xs"
+                    type="text"
+                    value={filter}
+                    onFocus={() => setFilterFocus(true)}
+                    onBlur={() => setFilterFocus(false)}
+                    onChange={(e) => setFilter(e.target.value)}
+                  />
+                  {/* The placeholder is a centered text+icon cluster, so the
+                      magnifier travels with the label instead of hugging the
+                      field's edge. */}
+                  {!filter && !filterFocus && (
+                    <span className="pointer-events-none absolute inset-0 flex items-center justify-center gap-1.5 text-xs text-muted-foreground">
+                      Filter tokens <SearchIcon />
+                    </span>
+                  )}
+                  {filter && (
+                    <button
+                      className="absolute top-1/2 right-3 -translate-y-1/2 cursor-pointer text-muted-foreground hover:text-foreground"
+                      title="clear filter"
+                      onClick={() => setFilter('')}
+                    >
+                      ×
+                    </button>
+                  )}
+                </div>
+              )}
             </div>
-          )}
-          {files.map(({ file }) => {
-              const leaves = handle.tokens.leaves(file)
-              const dirtySet = new Set(handle.tokens.dirty(file).map((l) => l.path.join('.')))
-              const query = filter.trim().toLowerCase()
-              // The file path is rendered directly above these rows but was
-              // not searchable, so in a project with many motion files you
-              // could find `duration` and not "everything in the transitions
-              // folder" — and typing `transitions` returned nothing at all.
-              // A hit here shows the whole file, rows and all.
-              const fileHit = !!query && file.toLowerCase().includes(query)
-              // A group is named for what it IS in the code; people search for
-              // what it DOES on the page. `keywords` lets a file say so —
-              // indexed here, shown nowhere.
-              const fileKeywords = handle.tokens.keywords(file)
-              const keywordHit = (g: TokenGroup) =>
-                !!query &&
-                (fileKeywords[g.path.join('.')] ?? []).some((w) =>
-                  w.toLowerCase().includes(query),
+
+            {!allFiles.length && (
+              <div className="rounded-xl bg-background p-3.5 text-muted-foreground">
+                no motion tokens registered — create a motion.ts next to a page and
+                read it from your intro/useMotion code.
+              </div>
+            )}
+            {files.map(({ file }) => {
+                const leaves = handle.tokens.leaves(file)
+                const dirtySet = new Set(handle.tokens.dirty(file).map((l) => l.path.join('.')))
+                const query = filter.trim().toLowerCase()
+                // The file path is rendered directly above these rows but was
+                // not searchable, so in a project with many motion files you
+                // could find `duration` and not "everything in the transitions
+                // folder" — and typing `transitions` returned nothing at all.
+                // A hit here shows the whole file, rows and all.
+                const fileHit = !!query && file.toLowerCase().includes(query)
+                // A group is named for what it IS in the code; people search for
+                // what it DOES on the page. `keywords` lets a file say so —
+                // indexed here, shown nowhere.
+                const fileKeywords = handle.tokens.keywords(file)
+                const keywordHit = (g: TokenGroup) =>
+                  !!query &&
+                  (fileKeywords[g.path.join('.')] ?? []).some((w) =>
+                    w.toLowerCase().includes(query),
+                  )
+                const groups = groupLeaves(leaves, overrideKeys, blockOrder)
+                const groupVisible = (g: TokenGroup) =>
+                  fileHit ||
+                  keywordHit(g) ||
+                  g.blocks.some((b) =>
+                    b.leaves.some(
+                      (l) =>
+                        !query ||
+                        rowMatches(query, g.path, l) ||
+                        dirtySet.has(l.path.join('.')),
+                    ),
+                  )
+                const shownGroups = groups.filter(groupVisible)
+                if (query && !shownGroups.length) return null
+                return (
+                  <div key={file} className="rounded-xl bg-background p-3.5">
+                    <div className="flex min-w-0 items-center gap-1.5">
+                      <button
+                        className="shrink-0 cursor-pointer text-foreground/60 hover:text-foreground"
+                        title="copy file path"
+                        aria-label={`copy ${file}`}
+                        onClick={() => void navigator.clipboard?.writeText(file)}
+                      >
+                        <FileStackIcon />
+                      </button>
+                      <span className="truncate text-[13px] font-semibold">{file}</span>
+                    </div>
+                    <div>
+                      {shownGroups.map((group) => (
+                        <GroupSection
+                          key={group.path.join('.') || '(root)'}
+                          group={group}
+                          dirtySet={dirtySet}
+                          query={query}
+                          groupHit={fileHit || keywordHit(group)}
+                          declared={declaredEases}
+                          onChange={(leaf, value) => {
+                            handle.tokens.set(file, leaf.path, value)
+                            queueReplay()
+                          }}
+                          onReset={(leaf) => {
+                            handle.tokens.resetLeaf(file, leaf.path)
+                            queueReplay()
+                          }}
+                        />
+                      ))}
+                    </div>
+                    <div className="mt-3 flex gap-1.5">
+                      <Button
+                        size="sm"
+                        className="h-9 flex-1 rounded-full text-xs"
+                        disabled={!dirtySet.size}
+                        onClick={() => void save(file)}
+                      >
+                        Save{dirtySet.size ? ` (${dirtySet.size})` : ''}
+                      </Button>
+                      <Button
+                        variant="secondary"
+                        size="sm"
+                        className="h-9 flex-1 rounded-full text-xs"
+                        disabled={!dirtySet.size}
+                        onClick={() => {
+                          handle.tokens.reset(file)
+                          queueReplay()
+                        }}
+                      >
+                        Reset
+                      </Button>
+                    </div>
+                  </div>
                 )
-              const groups = groupLeaves(leaves, overrideKeys, blockOrder)
-              const groupVisible = (g: TokenGroup) =>
-                fileHit ||
-                keywordHit(g) ||
+              })}
+            </>
+          )}
+
+          {active === 'type' && (
+            <>
+            {/* ── typography ──────────────────────────────────────────── */}
+            {/* The panel half of Type Mode. The popup on the page edits one
+                style where it sits; this is the whole system at once, with the
+                breakpoint tabs a click on a heading cannot reach. Both write the
+                same registry and save through the same endpoint. */}
+            {handle.type && handle.type.leaves(TYPE_FILE).length > 0 && (() => {
+              // Font stacks are READ-ONLY here — deliberately not offered.
+              //
+              // A stack is a comma-separated list of quoted family names, and a
+              // free-text box over it turns one stray character into a site that
+              // silently falls back to Times: no error, no red, just the wrong
+              // face everywhere. Nothing else in this panel can do damage of
+              // that shape — a bad number is visible and a slider can be dragged
+              // back. Changing a typeface is a decision made once, in type.ts,
+              // next to the @font-face or the Typekit link it depends on; it is
+              // not a thing to fat-finger while looking at a heading.
+              const leaves = handle.type
+                .leaves(TYPE_FILE)
+                .filter((l) => l.path[0] !== 'fonts')
+              // The catalogs the file itself declares. A style's `size` and
+              // `font` are KEYS into these, so they are closed sets and belong
+              // in a select — typing `lgg` into a text box is not an error, it
+              // is `var(--type-size-lgg)` falling back silently.
+              const spec = (handle.type.list().find((f) => f.file === TYPE_FILE)
+                ?.tokens ?? {}) as {
+                fonts?: Record<string, unknown>
+                scale?: Record<string, unknown>
+              }
+              const sizes = Object.entries(spec.scale ?? {}).map(([key, value]) => ({
+                value: key,
+                // The value beside the key, so choosing a step does not mean
+                // remembering what `lg` is worth in this project.
+                label: `${key} · ${String(value)}`,
+              }))
+              const fonts = Object.keys(spec.fonts ?? {}).map((key) => ({
+                value: key,
+                label: key,
+              }))
+              // `case` and `wrap` are CSS keyword sets — closed by the language
+              // rather than by the file, same silent-typo risk, same treatment.
+              const keywords = (list: string[]) =>
+                list.map((value) => ({ value, label: value }))
+              const typeOptions = (leaf: TokenLeaf) => {
+                // Only inside a style (or a per-selector override of one): the
+                // `scale` group's own entries are lengths, not keys.
+                const root = leaf.path[0]
+                if (root !== 'styles' && root !== 'overrides') return null
+                switch (leaf.path[leaf.path.length - 1]) {
+                  case 'size':
+                    return sizes.length ? sizes : null
+                  case 'font':
+                    return fonts.length ? fonts : null
+                  case 'case':
+                    return keywords(['none', 'uppercase', 'lowercase', 'capitalize'])
+                  case 'wrap':
+                    return keywords(['wrap', 'balance', 'pretty', 'nowrap'])
+                  default:
+                    return null
+                }
+              }
+              const typeDirty = new Set(
+                handle.type.dirty(TYPE_FILE).map((l) => l.path.join('.')),
+              )
+              const query = filter.trim().toLowerCase()
+              const groups = groupLeaves(leaves, overrideKeys, blockOrder).filter((g) =>
                 g.blocks.some((b) =>
                   b.leaves.some(
                     (l) =>
                       !query ||
                       rowMatches(query, g.path, l) ||
-                      dirtySet.has(l.path.join('.')),
+                      typeDirty.has(l.path.join('.')),
                   ),
-                )
-              const shownGroups = groups.filter(groupVisible)
-              if (query && !shownGroups.length) return null
+                ),
+              )
               return (
-                <div key={file} className="rounded-xl bg-background p-3.5">
-                  <div className="flex min-w-0 items-center gap-1.5">
-                    <button
-                      className="shrink-0 cursor-pointer text-foreground/60 hover:text-foreground"
-                      title="copy file path"
-                      aria-label={`copy ${file}`}
-                      onClick={() => void navigator.clipboard?.writeText(file)}
-                    >
-                      <FileStackIcon />
-                    </button>
-                    <span className="truncate text-[13px] font-semibold">{file}</span>
+                <div className="rounded-xl bg-background p-3.5" data-version={typeVersion}>
+                  <div className="flex items-center justify-between">
+                    <SectionTitle>Typography</SectionTitle>
+                    <label className="flex cursor-pointer items-center gap-2 text-xs text-muted-foreground">
+                      <Switch
+                        size="sm"
+                        checked={typing}
+                        onCheckedChange={(c: boolean) => typeMode.set(c === true)}
+                      />
+                      Click text
+                    </label>
                   </div>
+                  {typing && (
+                    <div className="mt-1.5 text-[11px] text-muted-foreground">
+                      Click any text on the page to edit the style it is set in.
+                      Escape closes the card; Escape again leaves the mode.
+                    </div>
+                  )}
                   <div>
-                    {shownGroups.map((group) => (
+                    {groups.map((group) => (
                       <GroupSection
                         key={group.path.join('.') || '(root)'}
                         group={group}
-                        dirtySet={dirtySet}
+                        dirtySet={typeDirty}
                         query={query}
-                        groupHit={fileHit || keywordHit(group)}
-                        declared={declaredEases}
-                        onChange={(leaf, value) => {
-                          handle.tokens.set(file, leaf.path, value)
-                          queueReplay()
-                        }}
-                        onReset={(leaf) => {
-                          handle.tokens.resetLeaf(file, leaf.path)
-                          queueReplay()
-                        }}
+                        groupHit={false}
+                        declared={[]}
+                        optionsFor={typeOptions}
+                        onChange={(leaf, value) =>
+                          handle.type?.set(TYPE_FILE, leaf.path, value)
+                        }
+                        onReset={(leaf) => handle.type?.resetLeaf(TYPE_FILE, leaf.path)}
                       />
                     ))}
                   </div>
@@ -1162,27 +1402,29 @@ function Overlay() {
                     <Button
                       size="sm"
                       className="h-9 flex-1 rounded-full text-xs"
-                      disabled={!dirtySet.size}
-                      onClick={() => void save(file)}
+                      disabled={!typeDirty.size}
+                      onClick={() => void saveType()}
                     >
-                      Save{dirtySet.size ? ` (${dirtySet.size})` : ''}
+                      Save{typeDirty.size ? ` (${typeDirty.size})` : ''}
                     </Button>
                     <Button
                       variant="secondary"
                       size="sm"
                       className="h-9 flex-1 rounded-full text-xs"
-                      disabled={!dirtySet.size}
-                      onClick={() => {
-                        handle.tokens.reset(file)
-                        queueReplay()
-                      }}
+                      disabled={!typeDirty.size}
+                      onClick={() => handle.type?.reset(TYPE_FILE)}
                     >
                       Reset
                     </Button>
                   </div>
                 </div>
               )
-            })}
+            })()}
+            </>
+          )}
+
+          {active === 'colors' && <ColorsCard />}
+
           {status && <div className="px-2 pb-1 text-[11px] text-muted-foreground">{status}</div>}
         </div>
       )}

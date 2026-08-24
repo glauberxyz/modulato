@@ -419,7 +419,10 @@ export default motion({
   the resolver descends, the hoisted one merges at the outer level afterwards,
   so it lands last. The Tweak overlay dims the row that is never read.
 - **Tweak Mode** (dev, with `@modulato/tweak` installed): the ✦ Tweak
-  overlay shows the token files for the current view (shell + this page +
+  overlay is tabbed — **Motion**, **Typography** (§7b, when the project has a
+  `type.ts`) and **Colors** (a read-only list of the `:root` custom properties,
+  since colors are a stylesheet rather than a token module). Motion shows the
+  token files for the current view (shell + this page +
   transitions touching this route; "Show all" reveals the rest) — edit live,
   replay Intro/Shell/Motions, loop, 0.1x–1x slow-mo (GSAP, WAAPI, and
   `useTicker` loops all follow), preview any breakpoint + reduced motion.
@@ -635,7 +638,11 @@ Font stacks are shown but **not editable** in the overlay. A stack is a
 comma-separated list of quoted family names, and a free-text box over one turns
 a stray character into a site that silently falls back to Times — no error, no
 red, just the wrong face everywhere. Changing a typeface is a decision made once
-in `type.ts`, next to the `@font-face` or webfont link it depends on.
+in `type.ts`, next to the `@font-face` or webfont link it depends on. Every field
+that is a KEY into a catalog the file declares — a style's `size` naming a scale
+step, its `font` naming a stack — is a select rather than a text box, as are
+`case` and `wrap`: `var(--type-size-lgg)` is not an error, it is a silent
+fallback, so a closed set should not be typed.
 
 Save writes `type.ts` through the same AST-preserving endpoint a `motion.ts`
 uses, matching the file's own indentation; an editor edit HMR-repaints the

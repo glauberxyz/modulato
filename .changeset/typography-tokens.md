@@ -49,3 +49,8 @@ Type Mode is also reachable without the panel: a round **Aa** button beside the
 are shown but not editable in the overlay — a stray character in one silently
 falls the whole site back to Times, and a typeface is a decision made once in
 `type.ts`, next to the webfont link it depends on.
+
+The overlay is now tabbed — **Motion**, **Typography** and **Colors** — rather
+than one scroll holding all three. Colors is read-only: colors are CSS custom
+properties in a stylesheet, not a token module, so there is nothing to write
+back to; it lists the `:root` palette and copies a `var()` on click.
