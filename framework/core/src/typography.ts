@@ -7,7 +7,8 @@ import { createTokenRegistry } from './registry'
  *   // type.ts (project root)
  *   export default typography({
  *     fonts: { sans: 'ui-sans-serif, system-ui, sans-serif' },
- *     scale: { sm: 14, base: 18, lg: 24, xl: 32, '2xl': 48, '3xl': 72 },
+ *     fluid: { from: 390, to: 1440 },
+ *     scale: { sm: 14, base: 18, lg: 24, xl: 32, '3xl': { min: 48, max: 72 } },
  *     styles: {
  *       headline: { font: 'sans', size: '3xl', leading: 1, tracking: -0.03 },
  *       body: { font: 'sans', size: 'base', leading: 1.7 },
@@ -22,21 +23,54 @@ import { createTokenRegistry } from './registry'
  * consumes them by name.
  *
  * Everything here is optional except `styles`. A style names a font and a
- * size from the two catalogs above it; anything not in a catalog is passed
- * through as raw CSS, so `size: 'clamp(44px, 9vw, 90px)'` works without
- * inventing a scale step for a one-off.
+ * size from the two catalogs above it; anything not in a catalog is used as
+ * written, so `size: { min: 44, max: 90 }` works without inventing a scale
+ * step for a one-off.
+ *
+ * NO UNIT IS EVER WRITTEN IN THIS FILE. A size is the px a design was drawn
+ * at and ships in rem; tracking is em; leading and weight are unitless. Which
+ * unit a field ships in is a property of the field, so it is decided once
+ * here rather than re-argued at every declaration — see `remFrom`.
  */
 export function typography<T extends TypographySpec>(spec: T): T {
   return spec
 }
 
+/**
+ * A size that grows with the viewport, as DATA rather than as a `clamp()`.
+ *
+ *   display: { min: 44, max: 90 }   // 44px at `from`, 90px at `to`
+ *
+ * The emitted value is the line through those two points — `clamp(min, a*rem
+ * + b*vw, max)` — which is the accessible spelling of a fluid size and the
+ * one nobody hand-computes correctly. That is the whole argument for putting
+ * it here: the slope depends on the viewport range, so a hand-written
+ * `clamp(44px, 9vw, 90px)` encodes a range its author never stated and the
+ * next person cannot recover. Two numbers state it.
+ *
+ * Being two numbers rather than a string is also what keeps the size EDITABLE:
+ * Tweak walks the token tree and gives every number a slider, so a fluid step
+ * gets two of them. A `clamp()` string is opaque to the overlay — it can name
+ * the step but not move it.
+ */
+export interface FluidValue {
+  /** px at the `from` viewport. */
+  min: number
+  /** px at the `to` viewport. */
+  max: number
+  /** Viewport width where `min` is reached. Default: `fluid.from`. */
+  from?: number
+  /** Viewport width where `max` is reached. Default: `fluid.to`. */
+  to?: number
+}
+
 /** A size step, a leading, a tracking — the values a type style is made of. */
-export type TypeValue = number | string
+export type TypeValue = number | string | FluidValue
 
 export interface TypeStyle {
   /** A key in `fonts`, or a raw font-family list. */
   font?: string
-  /** A key in `scale`, or a raw CSS length (`clamp(...)`, `2rem`, `40px`). */
+  /** A key in `scale`, a `{ min, max }` fluid pair, or raw CSS. */
   size?: TypeValue
   /** Unitless line-height (1.4), or a raw CSS value. */
   leading?: TypeValue
@@ -67,11 +101,18 @@ export interface TypographySpec {
   fonts?: Record<string, string>
   /**
    * The size steps the project uses. `--type-size-<name>`. A bare number is
-   * px. This is deliberately a closed set: Tweak's size control steps THROUGH
-   * these rather than offering a free pixel slider, which is what keeps a site
-   * to a scale instead of to forty-one accidental sizes.
+   * the size in px AS DESIGNED, emitted in rem (see `remFrom`). This is
+   * deliberately a closed set: Tweak's size control steps THROUGH these
+   * rather than offering a free pixel slider, which is what keeps a site to a
+   * scale instead of to forty-one accidental sizes.
    */
   scale?: Record<string, TypeValue>
+  /**
+   * The viewport range every `{ min, max }` size interpolates across, unless
+   * the step names its own. Stated once, here, because a fluid scale whose
+   * steps each reach full size at a different width is not a scale.
+   */
+  fluid?: { from: number; to: number }
   /** The named type styles. Each emits `--type-<name>-*` and a `.type-<name>`. */
   styles: Record<string, TypeStyle>
   /**
@@ -141,8 +182,82 @@ const DECLARATIONS: Array<[string, string, string]> = [
 const isPlainObject = (value: unknown): value is Record<string, unknown> =>
   !!value && typeof value === 'object' && !Array.isArray(value)
 
+/**
+ * A fluid pair, told apart from a breakpoint block — both are objects sitting
+ * in the same positions, and only the shape distinguishes them.
+ */
+const isFluid = (value: unknown): value is FluidValue =>
+  isPlainObject(value) &&
+  typeof value.min === 'number' &&
+  typeof value.max === 'number'
+
 /** A CSS identifier fragment — variable names are built from author keys. */
 const safeKey = (key: string) => key.replace(/[^a-zA-Z0-9_-]/g, '-')
+
+/** The CSS initial root font size — the constant a design's px are drawn at. */
+const ROOT_PX = 16
+
+/** The viewport range a fluid size crosses when the spec names none. */
+const FLUID_FROM = 390
+const FLUID_TO = 1440
+
+/** Enough precision for a sub-pixel step, without emitting float noise. */
+const round = (n: number) => Math.round(n * 1e4) / 1e4
+
+/**
+ * A designed px size, in rem.
+ *
+ * THE unit decision of the framework, made once, here. A type size is the one
+ * length on a page that a reader may legitimately want bigger without wanting
+ * the layout bigger too — that is what the browser's font-size setting is,
+ * and rem is the only unit that hears it. Page zoom is the other affordance
+ * and it scales everything; both exist because they answer different needs.
+ *
+ * The author still writes `18`, because 18 is what the design says and a px
+ * number is what a designer and an LLM both reason in. The division is the
+ * framework's job. The 16 is not an assumption about the reader's setting —
+ * it is the CSS initial value, i.e. the size the design was drawn at; a
+ * reader who has moved it gets type that moves with them, which is the point.
+ *
+ * Layout does NOT get this treatment: padding, gaps and container widths stay
+ * px, so text can grow without the boxes around it inflating to match.
+ */
+const remFrom = (px: number) => `${round(px / ROOT_PX)}rem`
+
+/**
+ * A fluid pair as the `clamp()` it stands for.
+ *
+ * The middle term is the line through (from, min) and (to, max), split into
+ * the rem part (its intercept) and the vw part (its slope). Keeping an intercept
+ * in rem is what makes the result accessible: a size expressed purely in vw
+ * ignores the font-size setting AND cannot be enlarged by zoom, since zooming
+ * does not change the viewport width in CSS pixels.
+ *
+ * `min`/`max` are ordered before they are emitted, so a step that shrinks as
+ * the viewport grows (legal, occasionally wanted) still clamps to its own two
+ * ends rather than pinning to one of them.
+ */
+function fluidCss(value: FluidValue, spec: TypographySpec): string {
+  const from = value.from ?? spec.fluid?.from ?? FLUID_FROM
+  const to = value.to ?? spec.fluid?.to ?? FLUID_TO
+  const lo = Math.min(value.min, value.max)
+  const hi = Math.max(value.min, value.max)
+  // A zero-width range has no line through it; the size is simply its top.
+  if (to === from) return remFrom(hi)
+  const slope = (value.max - value.min) / (to - from)
+  const intercept = value.min - slope * from
+  return `clamp(${remFrom(lo)}, ${remFrom(intercept)} + ${round(slope * 100)}vw, ${remFrom(hi)})`
+}
+
+/**
+ * One authored size as the CSS length it means: a fluid pair as its clamp, a
+ * number as rem, anything else as the raw CSS it already is.
+ */
+function sizeCss(value: TypeValue, spec: TypographySpec): string {
+  if (isFluid(value)) return fluidCss(value, spec)
+  if (typeof value === 'number') return remFrom(value)
+  return value
+}
 
 /**
  * Resolve one authored field to the CSS text that goes on the right of the
@@ -158,16 +273,18 @@ function resolveField(
     return `var(--type-font-${safeKey(value)})`
   if (field === 'size' && typeof value === 'string' && spec.scale?.[value] !== undefined)
     return `var(--type-size-${safeKey(value)})`
-  // A bare number means the unit the field is normally authored in: px for a
-  // size, em for tracking (tracking is relative to the size by definition, and
-  // a px value silently stops being right the moment the size moves), and
-  // unitless for leading and weight.
+  // A size is a length, and the framework owns which unit that length ships
+  // in — a number, a fluid pair or a raw string all go through one place.
+  if (field === 'size') return sizeCss(value, spec)
+  // Elsewhere a bare number means the unit the field is authored in: em for
+  // tracking (tracking is relative to the size by definition, and a px value
+  // silently stops being right the moment the size moves), unitless for
+  // leading and weight.
   if (typeof value === 'number') {
-    if (field === 'size') return `${value}px`
     if (field === 'tracking') return `${value}em`
     return String(value)
   }
-  return value
+  return value as string
 }
 
 function styleVars(
@@ -179,7 +296,10 @@ function styleVars(
   const out: string[] = []
   for (const [field, suffix] of CSS_PROPS) {
     const value = style[field]
-    if (value === undefined || isPlainObject(value)) continue
+    if (value === undefined) continue
+    // An object here is a breakpoint block, which the media-query pass emits —
+    // unless it is a fluid pair, which only `size` can be.
+    if (isPlainObject(value) && !(field === 'size' && isFluid(value))) continue
     out.push(
       `${indent}--type-${safeKey(name)}-${suffix}: ${resolveField(field, value as TypeValue, spec)};`,
     )
@@ -214,7 +334,7 @@ export function typeCss(
   for (const [name, stack] of Object.entries(spec.fonts ?? {}))
     root.push(`  --type-font-${safeKey(name)}: ${stack};`)
   for (const [name, size] of Object.entries(spec.scale ?? {}))
-    root.push(`  --type-size-${safeKey(name)}: ${typeof size === 'number' ? `${size}px` : size};`)
+    root.push(`  --type-size-${safeKey(name)}: ${sizeCss(size, spec)};`)
   for (const [name, style] of Object.entries(spec.styles))
     root.push(...styleVars(name, style, spec, '  '))
   if (root.length) lines.push(`:root {\n${root.join('\n')}\n}`)
@@ -237,7 +357,7 @@ export function typeCss(
     const inner: string[] = []
     for (const [name, style] of Object.entries(spec.styles)) {
       const block = style[bp]
-      if (!isPlainObject(block)) continue
+      if (!isPlainObject(block) || isFluid(block)) continue
       inner.push(...styleVars(name, block as TypeStyle, spec, '    '))
     }
     if (inner.length) lines.push(`@media ${query} {\n  :root {\n${inner.join('\n')}\n  }\n}`)

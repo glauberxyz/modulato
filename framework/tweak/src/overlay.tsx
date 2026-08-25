@@ -11,7 +11,7 @@ import type { DeclaredEase, TokenLeaf, TokenValue } from 'modulato'
 import { useHandle } from './handle'
 import { saveTokens } from './save'
 import { focusedOverlayField } from './dom'
-import { TypeIcon, TypeMode, typeMode, useTypeMode } from './type'
+import { TypeIcon, TypeMode, formatSize, typeMode, useTypeMode } from './type'
 import { Button } from './ui/button'
 import { Input } from './ui/input'
 import { Slider } from './ui/slider'
@@ -1579,8 +1579,10 @@ function Overlay() {
               const sizes = Object.entries(spec.scale ?? {}).map(([key, value]) => ({
                 value: key,
                 // The value beside the key, so choosing a step does not mean
-                // remembering what `lg` is worth in this project.
-                label: `${key} · ${String(value)}`,
+                // remembering what `lg` is worth in this project. A fluid step
+                // prints as its two ends — the numbers this panel's own
+                // sliders move, one row further down.
+                label: `${key} · ${formatSize(value)}`,
               }))
               const fonts = Object.keys(spec.fonts ?? {}).map((key) => ({
                 value: key,

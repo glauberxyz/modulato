@@ -4,49 +4,49 @@
 @use '../../styles/typography' as type;
 
 .guide {
-  padding: 10rem 6vw 8rem;
-  max-width: 62rem;
+  padding: 160px 6vw 128px;
+  max-width: 992px;
 
   &__head {
-    margin-bottom: 5rem;
+    margin-bottom: 80px;
   }
 
   &__title {
     @include type.headline;
-    margin: 0 0 1.5rem;
+    margin: 0 0 24px;
   }
 
   &__lede {
-    max-width: 38rem;
+    max-width: 608px;
     color: var(--muted);
   }
 
   &__section {
-    margin-bottom: 5rem;
+    margin-bottom: 80px;
     border-top: 1px solid var(--rule);
-    padding-top: 1.5rem;
+    padding-top: 24px;
   }
 
   &__heading {
     @include type.label;
     color: var(--muted);
-    margin: 0 0 2rem;
+    margin: 0 0 32px;
   }
 
   &__note {
     @include type.small;
-    max-width: 34rem;
+    max-width: 544px;
     color: var(--muted);
-    margin: -1rem 0 2rem;
+    margin: -16px 0 32px;
   }
 
   // A specimen is its facts beside the type it describes.
   &__specimen {
     display: grid;
-    grid-template-columns: 12rem 1fr;
-    gap: 2rem;
+    grid-template-columns: 192px 1fr;
+    gap: 32px;
     align-items: start;
-    padding: 2rem 0;
+    padding: 32px 0;
     border-bottom: 1px solid var(--rule);
 
     &:last-child {
@@ -55,7 +55,7 @@
 
     @media (max-width: 767px) {
       grid-template-columns: 1fr;
-      gap: 1rem;
+      gap: 16px;
     }
   }
 
@@ -66,16 +66,16 @@
 
   &__facts {
     @include type.small;
-    margin: 0.75rem 0 0;
+    margin: 12px 0 0;
     color: var(--muted);
   }
 
   &__fact {
     display: flex;
-    gap: 0.5rem;
+    gap: 8px;
 
     dt {
-      min-width: 4.5rem;
+      min-width: 72px;
     }
 
     dd {
@@ -86,7 +86,7 @@
     // The measured line is the one that can contradict the others — set it
     // apart so a mismatch is visible rather than buried in a list.
     &--computed {
-      margin-top: 0.5rem;
+      margin-top: 8px;
 
       dd {
         color: var(--accent);
@@ -108,10 +108,10 @@
 
   &__step {
     display: grid;
-    grid-template-columns: 4rem 1fr 6rem;
-    gap: 1.5rem;
+    grid-template-columns: 64px 1fr 96px;
+    gap: 24px;
     align-items: baseline;
-    padding: 0.75rem 0;
+    padding: 12px 0;
     border-bottom: 1px solid var(--rule);
   }
 
@@ -132,19 +132,19 @@
     margin: 0;
     padding: 0;
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(13rem, 1fr));
-    gap: 1.5rem;
+    grid-template-columns: repeat(auto-fill, minmax(208px, 1fr));
+    gap: 24px;
   }
 
   &__swatch {
     display: grid;
-    gap: 0.5rem;
+    gap: 8px;
   }
 
   &__chip {
     display: block;
-    height: 4.5rem;
-    border-radius: 0.5rem;
+    height: 72px;
+    border-radius: 8px;
     // A hairline, so a swatch the same color as the page still has an edge.
     box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.12);
   }

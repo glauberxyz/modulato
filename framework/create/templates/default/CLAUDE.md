@@ -56,6 +56,16 @@ stylesheet because the design has one more size than the scale does: add the
 step. The scale is deliberately closed, and that is what keeps a site to a
 type system instead of to forty-one accidental sizes.
 
+**Units: never write one for type; layout is px.** In `type.ts` a size is a
+plain number — the px the design says — and Modulato ships it in rem, so a
+reader's browser font-size setting reaches the text. A size that should grow
+with the viewport is its two ends, `{ min: 44, max: 90 }`, and Modulato solves
+the `clamp()`; never hand-write one, and never write `rem` or `px` in that
+file. In stylesheets, layout (padding, gaps, widths, offsets) is **px**, so
+text can grow without the boxes around it inflating to match. Use `em`/`ch`
+only where the length genuinely tracks the type it holds, and `clamp()`/`vw`
+where it should follow the viewport.
+
 **Colors are data too**, in `color.ts` at the project root: each key is a
 `--variable`. Add one there, or press **+** in the overlay's Colors tab and name
 it. Renaming a color in the overlay rewrites every `var()` that reads it;

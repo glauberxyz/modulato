@@ -22,7 +22,7 @@ html.lenis, html.lenis body { height: auto; }
 
 .menu {
   position: fixed;
-  top: 1.5rem;
+  top: 24px;
   left: 50%;
   transform: translateX(-50%);
   z-index: 10;
@@ -32,7 +32,7 @@ html.lenis, html.lenis body { height: auto; }
     display: flex;
     list-style: none;
     margin: 0;
-    padding: 0.375rem;
+    padding: 6px;
     background: rgba(255, 255, 255, 0.75);
     backdrop-filter: blur(12px);
     border-radius: 999px;
@@ -42,13 +42,13 @@ html.lenis, html.lenis body { height: auto; }
   &__item {
     position: relative;
     z-index: 1;
-    width: 6rem;
+    width: 96px;
     text-align: center;
 
     a {
       @include type.small;
       display: block;
-      padding: 0.625rem 0;
+      padding: 10px 0;
       text-decoration: none;
       color: var(--muted);
       transition: color 0.4s;
@@ -59,10 +59,10 @@ html.lenis, html.lenis body { height: auto; }
 
   &__indicator {
     position: absolute;
-    top: 0.375rem;
-    left: 0.375rem;
-    width: 6rem;
-    height: calc(100% - 0.75rem);
+    top: 6px;
+    left: 6px;
+    width: 96px;
+    height: calc(100% - 12px);
     border-radius: 999px;
     background: rgba(0, 0, 0, 0.06);
     transform: translateX(calc(var(--active-index, 0) * 100%));

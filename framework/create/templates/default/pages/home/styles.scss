@@ -1,17 +1,17 @@
 @use '../../styles/typography' as type;
 
 .home {
-  padding: 12rem 6vw 6rem;
-  max-width: 60rem;
+  padding: 192px 6vw 96px;
+  max-width: 960px;
 
   &__headline {
     @include type.headline;
-    margin: 0 0 2rem;
+    margin: 0 0 32px;
   }
 
   &__tagline {
     @include type.body;
-    max-width: 34rem;
+    max-width: 544px;
     color: var(--muted);
   }
 }
