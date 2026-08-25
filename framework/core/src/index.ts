@@ -63,7 +63,7 @@ export {
   TYPE_STYLE_ID,
   TYPE_MARKER,
 } from './typography'
-export type { TypographySpec, TypeStyle, TypeOverride, TypeValue } from './typography'
+export type { TypographySpec, TypeStyle, TypeOverride, TypeValue, FluidValue } from './typography'
 export {
   colors,
   colorRegistry,

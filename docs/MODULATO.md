@@ -550,8 +550,15 @@ import { typography } from 'modulato'
 export default typography({
   fonts: { sans: 'ui-sans-serif, system-ui, sans-serif' },
 
-  // The size steps the project uses, and the only ones it uses.
-  scale: { xs: 13, sm: 15, base: 18, lg: 24, xl: 34, '2xl': 48, '3xl': 72 },
+  // The viewport range every fluid step crosses, stated once.
+  fluid: { from: 390, to: 1440 },
+
+  // The size steps the project uses, and the only ones it uses. A number is
+  // px as designed; a pair is a size that grows with the viewport.
+  scale: {
+    xs: 13, sm: 15, base: 18, lg: 24, xl: 34, '2xl': 48,
+    '3xl': { min: 48, max: 72 },
+  },
 
   styles: {
     headline: {
@@ -567,10 +574,77 @@ export default typography({
 
 A style's fields are `font`, `size`, `leading`, `tracking`, `weight`, `case`
 (text-transform) and `wrap` (text-wrap). `font` and `size` name a key from the
-catalogs above; anything that is not a key is passed through as raw CSS, so a
-one-off fluid size can be written in full — `size: 'clamp(3rem, 8vw, 6.5rem)'`
-— without inventing a scale step for it. A bare number is px for `size`, em for
-`tracking`, and unitless for `leading` and `weight`.
+catalogs above; anything that is not a key is used as written, so a genuine
+one-off can be inlined — `size: { min: 32, max: 56 }` — without inventing a
+scale step for it.
+
+### Units
+
+**You never write a unit for type, and layout is px.** That is the whole rule.
+
+A `size` is a plain number: **the px the design says**, which is what a
+designer and a generated stylesheet both reason in. Modulato divides by the
+CSS root size and ships it in **rem** — `18` becomes `1.125rem` — so a reader
+who has raised their browser's font-size setting gets bigger text. That
+setting and page zoom are different affordances: zoom scales the whole page,
+the font-size setting scales only text, and only rem hears the second one. The
+16 in the division is not an assumption about the reader; it is the initial
+value, i.e. the size the design was drawn at.
+
+Stylesheets are the other half. **Layout — padding, gaps, container widths,
+offsets — stays px**, so text can grow without the boxes around it inflating
+to match. Sizing layout in rem gives a reader who asked for bigger text a page
+that is merely zoomed, which is what the control they did not press already
+does; it also ties every spacing value to the type scale, so neither can be
+adjusted without the other. Reach for a relative unit where the relationship
+is real: `em` or `ch` for a measure that should track the type it holds,
+`clamp()`/`vw` for a length that should follow the viewport.
+
+`modulato check` **warns** when a page stylesheet sizes layout in `rem`,
+alongside the warning for declaring `font-size` there — the two halves of one
+rule. Media and container queries are exempt: a breakpoint in rem is a real
+position ("switch when the text gets big" rather than "when the window does"),
+and `em`/`ch` are exempt because they say the length tracks its type, which is
+the case the rule exists to allow.
+
+Elsewhere in `type.ts`, a bare number is the unit the field is authored in:
+**em** for `tracking` (it is relative to the size by definition, and a px value
+stops being right the moment the size moves) and **unitless** for `leading` and
+`weight`.
+
+Do **not** set `html { font-size: 62.5% }` to make `1rem` equal `10px`. It
+breaks the preference it appears to serve and mis-sizes anything embedded that
+assumes the real root.
+
+### Fluid sizes
+
+A size that should grow with the viewport is written as its two ends:
+
+```ts
+fluid: { from: 390, to: 1440 },        // the range, once, for the whole scale
+scale: {
+  display:   { min: 44, max: 90 },     // 44px at 390, 90px at 1440
+  statement: { min: 40, max: 190, from: 320, to: 1600 },   // its own range
+},
+```
+
+Modulato solves the line through those two points and emits
+`clamp(2.75rem, 1.6821rem + 4.381vw, 5.625rem)`. Two reasons it is data and
+not a string you write:
+
+- **It is the accessible spelling.** Keeping the middle term's intercept in rem
+  is what lets a fluid size answer both the font-size setting and zoom. A size
+  expressed purely in `vw` does neither — zoom does not change the viewport
+  width in CSS pixels, so `clamp(44px, 9vw, 90px)` is a heading that cannot be
+  made bigger by any means the browser offers.
+- **It stays editable.** Tweak walks the token tree and puts a slider on every
+  number, so a `{ min, max }` step gets two of them, live on the page. A
+  `clamp()` string is one value the overlay can name but not move — and on most
+  sites the fluid steps are the headlines, i.e. exactly the sizes worth nudging.
+
+A hand-written `clamp()` still works and is still passed through untouched. It
+just encodes a viewport range its author never wrote down, which is the thing
+`fluid` exists to state.
 
 **What Modulato generates.** `type.ts` is rendered to CSS and **inlined into
 every SSR response**, so the first painted glyph is already correct — there is

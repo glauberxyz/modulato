@@ -6,6 +6,20 @@
 // declared here is yours alone and invisible to the overlay.
 //
 // Add a color? Put it in `color.ts` (or press + in the overlay's Colors tab).
+//
+// UNITS, since this is where a stylesheet starts: layout is px. Padding,
+// gaps, container widths, offsets — all px, all the way down. Type is the one
+// thing that ships in rem, and `type.ts` does that for you from the px numbers
+// you write there.
+//
+// The split is the whole point. A reader who raises their browser's font size
+// is asking for bigger TEXT, not a bigger layout; rem gaps around rem text
+// give them a page that is simply zoomed, which is what the zoom control they
+// did not press already does. Sizing layout in rem also means every spacing
+// value silently depends on the type scale, so one is not adjustable without
+// the other. Reach for a relative unit when the relationship is real — `em`
+// or `ch` for a measure that should track the type it holds — and for `clamp()`
+// or `vw` when a length should follow the viewport.
 :root {
   --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
 }

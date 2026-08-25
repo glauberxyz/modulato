@@ -63,7 +63,15 @@ Version Packages PR. Verifying such a change locally needs `npm ci` too —
 4. **Strict lifecycles.** Everything animated is created on mount and torn
    down on unmount. Pages stack during transitions; page roots paint opaque
    backgrounds.
-5. **A feature isn't done** until: demo shows it, MODULATO.md documents it,
+5. **Units are the framework's decision, not the author's.** A unit is a
+   property of the token category and is emitted, never typed: a `size` in
+   `type.ts` is the px a design was drawn at and ships in rem, tracking is em,
+   leading and weight are unitless. Layout — in stylesheets — is px, so text
+   can grow with a reader's font-size setting without the boxes around it
+   inflating to match. A length that should follow the viewport is data too
+   (`{ min, max }`), because a value with a unit baked in is a string, and a
+   string is one Tweak can name but not move.
+6. **A feature isn't done** until: demo shows it, MODULATO.md documents it,
    `npm run check` passes (CI runs it, plus `npm ci`, `modulato check`, a demo
    build and the docs-sync check), and it's verified running (browser for
    anything visual — SSR curl + DOM-state checks at minimum).

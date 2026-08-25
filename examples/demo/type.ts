@@ -27,9 +27,16 @@ export default typography({
     serif: "'adobe-garamond-pro', Georgia, serif",
   },
 
-  // The sizes this site uses, and the only ones it uses. The fluid steps are
-  // here for the same reason the fixed ones are: a `clamp()` buried in a page
-  // stylesheet is a size nobody can find, and this is where sizes are found.
+  // The viewport range the fluid steps below cross: phone to laptop. One
+  // range for the whole scale, so the steps stay in proportion to each other
+  // at every width — which is the thing a hand-written `clamp()` per step
+  // cannot promise, since each one encodes a range nobody wrote down.
+  fluid: { from: 390, to: 1440 },
+
+  // The sizes this site uses, and the only ones it uses. Numbers are px as
+  // drawn; the framework ships them in rem so a reader's font-size setting
+  // reaches them. A fluid step is its two ends, and Modulato solves the line
+  // between them — `{ min: 44, max: 90 }` is 44px at 390 and 90px at 1440.
   scale: {
     xxs: 12,
     xs: 14,
@@ -37,10 +44,14 @@ export default typography({
     base: 24,
     lg: 30,
     xl: 40,
-    sub: 'clamp(24px, 2.4vw, 32px)',
-    plate: 'clamp(24px, 2.6vw, 34px)',
-    display: 'clamp(44px, 9vw, 90px)',
-    statement: 'clamp(40px, 13vw, 190px)',
+    sub: { min: 24, max: 32 },
+    plate: { min: 24, max: 34 },
+    // Full size by 1000px and flat above it — a chapter opener is meant to be
+    // the same 90px on a laptop as on a large display, so it finishes growing
+    // where the column stops widening. Its own range, stated, because that is
+    // a decision about this step rather than about the scale.
+    display: { min: 44, max: 90, to: 1000 },
+    statement: { min: 40, max: 190 },
   },
 
   styles: {

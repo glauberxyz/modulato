@@ -367,6 +367,29 @@ function checkTypography(root, error, warn) {
         break
       }
     }
+
+    // Layout is px. The other half of the same rule as the two properties
+    // above: type ships in rem so a reader's font-size setting can reach it,
+    // and layout stays px so the boxes do not inflate to match. rem gaps
+    // around rem text are a page that is merely zoomed, which is what the
+    // zoom control the reader did not press already does.
+    //
+    // Media queries are exempt, and not as a courtesy: a breakpoint in rem is
+    // a real position — "switch when the text gets big" rather than "when the
+    // window does" — and warning on it would be this check having an opinion
+    // it has not earned. `em` and `ch` are exempt for the same reason, since
+    // those say the length tracks the type it holds, which is the case the
+    // rule is FOR.
+    const remLines = []
+    for (const [i, line] of text.split('\n').entries()) {
+      if (/@media|@container/.test(line)) continue
+      if (/(^|[^\w.-])-?\d*\.?\d+rem\b/.test(line)) remLines.push(i + 1)
+    }
+    if (remLines.length)
+      warn(
+        rel,
+        `sizes layout in rem (line${remLines.length > 1 ? 's' : ''} ${remLines.slice(0, 5).join(', ')}${remLines.length > 5 ? `, +${remLines.length - 5} more` : ''}) — layout is px, so text can grow with a reader's font-size setting without the boxes around it growing too. Use px, or em/ch where the length genuinely tracks the type it holds.`,
+      )
   }
 }
 

@@ -108,7 +108,7 @@ server.registerTool(
   'list_motion_tokens',
   {
     description:
-      'Read every token module (file → token tree): each motion.ts / *.motion.ts, holding the tweakable numbers of the site’s animations, plus the root type.ts, holding its type system (fonts, size scale, named styles).',
+      'Read every token module (file → token tree): each motion.ts / *.motion.ts, holding the tweakable numbers of the site’s animations, plus the root type.ts, holding its type system (fonts, size scale, named styles). No token carries a unit: a type size is the px a design was drawn at and ships in rem, tracking is em, leading and weight are unitless. A size step written as {min,max} is fluid — those two ends and the spec’s `fluid` viewport range, from which Modulato solves the clamp().',
     inputSchema: {},
   },
   run(() =>
@@ -127,7 +127,9 @@ server.registerTool(
         z.object({
           path: z
             .array(z.string())
-            .describe('e.g. ["intro","headline","duration"] or ["styles","headline","size"]'),
+            .describe(
+              'e.g. ["intro","headline","duration"], ["styles","headline","size"], or ["scale","display","min"] for one end of a fluid step',
+            ),
           value: z.union([z.number(), z.string(), z.boolean()]),
         }),
       ),

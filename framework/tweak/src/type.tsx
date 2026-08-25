@@ -181,9 +181,44 @@ function resolve(x: number, y: number): Target | null {
 
 type Spec = {
   fonts?: Record<string, string>
-  scale?: Record<string, TokenValue>
+  scale?: Record<string, TokenValue | FluidPair>
   styles?: Record<string, Record<string, unknown>>
   overrides?: Record<string, Record<string, unknown>>
+}
+
+/** A `{ min, max }` size step — two numbers the panel can put sliders on. */
+type FluidPair = { min: number; max: number; from?: number; to?: number }
+
+const isFluid = (value: unknown): value is FluidPair =>
+  !!value &&
+  typeof value === 'object' &&
+  typeof (value as FluidPair).min === 'number' &&
+  typeof (value as FluidPair).max === 'number'
+
+/**
+ * A scale step as the reader should see it beside its key.
+ *
+ * A fluid pair prints as its two ends rather than as `[object Object]` — and
+ * as the two ends rather than as the emitted `clamp()`, because the ends are
+ * what the file says and what the sliders in the Typography tab move.
+ */
+export function formatSize(value: unknown): string {
+  if (isFluid(value)) return `${value.min}→${value.max}`
+  return String(value)
+}
+
+/**
+ * The number a step sorts by, so ◀ and ▶ mean smaller and larger.
+ *
+ * A fluid step sorts by its MIDPOINT: ordering by either end alone gets it
+ * wrong the moment two steps have different ranges — a 40→190 statement reads
+ * as smaller than a 44→90 display by its min, and the stepper would walk them
+ * in an order the page contradicts.
+ */
+function sortValue(value: unknown): number {
+  if (isFluid(value)) return (value.min + value.max) / 2
+  const n = typeof value === 'number' ? value : Number.parseFloat(String(value))
+  return Number.isFinite(n) ? n : Number.POSITIVE_INFINITY
 }
 
 function specOf(handle: ModulatoDevHandle): Spec | null {
@@ -194,18 +229,16 @@ function specOf(handle: ModulatoDevHandle): Spec | null {
 /**
  * Scale keys, smallest first.
  *
- * Sorted by their px value rather than trusted in declaration order, because
- * the stepper's ◀ and ▶ have to mean smaller and larger. A step whose value is
- * not a plain number (`clamp(...)`) cannot be ordered against one that is, so
- * it keeps its authored position at the end.
+ * Sorted by their size rather than trusted in declaration order, because the
+ * stepper's ◀ and ▶ have to mean smaller and larger. A fluid `{ min, max }`
+ * step sorts by its midpoint; a step that is still raw CSS (`clamp(...)`)
+ * cannot be ordered against a number, so it keeps its authored position at
+ * the end — one more reason to write the pair instead of the string.
  */
 function scaleKeys(spec: Spec | null): string[] {
   const entries = Object.entries(spec?.scale ?? {})
   return entries
-    .map(([key, value], index) => {
-      const n = typeof value === 'number' ? value : Number.parseFloat(String(value))
-      return { key, sort: Number.isFinite(n) ? n : Number.POSITIVE_INFINITY, index }
-    })
+    .map(([key, value], index) => ({ key, sort: sortValue(value), index }))
     .sort((a, b) => a.sort - b.sort || a.index - b.index)
     .map((e) => e.key)
 }
@@ -297,8 +330,10 @@ function Row({ label, children }: { label: string; children: React.ReactNode }) 
  * you choose FROM — stepping through it one press at a time is the same
  * decision made slowly, and it hides the other steps while you make it.
  *
- * A value the scale does not contain (a legitimate one-off `clamp()`) leads
- * the list as its own option rather than being silently snapped away.
+ * A value the scale does not contain — a one-off, written inline as a `{ min,
+ * max }` pair or as raw CSS — leads the list as its own option rather than
+ * being silently snapped away. Picking a real step from the list replaces it,
+ * which is the only way back into the scale and should stay one gesture.
  */
 function SizeSelect({
   keys,
@@ -308,11 +343,17 @@ function SizeSelect({
 }: {
   keys: string[]
   value: unknown
-  scale: Record<string, TokenValue>
+  scale: Record<string, TokenValue | FluidPair>
   onChange: (key: string) => void
 }) {
   const current = typeof value === 'string' ? value : ''
-  const options = keys.map((key) => ({ value: key, label: `${key} · ${scale[key]}` }))
+  // An inline size is an object or a number, so it names no key — it shows as
+  // the empty option, labelled with what it actually is.
+  const inline = !current && value !== undefined && value !== null ? formatSize(value) : ''
+  const options = keys.map((key) => ({
+    value: key,
+    label: `${key} · ${formatSize(scale[key])}`,
+  }))
   if (current && !keys.includes(current))
     options.unshift({ value: current, label: `${current} (not in the scale)` })
   return (
@@ -322,7 +363,7 @@ function SizeSelect({
         value={current}
         onChange={(e) => onChange(e.target.value)}
       >
-        {!current && <option value="">—</option>}
+        {!current && <option value="">{inline ? `${inline} (not in the scale)` : '—'}</option>}
         {options.map((o) => (
           <option key={o.value} value={o.value}>
             {o.label}
@@ -560,7 +601,7 @@ function Popup({
               <SizeSelect
                 keys={keys}
                 value={read('size')}
-                scale={(spec.scale ?? {}) as Record<string, TokenValue>}
+                scale={(spec.scale ?? {}) as Record<string, TokenValue | FluidPair>}
                 onChange={(key) => write('size', key)}
               />
             </Row>

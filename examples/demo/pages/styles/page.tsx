@@ -74,15 +74,25 @@ const TYPE_ROLES = Object.entries(spec.styles).map(([key, style]) => ({
   scale: fluidStep(style.size),
 }))
 
-/** The authored size, when it is a fluid step; null when it is a fixed one. */
+/**
+ * The authored size, when it is a fluid step; null when it is a fixed one.
+ *
+ * A fluid step reads back as the two ends and the viewport range they cross —
+ * what `type.ts` actually says — rather than as the `clamp()` Modulato solves
+ * from them. The clamp is the output; a specimen sheet should print the
+ * decision, which is the four numbers.
+ */
 function fluidStep(size: unknown): string | null {
-  const raw =
+  const value =
     typeof size === 'string' && size in (spec.scale ?? {})
-      ? String((spec.scale as Record<string, unknown>)[size])
-      : typeof size === 'string'
-        ? size
-        : null
-  return raw && /clamp\(|vw|vh|%/.test(raw) ? raw : null
+      ? (spec.scale as Record<string, unknown>)[size]
+      : size
+  if (value && typeof value === 'object' && 'min' in value && 'max' in value) {
+    const pair = value as { min: number; max: number; from?: number; to?: number }
+    return `${pair.min} → ${pair.max}px across ${pair.from ?? spec.fluid.from}–${pair.to ?? spec.fluid.to}px`
+  }
+  // A hand-written one-off is still legal, and still worth printing.
+  return typeof value === 'string' && /clamp\(|vw|vh|%/.test(value) ? value : null
 }
 
 const SURFACE = [

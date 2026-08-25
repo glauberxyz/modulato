@@ -29,10 +29,26 @@ export default typography({
     sans: 'ui-sans-serif, system-ui, sans-serif',
   },
 
+  // The viewport range a fluid `{ min, max }` step crosses, stated once for
+  // the whole scale. Only read by steps written as a pair — a plain number is
+  // one size at every width.
+  fluid: { from: 390, to: 1440 },
+
   // The size steps this project uses, and the only ones it uses. A closed set
   // is what keeps a site to a scale instead of to forty-one accidental sizes:
   // Tweak's size control steps THROUGH these rather than offering a free
-  // pixel slider. Bare numbers are px.
+  // pixel slider.
+  //
+  // A number is the size in PX AS DESIGNED — write what the design says, 18.
+  // Modulato ships it in rem, so a reader who has raised their browser's font
+  // size gets larger text without the layout inflating around it. You never
+  // write the unit; the framework owns that decision (and layout, in the
+  // stylesheets, stays in px for the other half of the same reason).
+  //
+  // A step that should grow with the viewport is its two ends, and Modulato
+  // solves the line between them: `display: { min: 44, max: 90 }` is 44px at
+  // 390 and 90px at 1440. Two numbers rather than a `clamp()` string because
+  // numbers are what Tweak can put a slider on.
   scale: {
     xs: 13,
     sm: 15,
@@ -40,14 +56,13 @@ export default typography({
     lg: 24,
     xl: 34,
     '2xl': 48,
-    '3xl': 72,
+    '3xl': { min: 48, max: 72 },
   },
 
   styles: {
-    // A style names a font and a size from the catalogs above. Anything that
-    // is not a catalog key is passed through as raw CSS, so a one-off fluid
-    // size can be written in full — `size: 'clamp(3rem, 8vw, 6.5rem)'` —
-    // without inventing a scale step for it.
+    // A style names a font and a size from the catalogs above. A one-off can
+    // be written inline instead — `size: { min: 32, max: 56 }`, or raw CSS if
+    // it is genuinely something else — without inventing a scale step for it.
     headline: {
       font: 'sans',
       size: '3xl',

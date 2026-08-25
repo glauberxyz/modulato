@@ -144,7 +144,13 @@ export default function Styleguide() {
           <h2 className="guide__heading">Scale</h2>
           <p className="guide__note">
             The only sizes this project uses. Tweak’s size control steps through
-            them; it never offers a free pixel slider.
+            them; it never offers a free pixel slider. They are written as the
+            px the design was drawn at and ship in <code>rem</code>, so a
+            reader’s browser font-size setting reaches the text — layout stays
+            in px, so it does not inflate to match. A step written{' '}
+            <code>44→90</code> is a fluid pair: those two ends and the viewport
+            range in <code>type.ts</code>, with the <code>clamp()</code> solved
+            for you.
           </p>
           <ul className="guide__scale">
             {scale.map(([key, value]) => (
@@ -157,7 +163,11 @@ export default function Styleguide() {
                   Ag
                 </span>
                 <span className="guide__stepValue">
-                  {typeof value === 'number' ? `${value}px` : value}
+                  {typeof value === 'number'
+                    ? `${value}px`
+                    : typeof value === 'object'
+                      ? `${value.min}→${value.max}px`
+                      : value}
                 </span>
               </li>
             ))}
