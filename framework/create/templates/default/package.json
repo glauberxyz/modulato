@@ -16,11 +16,11 @@
   "dependencies": {
     "@modulato/content-local": "^0.1.1",
     "@modulato/gsap": "^0.3.0",
-    "@modulato/server": "^0.4.0",
-    "@modulato/tweak": "^0.6.0",
+    "@modulato/server": "^0.4.1",
+    "@modulato/tweak": "^0.7.0",
     "@modulato/vite": "^0.6.0",
     "gsap": "^3.13.0",
-    "modulato": "^0.10.0",
+    "modulato": "^0.11.0",
     "react": "^19.1.0",
     "react-dom": "^19.1.0"
   },

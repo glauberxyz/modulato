@@ -1,6 +1,6 @@
 {
   "name": "@modulato/mcp",
-  "version": "0.1.7",
+  "version": "0.1.8",
   "description": "MCP server for Modulato projects: routes, contracts, scaffolds and live motion tokens for agents.",
   "license": "MIT",
   "homepage": "https://github.com/glauberxyz/modulato#readme",
@@ -21,8 +21,8 @@
   },
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.30.0",
-    "@modulato/tweak": "^0.6.0",
-    "modulato": ">=0.10.0",
+    "@modulato/tweak": "^0.7.0",
+    "modulato": ">=0.11.0",
     "zod": "^3.24.0"
   },
   "repository": {
