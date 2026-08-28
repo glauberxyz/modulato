@@ -733,9 +733,58 @@ stylesheet without a reload. It's a mode, not a bare click handler, so links
 keep working while the tool is installed.
 
 **Given a design to implement, encode it in `type.ts` first.** A new size is a
-scale step; a new kind of text is a style. `create-modulato` scaffolds a
-`/styleguide` page that renders the styles, the scale and the color variables
-from the live values — delete `pages/styleguide/` if you don't want it.
+scale step; a new kind of text is a style.
+
+**The styleguide page is the framework's, not the site's.** `create-modulato`
+scaffolds `pages/styleguide/page.tsx` as one component call:
+
+```tsx
+import { Styleguide } from 'modulato/styleguide'
+import type from '../../type'
+import colors from '../../color'
+import motion from '../../motion'
+
+export default () => <Styleguide type={type} colors={colors} motion={{ shell: motion }} />
+```
+
+Its markup and chrome ship with Modulato — white page, shades of gray, the
+framework's own Inter, px throughout — so it looks the same in every project
+and there is nothing in the page file to restyle. **Do not redesign it, and do
+not give it a `styles.scss`.** It reads what it is handed and never restates
+it: the type styles — every authored field on one line, breakpoint blocks and
+the fluid range included, each named by its `--type-<style>-size` variable —
+the palette, the motion tokens of whichever `motion.ts` modules the page passes
+(`{ shell: motion, home: homeMotion }`), the eases declared in
+`modulato.config.ts` as drawn curves, and the breakpoints. The specimens render
+through the site's real `.type-*` classes, so the page cannot disagree with the
+site.
+
+There is deliberately no table of the `scale` steps and no list of the `fonts`
+stacks: a step is the size of some style already, a stack is the face some
+style is set in, and both are on show in the specimens. A second table of the
+same facts is a second place to read one thing.
+
+The type specimens are set the way a foundry sets one: every style gets the
+**same paragraph** in a box of fixed height, so a big style fills it in two
+lines and a small one in a dozen, and the amount you can read is the size. The
+sheet says **nothing about what a style is for** — where a style gets used is
+the project's decision, and the setting is the specification. A project's own
+sections go in as children with `Section` from the same module and appear in
+the side nav. Delete `pages/styleguide/`
+(and its entry in `shell/Menu.tsx`) if the project does not want the page.
+
+**The shell steps aside on it.** The page's root carries
+`data-modulato-styleguide`, and the scaffolded `styles/global.scss` hides the
+menu on it with one rule — CSS, so it is already true in the SSR HTML and the
+shell never flashes before hydration:
+
+```scss
+body:has([data-modulato-styleguide]) .menu { display: none; }
+```
+
+Add your shell's other selectors to that rule (a cursor, a scroll bar); delete
+it if the site wants its nav on the styleguide. The sheet has its own "Back to
+site" link either way.
 
 ## 7c. Color tokens (`color.ts`)
 

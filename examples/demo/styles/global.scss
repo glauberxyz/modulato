@@ -166,3 +166,12 @@ a {
     transition: none;
   }
 }
+
+// The specimen (/styles) is the framework's page, not the site's: the running
+// head and the reading bar step aside there. `:has()` rather than a route
+// check in the components, so it is already true in the SSR HTML — no frame of
+// shell before hydration. The sheet carries its own "Back to site" link.
+body:has([data-modulato-styleguide]) .runhead,
+body:has([data-modulato-styleguide]) .scrollbar {
+  display: none;
+}

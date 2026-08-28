@@ -45,7 +45,6 @@ export default typography({
     lg: 30,
     xl: 40,
     sub: { min: 24, max: 32 },
-    plate: { min: 24, max: 34 },
     // Full size by 1000px and flat above it — a chapter opener is meant to be
     // the same 90px on a laptop as on a large display, so it finishes growing
     // where the column stops widening. Its own range, stated, because that is
@@ -80,17 +79,6 @@ export default typography({
     subhead: {
       font: 'sans',
       size: 'sub',
-      weight: 900,
-      leading: 0.95,
-      tracking: -0.03,
-      wrap: 'balance',
-    },
-
-    // A plate's title. Its own step, and not `subhead`, because these are
-    // often whole sentences and want to break a little later.
-    'plate-title': {
-      font: 'sans',
-      size: 'plate',
       weight: 900,
       leading: 0.95,
       tracking: -0.03,

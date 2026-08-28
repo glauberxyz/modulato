@@ -72,8 +72,15 @@ it. Renaming a color in the overlay rewrites every `var()` that reads it;
 renaming it by hand in the file does not. Theme overrides (`.is-dark { --bg: … }`)
 stay in CSS — that is a selector question, not a palette one.
 
-`pages/styleguide/` is a specimen of both, read from the live values —
-**delete the folder** (and its Menu entry) if the project does not want it.
+`pages/styleguide/` is a specimen of both (and of the motion tokens), rendered
+by the framework's own `<Styleguide>` from `modulato/styleguide`. Its look is
+Modulato's, the same in every project — **never redesign it or give it a
+`styles.scss`**; the page file is one component call and stays that way. Pass it
+more `motion.ts` modules or `notes` per style; add sections with `Section` from
+the same module. The shell hides itself on that page through the
+`body:has([data-modulato-styleguide])` rule in `styles/global.scss` — add new
+shell selectors to it. **Delete the folder** (and its Menu entry) if the project
+does not want it.
 
 In dev, the round **Aa** button beside the ✦ Tweak launcher turns the page into
 the control: click any text to edit the style it is set in, saving either to the

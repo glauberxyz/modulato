@@ -1,0 +1,557 @@
+import {
+  createContext,
+  useContext,
+  useEffect,
+  useMemo,
+  useState,
+  type CSSProperties,
+  type ReactNode,
+} from 'react'
+import type { FluidValue, TypeStyle, TypographySpec } from '../typography'
+import type { ColorSpec } from '../colors'
+import { viewportStore } from '../viewport'
+import { easeRegistry, parseDeclaredEase, type DeclaredEase } from '../eases'
+import './styleguide.css'
+
+/**
+ * The styleguide: what a site is built out of, in the framework's own chrome.
+ *
+ * This is a FRAMEWORK surface, not a page of the site. It reads the project's
+ * token files — `type.ts`, `color.ts`, the `motion.ts` modules — and renders
+ * them as a specimen sheet whose look is Modulato's and not the project's: a
+ * white page, shades of gray, the same Inter the Tweak overlay bundles, every
+ * length in px. Two reasons it lives here rather than in the scaffold:
+ *
+ * 1. It must look the same in every project. When the page was scaffolded
+ *    source, styled with the site's own type mixins and colour variables,
+ *    every agent that implemented a design re-skinned it along with the rest
+ *    of `pages/` — the first thing they rewrite is `color.ts`, at which point
+ *    the page's `var(--rule)` is undeclared, it looks broken, and "fix it"
+ *    means "redesign it". Markup and CSS in `node_modules` cannot be
+ *    redesigned, and a page file that is one component call has nothing in it
+ *    worth restyling.
+ * 2. The specimens have to render through the DOCUMENT's type: the `.type-*`
+ *    rules, the `--type-*` variables, the media queries and the loaded
+ *    `@font-face`s. None of those cross a shadow boundary, so unlike the
+ *    overlay this is light DOM with a defensive stylesheet — every rule
+ *    prefixed, every property the chrome depends on declared — rather than a
+ *    shadow root.
+ *
+ * Everything below is READ, never restated. The numbers beside a specimen are
+ * read back off the rendered element with `getComputedStyle`, so the sheet
+ * cannot drift from what you are looking at; a wrong number here is a real
+ * bug rather than a stale copy.
+ *
+ * The scaffolded `pages/styleguide/page.tsx` is:
+ *
+ *   import { Styleguide } from 'modulato/styleguide'
+ *   import type from '../../type'
+ *   import colors from '../../color'
+ *   import motion from '../../motion'
+ *   export default () => <Styleguide type={type} colors={colors} motion={{ shell: motion }} />
+ *
+ * Props rather than the token registries because those are populated by the
+ * dev transform only, and this page ships in production (noindexed) — it is a
+ * reference a client can be sent a link to.
+ */
+
+/** A named token module, as the page would import it — `{ shell: motion }`. */
+export type MotionModules = Record<string, Record<string, unknown>>
+
+export interface StyleguideProps {
+  /** `type.ts`'s default export. */
+  type?: TypographySpec
+  /** `color.ts`'s default export. */
+  colors?: ColorSpec
+  /**
+   * Motion token modules keyed by a label — `{ shell: motion, home: homeMotion }`.
+   * A site has one per page plus the shell's, and which of them belong on the
+   * sheet is the page's call.
+   */
+  motion?: MotionModules
+  /**
+   * Declared curves, as `modulato.config.ts` spells them. Read from the
+   * running config when absent, so this is only for a page that wants to show
+   * a different set.
+   */
+  eases?: Record<string, string>
+  /** Breakpoints, as `modulato.config.ts` spells them. Read from the running config when absent. */
+  breakpoints?: Record<string, string>
+  /** Extra `<Section>`s, in the same chrome — a project's own components, say. */
+  children?: ReactNode
+}
+
+// ————— Section registry: the side nav lists what is on the page —————
+
+interface SectionEntry {
+  id: string
+  title: string
+}
+
+interface GuideContextValue {
+  register(entry: SectionEntry): () => void
+}
+
+const GuideContext = createContext<GuideContextValue | null>(null)
+
+/**
+ * One block of the sheet. The built-in sections are made of this, and so is
+ * anything a project adds as children: it registers its title with the side
+ * nav on mount, so the nav is always the page and never a list to keep in
+ * step. Nothing is rendered above the content — the sheet is the tokens, and
+ * a heading and a paragraph over each one is the kind of furniture a specimen
+ * does not need.
+ */
+export function Section({
+  id,
+  title,
+  children,
+}: {
+  id: string
+  /** Not rendered — the side nav is where a section is named. */
+  title: string
+  children?: ReactNode
+}) {
+  const guide = useContext(GuideContext)
+  useEffect(() => guide?.register({ id, title }), [guide, id, title])
+  return (
+    <section className="mdl-guide__section" id={`mdl-${id}`} data-mdl-section={id}>
+      {children}
+    </section>
+  )
+}
+
+// ————— Helpers shared by the sections —————
+
+const isPlainObject = (value: unknown): value is Record<string, unknown> =>
+  !!value && typeof value === 'object' && !Array.isArray(value)
+
+const isFluid = (value: unknown): value is FluidValue =>
+  isPlainObject(value) && typeof value.min === 'number' && typeof value.max === 'number'
+
+/** The fields of a style, in the order a typographer reads them. */
+const FIELDS: Array<keyof TypeStyle & string> = [
+  'font',
+  'size',
+  'leading',
+  'tracking',
+  'weight',
+  'case',
+  'wrap',
+]
+
+/**
+ * The one paragraph every specimen is set in.
+ *
+ * The same text for every style, in a box of fixed height: a big style fills
+ * it in two or three lines and a small one in a dozen, so the amount of text
+ * you can read IS the size, and the line breaks, the leading and the wrapping
+ * are all on show rather than described. It is the way a foundry sets a
+ * specimen, and it is why the sheet says nothing about where a style should
+ * be used — that is the project's decision, not the framework's.
+ *
+ * The paragraph itself is not truncated: it runs its full length and the BOX
+ * cuts it, through a mask that fades the last of it out (see the stylesheet).
+ * A `line-clamp` was the obvious way and the wrong one — it ends on a whole
+ * line, so the box height had to be measured back per style, and the ellipsis
+ * sliced descenders through the middle of the glyph.
+ */
+const SPECIMEN =
+  'A typeface has to work at every size a design asks of it, and a name cannot tell you whether it does. Read the setting instead: how the letters space themselves, where the lines break, how ascenders and descenders sit against the leading, whether the numerals 0123456789 hold their place in a column. Every style on this page is set in this same paragraph, so the only thing that changes from one to the next is the type itself — and because the box below is one height for all of them, the amount you can read is itself a measure of the size. Large styles fill it in two or three lines and run out; small ones carry the paragraph most of the way to its end. Look for the shapes that give a face away: the a and the g, the terminals on the c and the s, the distance between a capital I, a lowercase l and the figure 1. Then read a line at speed, and see whether the words hold together or fall apart into letters.'
+
+/** A fluid pair's three or four numbers, printed as `type.ts` states them. */
+function fluidText(value: FluidValue, spec: TypographySpec): string {
+  const from = value.from ?? spec.fluid?.from ?? 390
+  const to = value.to ?? spec.fluid?.to ?? 1440
+  return `${value.min} → ${value.max}px across ${from}–${to}px`
+}
+
+/** A scale step or a raw size, as a short value: `18px`, `44→90px`, or the CSS. */
+function sizeText(value: unknown): string {
+  if (typeof value === 'number') return `${value}px`
+  if (isFluid(value)) return `${value.min}→${value.max}px`
+  return String(value)
+}
+
+/**
+ * Which section the reader is in — the one whose heading last crossed the
+ * upper third of the viewport, and the last one once the page is scrolled to
+ * the bottom (a short final section never reaches the line otherwise).
+ *
+ * Read off the live layout on scroll rather than with an IntersectionObserver:
+ * IO answers "is it visible", and with sections taller than the viewport
+ * several are visible at once, so picking ONE still means comparing their
+ * positions. This is that comparison, done directly, rAF-throttled to one read
+ * per frame. Lenis scrolls through `window.scrollTo`, so smooth scroll fires
+ * these events like any other.
+ */
+function useActiveSection(ids: string[]): string | null {
+  const [active, setActive] = useState<string | null>(null)
+  const key = ids.join()
+  useEffect(() => {
+    if (ids.length === 0) return undefined
+    let frame = 0
+    const read = () => {
+      frame = 0
+      const line = window.innerHeight / 3
+      const atBottom =
+        window.scrollY + window.innerHeight >= document.documentElement.scrollHeight - 2
+      let current = ids[0]
+      for (const id of ids) {
+        const el = document.getElementById(`mdl-${id}`)
+        if (el && el.getBoundingClientRect().top <= line) current = id
+      }
+      setActive(atBottom ? ids[ids.length - 1] : current)
+    }
+    const schedule = () => {
+      if (!frame) frame = requestAnimationFrame(read)
+    }
+    read()
+    window.addEventListener('scroll', schedule, { passive: true })
+    window.addEventListener('resize', schedule)
+    return () => {
+      window.removeEventListener('scroll', schedule)
+      window.removeEventListener('resize', schedule)
+      if (frame) cancelAnimationFrame(frame)
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [key])
+  return active
+}
+
+// ————— Sections —————
+
+/** The named styles: what `type.ts` declares, and the type it makes. */
+export function TypeStyles({ spec }: { spec: TypographySpec }) {
+  const names = Object.keys(spec.styles)
+  // Fields a style leaves undeclared fall back to `inherit`, and on the site
+  // what they inherit is the document's `body` style. The stage wears it for
+  // the same reason, so a style that says nothing about weight renders here
+  // as it does there — and not in the sheet's own Inter.
+  const stage = 'body' in spec.styles ? 'mdl-guide__stage type-body' : 'mdl-guide__stage'
+
+  return (
+    <Section
+      id="type"
+      title="Type styles"
+    >
+      <div>
+        {names.map((name) => {
+          const style = spec.styles[name]
+          // A size naming a scale step resolves to it; a fluid one is worth
+          // printing in full because the clamp() is the output and the sheet
+          // should print the decision.
+          const rawSize = style.size
+          const step =
+            typeof rawSize === 'string' && spec.scale && rawSize in spec.scale
+              ? spec.scale[rawSize]
+              : rawSize
+          const fluid = isFluid(step) ? fluidText(step, spec) : null
+          const blocks = Object.entries(style).filter(
+            ([key, value]) => !FIELDS.includes(key as keyof TypeStyle & string) && isPlainObject(value) && !isFluid(value),
+          ) as Array<[string, TypeStyle]>
+
+          return (
+            <article className="mdl-guide__specimen" key={name}>
+              {/* One row: the style's name and every field it declares, each
+                  as a label over its value, so the type below gets the full
+                  width rather than a column beside a column. */}
+              <header className="mdl-guide__specimenHead">
+                <h3 className="mdl-guide__name">
+                  {name}
+                  {/* The variable rather than the `.type-<name>` class: it is
+                      what a stylesheet writes when it wants one field of a
+                      style, and it names the style in the same breath. A style
+                      that declares no size has no such variable, so that one
+                      falls back to the class. */}
+                  <span className="mdl-guide__dim">
+                    {style.size === undefined ? `.type-${name}` : `--type-${name}-size`}
+                  </span>
+                </h3>
+                <dl className="mdl-guide__facts">
+                {FIELDS.map((field) => {
+                  const value = style[field]
+                  if (value === undefined) return null
+                  const text =
+                    field === 'size'
+                      ? isFluid(value)
+                        ? sizeText(value)
+                        : typeof value === 'string' && step !== value
+                          ? `${value} · ${sizeText(step)}`
+                          : sizeText(value)
+                      : isFluid(value)
+                        ? sizeText(value)
+                        : String(value)
+                  return (
+                    <div className="mdl-guide__fact" key={field}>
+                      <dt>{field}</dt>
+                      <dd>{text}</dd>
+                    </div>
+                  )
+                })}
+                {fluid && (
+                  <div className="mdl-guide__fact">
+                    <dt>fluid</dt>
+                    <dd>{fluid}</dd>
+                  </div>
+                )}
+                  {blocks.map(([bp, block]) => (
+                    <div className="mdl-guide__fact" key={bp}>
+                      <dt>{bp}</dt>
+                      <dd>
+                        {Object.entries(block)
+                          .map(([k, v]) => `${k} ${isFluid(v) ? sizeText(v) : String(v)}`)
+                          .join(' · ')}
+                      </dd>
+                    </div>
+                  ))}
+                </dl>
+              </header>
+              <div className={stage}>
+                {/* The class Modulato generates for the style — the specimen
+                    is the real thing, not a copy of it. */}
+                <p className={`type-${name} mdl-guide__sample`} data-mdl-specimen={name}>
+                  {SPECIMEN}
+                </p>
+              </div>
+            </article>
+          )
+        })}
+      </div>
+    </Section>
+  )
+}
+
+/** The palette: one swatch per key in `color.ts`. */
+export function Swatches({ colors }: { colors: ColorSpec }) {
+  const entries = Object.entries(colors)
+  if (entries.length === 0) return null
+  return (
+    <Section
+      id="colors"
+      title="Colors"
+    >
+      <ul className="mdl-guide__swatches">
+        {entries.map(([name, value]) => (
+          <li className="mdl-guide__swatch" key={name}>
+            <span className="mdl-guide__chip" style={{ background: value }} />
+            <span className="mdl-guide__key">--{name}</span>
+            <span className="mdl-guide__dim">{value}</span>
+          </li>
+        ))}
+      </ul>
+    </Section>
+  )
+}
+
+interface Leaf {
+  path: string[]
+  value: string
+}
+
+function leaves(node: unknown, path: string[] = [], out: Leaf[] = []): Leaf[] {
+  if (typeof node === 'number' || typeof node === 'string' || typeof node === 'boolean') {
+    out.push({ path, value: String(node) })
+  } else if (isPlainObject(node)) {
+    for (const [key, value] of Object.entries(node)) leaves(value, [...path, key], out)
+  }
+  return out
+}
+
+/** Motion tokens: every leaf of every module the page handed over, read-only. */
+export function MotionTokens({ modules }: { modules: MotionModules }) {
+  const groups = Object.entries(modules).filter(([, tokens]) => leaves(tokens).length > 0)
+  if (groups.length === 0) return null
+  return (
+    <Section
+      id="motion"
+      title="Motion"
+    >
+      {groups.map(([label, tokens]) => (
+        <div className="mdl-guide__group" key={label}>
+          <h3 className="mdl-guide__h3">{label}</h3>
+          <ul className="mdl-guide__rows">
+            {leaves(tokens).map((leaf) => (
+              <li className="mdl-guide__row mdl-guide__row--token" key={leaf.path.join('.')}>
+                <span className="mdl-guide__path">
+                  {leaf.path.length > 1 && (
+                    <span className="mdl-guide__dim">{leaf.path.slice(0, -1).join('.')}.</span>
+                  )}
+                  {leaf.path[leaf.path.length - 1]}
+                </span>
+                <span className="mdl-guide__value">{leaf.value}</span>
+              </li>
+            ))}
+          </ul>
+        </div>
+      ))}
+    </Section>
+  )
+}
+
+/** A cubic-bezier as a 64×64 curve. Overshoot is allowed to leave the box. */
+function Curve({ points }: { points: DeclaredEase['points'] }) {
+  const [x1, y1, x2, y2] = points
+  const d = `M 0 64 C ${x1 * 64} ${64 - y1 * 64}, ${x2 * 64} ${64 - y2 * 64}, 64 0`
+  return (
+    <svg className="mdl-guide__curve" viewBox="0 0 64 64" width="64" height="64" aria-hidden>
+      <path d="M 0 64 L 64 0" className="mdl-guide__curveLinear" />
+      <path d={d} className="mdl-guide__curvePath" />
+    </svg>
+  )
+}
+
+/** The curves `modulato.config.ts` declares, as both spellings and a drawing. */
+export function Eases({ eases }: { eases?: Record<string, string> }) {
+  const [declared, setDeclared] = useState<DeclaredEase[]>([])
+  useEffect(() => {
+    if (eases) {
+      setDeclared(
+        Object.entries(eases).flatMap(([name, value]) => {
+          const ease = parseDeclaredEase(name, value)
+          return ease ? [ease] : []
+        }),
+      )
+      return undefined
+    }
+    return easeRegistry.subscribe(setDeclared)
+  }, [eases])
+  if (declared.length === 0) return null
+  return (
+    <Section
+      id="eases"
+      title="Eases"
+    >
+      <ul className="mdl-guide__eases">
+        {declared.map((ease) => (
+          <li className="mdl-guide__ease" key={ease.name}>
+            <Curve points={ease.points} />
+            <span className="mdl-guide__key">{ease.name}</span>
+            <span className="mdl-guide__dim">{ease.css}</span>
+          </li>
+        ))}
+      </ul>
+    </Section>
+  )
+}
+
+/** The breakpoints the site is built against. */
+export function Breakpoints({ breakpoints }: { breakpoints?: Record<string, string> }) {
+  // Read after mount: the server renders with the defaults, and the client
+  // learns the configured map at boot — so the SSR HTML must not print a set
+  // hydration would then have to correct.
+  const [map, setMap] = useState<Record<string, string> | null>(breakpoints ?? null)
+  useEffect(() => {
+    if (!breakpoints) setMap(viewportStore.breakpoints())
+  }, [breakpoints])
+  if (!map) return null
+  return (
+    <Section
+      id="breakpoints"
+      title="Breakpoints"
+    >
+      <ul className="mdl-guide__rows">
+        {Object.entries(map).map(([name, query]) => (
+          <li className="mdl-guide__row mdl-guide__row--bp" key={name}>
+            <span className="mdl-guide__key">{name}</span>
+            <span className="mdl-guide__value">{query}</span>
+          </li>
+        ))}
+        <li className="mdl-guide__row mdl-guide__row--bp">
+          <span className="mdl-guide__key">desktop</span>
+          <span className="mdl-guide__value mdl-guide__dim">everything else</span>
+        </li>
+      </ul>
+    </Section>
+  )
+}
+
+// ————— The page —————
+
+const NAV_TITLES: Record<string, string> = {
+  type: 'Type styles',
+  colors: 'Colors',
+  motion: 'Motion',
+  eases: 'Eases',
+  breakpoints: 'Breakpoints',
+}
+
+/**
+ * The whole sheet. Sections render for whatever is handed over; the side nav
+ * lists what the page ended up with.
+ */
+export function Styleguide({
+  type,
+  colors,
+  motion,
+  eases,
+  breakpoints,
+  children,
+}: StyleguideProps) {
+  // Sections announce themselves on mount, so a project's own <Section>s show
+  // up in the nav beside the built-in ones. Mount order is document order.
+  const [sections, setSections] = useState<SectionEntry[]>([])
+  const guide = useMemo<GuideContextValue>(
+    () => ({
+      register(entry) {
+        setSections((list) => (list.some((s) => s.id === entry.id) ? list : [...list, entry]))
+        return () => setSections((list) => list.filter((s) => s.id !== entry.id))
+      },
+    }),
+    [],
+  )
+
+  const active = useActiveSection(sections.map((s) => s.id))
+
+  const jump = (id: string) => (event: React.MouseEvent) => {
+    // A hash link would be a navigation to the router; this is a scroll.
+    event.preventDefault()
+    document.getElementById(`mdl-${id}`)?.scrollIntoView({ block: 'start' })
+  }
+
+  return (
+    <GuideContext.Provider value={guide}>
+      {/* `data-modulato-styleguide` is the hook a project's stylesheet hides
+          its shell on: `body:has([data-modulato-styleguide]) .menu { display:
+          none }`. CSS rather than a route check in the shell component so it
+          is already true in the SSR HTML — no frame of shell before hydration
+          — and so the project keeps the last word about its own shell. */}
+      <main className="mdl-guide" data-modulato-styleguide>
+        <aside className="mdl-guide__side">
+          {/* The site's shell is expected to step aside on this page (see the
+              data attribute on the root), so the sheet carries its own way
+              out. A plain link: the router picks it up like any other. */}
+          <a className="mdl-guide__back" href="/">
+            ← Back to site
+          </a>
+          <nav className="mdl-guide__nav" aria-label="Sections">
+            {sections.map((s) => (
+              <a
+                className={`mdl-guide__navLink${s.id === active ? ' is-active' : ''}`}
+                // `aria-current` and not just a class: a screen reader gets the
+                // same answer the highlight gives everyone else.
+                aria-current={s.id === active ? 'true' : undefined}
+                href={`#mdl-${s.id}`}
+                key={s.id}
+                onClick={jump(s.id)}
+              >
+                {NAV_TITLES[s.id] ?? s.title}
+              </a>
+            ))}
+          </nav>
+        </aside>
+        {/* No headings of any kind: not for the page (the browser tab and the
+            site's own title say what this is) and not per section (the side
+            nav names them). What is left is the tokens themselves. */}
+        <div className="mdl-guide__main">
+          {type && <TypeStyles spec={type} />}
+          {colors && <Swatches colors={colors} />}
+          {motion && <MotionTokens modules={motion} />}
+          <Eases eases={eases} />
+          <Breakpoints breakpoints={breakpoints} />
+          {children}
+        </div>
+      </main>
+    </GuideContext.Provider>
+  )
+}

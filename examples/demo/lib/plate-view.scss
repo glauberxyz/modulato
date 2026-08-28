@@ -32,7 +32,7 @@
 // `margin-inline: auto` on every one, rather than a width on the parent, so
 // the measures can differ — a title wants to break early, a note wants to run.
 .plate__title {
-  @include type.plate-title;
+  @include type.subhead;
   // 24ch, not the note's 44: several of these titles are sentences
   // ("One hundred and seventy-five, two hundred, four hundred lines"), and at
   // this size a long measure gives one very wide line instead of a stack.

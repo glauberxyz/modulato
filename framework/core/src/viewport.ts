@@ -94,6 +94,10 @@ export const viewportStore = {
   breakpointNames(): string[] {
     return [...Object.keys(breakpoints), 'desktop']
   },
+  /** The configured map itself, name → media query (the styleguide prints it). */
+  breakpoints(): Record<string, string> {
+    return { ...breakpoints }
+  },
 }
 
 /** Dev-only (Tweak Mode): preview tokens/motions under another breakpoint. */
