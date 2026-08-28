@@ -20,11 +20,10 @@ writes back into the motion.ts files. The same panel edits the type system in
 `type.ts` — or press the round **Aa** button beside it and click any heading on
 the page to change the style it is set in, where it sits.
 
-`/styleguide` is a specimen of the type styles, the scale, the fonts, the colors
-and the motion tokens, read from `type.ts`, `color.ts` and `motion.ts` — the
-same data the overlay edits. The page is the framework's (`modulato/styleguide`)
-and looks the same in every project. Delete `pages/styleguide/` (and its entry
-in `shell/Menu.tsx`) if you don't want it.
+`/styleguide` is a specimen of the type styles and the colors, read from
+`type.ts` and `color.ts` — the same data the overlay edits. The page is the
+framework's (`modulato/styleguide`) and looks the same in every project. Delete
+`pages/styleguide/` (and its entry in `shell/Menu.tsx`) if you don't want it.
 
 The full framework reference is in **MODULATO.md**. If you work with Claude
 or another agent, it reads CLAUDE.md and MODULATO.md automatically.

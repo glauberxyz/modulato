@@ -21,9 +21,8 @@ The markup and the chrome now ship with the framework, from a new
 import { Styleguide } from 'modulato/styleguide'
 import type from '../../type'
 import colors from '../../color'
-import motion from '../../motion'
 
-export default () => <Styleguide type={type} colors={colors} motion={{ shell: motion }} />
+export default () => <Styleguide type={type} colors={colors} />
 ```
 
 The look is Modulato's and not the project's — a white page, shades of gray,
@@ -36,14 +35,15 @@ itself the way an embedded widget does instead.
 
 What it shows, all read and never restated: the type styles (the authored
 fields on one line, breakpoint blocks and the fluid range included, each named
-by its `--type-<style>-size` variable), the palette, the motion tokens of
-whichever modules the page hands over, the declared eases as drawn curves, and
-the breakpoints. The side nav marks the section being read.
+by its `--type-<style>-size` variable), the palette, the declared eases as
+drawn curves, and the breakpoints. The side nav marks the section being read.
 
-There is deliberately no table of the `scale` steps and no list of the `fonts`
-stacks: a step is the size of some style already, a stack is the face some
-style is set in, and both are on show in the specimens. A second table of the
-same facts is a second place to read one thing.
+What is deliberately NOT on it: the motion tokens, a table of the `scale`
+steps, a list of the `fonts` stacks. A step is the size of some style already
+and a stack is the face it is set in — both are on show in the specimens, and
+a second table of the same facts is a second place to read one thing. Motion
+numbers have no shape on a sheet; they are worked on live in the overlay (✦),
+against the animation they drive.
 
 The type specimens are set the way a foundry sets one: the **same paragraph**
 for every style in a box of one height, clamped with an ellipsis, so a big

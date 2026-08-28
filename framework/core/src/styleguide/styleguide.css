@@ -186,22 +186,9 @@
   border-top: 0;
 }
 
-.mdl-guide .mdl-guide__h3 {
-  margin: 0 0 8px;
-  font: inherit;
-  font-size: 12px;
-  font-weight: 500;
-  color: var(--mg-muted);
-}
-
-.mdl-guide .mdl-guide__group + .mdl-guide__group {
-  margin-top: 32px;
-}
-
 /* Shared small type: keys, values, the dim secondary line. */
 
 .mdl-guide .mdl-guide__key,
-.mdl-guide .mdl-guide__path,
 .mdl-guide .mdl-guide__value,
 .mdl-guide .mdl-guide__dim,
 .mdl-guide .mdl-guide__facts {
@@ -356,11 +343,6 @@
   border-bottom: 0;
 }
 
-.mdl-guide .mdl-guide__row--token {
-  grid-template-columns: minmax(0, 1fr) 200px;
-  padding: 6px 0;
-}
-
 .mdl-guide .mdl-guide__row--bp {
   grid-template-columns: 160px minmax(0, 1fr);
 }
@@ -370,14 +352,6 @@
     grid-template-columns: minmax(0, 1fr);
     gap: 4px;
   }
-}
-
-.mdl-guide .mdl-guide__path {
-  overflow-wrap: anywhere;
-}
-
-.mdl-guide .mdl-guide__path .mdl-guide__dim {
-  display: inline;
 }
 
 /* ——— Colors ——— */
@@ -391,17 +365,21 @@
   list-style: none;
 }
 
+/* The name and its value are one label in two lines, so they sit tight to
+   each other and the swatch keeps the wider gap. */
 .mdl-guide .mdl-guide__swatch {
   display: grid;
-  gap: 6px;
+  gap: 2px;
   margin: 0;
   padding: 0;
 }
 
+/* A square, with square corners: a swatch is a sample of the ink, and a
+   sample is the same in both directions. */
 .mdl-guide .mdl-guide__chip {
   display: block;
-  height: 72px;
-  border-radius: 8px;
+  aspect-ratio: 1;
+  margin-bottom: 6px;
   /* A hairline, so a swatch the same colour as the page still has an edge. */
   box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.1);
 }

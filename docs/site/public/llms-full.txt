@@ -742,9 +742,8 @@ scaffolds `pages/styleguide/page.tsx` as one component call:
 import { Styleguide } from 'modulato/styleguide'
 import type from '../../type'
 import colors from '../../color'
-import motion from '../../motion'
 
-export default () => <Styleguide type={type} colors={colors} motion={{ shell: motion }} />
+export default () => <Styleguide type={type} colors={colors} />
 ```
 
 Its markup and chrome ship with Modulato — white page, shades of gray, the
@@ -753,16 +752,16 @@ and there is nothing in the page file to restyle. **Do not redesign it, and do
 not give it a `styles.scss`.** It reads what it is handed and never restates
 it: the type styles — every authored field on one line, breakpoint blocks and
 the fluid range included, each named by its `--type-<style>-size` variable —
-the palette, the motion tokens of whichever `motion.ts` modules the page passes
-(`{ shell: motion, home: homeMotion }`), the eases declared in
-`modulato.config.ts` as drawn curves, and the breakpoints. The specimens render
-through the site's real `.type-*` classes, so the page cannot disagree with the
-site.
+the palette, the eases declared in `modulato.config.ts` as drawn curves, and
+the breakpoints. The specimens render through the site's real `.type-*`
+classes, so the page cannot disagree with the site.
 
-There is deliberately no table of the `scale` steps and no list of the `fonts`
-stacks: a step is the size of some style already, a stack is the face some
-style is set in, and both are on show in the specimens. A second table of the
-same facts is a second place to read one thing.
+**Motion is deliberately not on it**, and neither is a table of the `scale`
+steps or a list of the `fonts` stacks. A step is the size of some style
+already and a stack is the face it is set in — both are on show in the
+specimens, and a second table of the same facts is a second place to read one
+thing. Motion numbers have no shape on a sheet: they are worked on live in the
+overlay (✦), against the animation they drive.
 
 The type specimens are set the way a foundry sets one: every style gets the
 **same paragraph** in a box of fixed height, so a big style fills it in two

@@ -17,7 +17,7 @@ import './styleguide.css'
  * The styleguide: what a site is built out of, in the framework's own chrome.
  *
  * This is a FRAMEWORK surface, not a page of the site. It reads the project's
- * token files — `type.ts`, `color.ts`, the `motion.ts` modules — and renders
+ * token files — `type.ts` and `color.ts` — and renders
  * them as a specimen sheet whose look is Modulato's and not the project's: a
  * white page, shades of gray, the same Inter the Tweak overlay bundles, every
  * length in px. Two reasons it lives here rather than in the scaffold:
@@ -47,28 +47,22 @@ import './styleguide.css'
  *   import { Styleguide } from 'modulato/styleguide'
  *   import type from '../../type'
  *   import colors from '../../color'
- *   import motion from '../../motion'
- *   export default () => <Styleguide type={type} colors={colors} motion={{ shell: motion }} />
+ *   export default () => <Styleguide type={type} colors={colors} />
  *
  * Props rather than the token registries because those are populated by the
  * dev transform only, and this page ships in production (noindexed) — it is a
  * reference a client can be sent a link to.
+ *
+ * MOTION IS NOT HERE. Numbers with no visible shape are a table nobody reads,
+ * and the overlay (✦) is where they are actually worked on — live, against the
+ * animation they drive. This sheet is for what can be SEEN.
  */
-
-/** A named token module, as the page would import it — `{ shell: motion }`. */
-export type MotionModules = Record<string, Record<string, unknown>>
 
 export interface StyleguideProps {
   /** `type.ts`'s default export. */
   type?: TypographySpec
   /** `color.ts`'s default export. */
   colors?: ColorSpec
-  /**
-   * Motion token modules keyed by a label — `{ shell: motion, home: homeMotion }`.
-   * A site has one per page plus the shell's, and which of them belong on the
-   * sheet is the page's call.
-   */
-  motion?: MotionModules
   /**
    * Declared curves, as `modulato.config.ts` spells them. Read from the
    * running config when absent, so this is only for a page that wants to show
@@ -344,51 +338,6 @@ export function Swatches({ colors }: { colors: ColorSpec }) {
   )
 }
 
-interface Leaf {
-  path: string[]
-  value: string
-}
-
-function leaves(node: unknown, path: string[] = [], out: Leaf[] = []): Leaf[] {
-  if (typeof node === 'number' || typeof node === 'string' || typeof node === 'boolean') {
-    out.push({ path, value: String(node) })
-  } else if (isPlainObject(node)) {
-    for (const [key, value] of Object.entries(node)) leaves(value, [...path, key], out)
-  }
-  return out
-}
-
-/** Motion tokens: every leaf of every module the page handed over, read-only. */
-export function MotionTokens({ modules }: { modules: MotionModules }) {
-  const groups = Object.entries(modules).filter(([, tokens]) => leaves(tokens).length > 0)
-  if (groups.length === 0) return null
-  return (
-    <Section
-      id="motion"
-      title="Motion"
-    >
-      {groups.map(([label, tokens]) => (
-        <div className="mdl-guide__group" key={label}>
-          <h3 className="mdl-guide__h3">{label}</h3>
-          <ul className="mdl-guide__rows">
-            {leaves(tokens).map((leaf) => (
-              <li className="mdl-guide__row mdl-guide__row--token" key={leaf.path.join('.')}>
-                <span className="mdl-guide__path">
-                  {leaf.path.length > 1 && (
-                    <span className="mdl-guide__dim">{leaf.path.slice(0, -1).join('.')}.</span>
-                  )}
-                  {leaf.path[leaf.path.length - 1]}
-                </span>
-                <span className="mdl-guide__value">{leaf.value}</span>
-              </li>
-            ))}
-          </ul>
-        </div>
-      ))}
-    </Section>
-  )
-}
-
 /** A cubic-bezier as a 64×64 curve. Overshoot is allowed to leave the box. */
 function Curve({ points }: { points: DeclaredEase['points'] }) {
   const [x1, y1, x2, y2] = points
@@ -471,7 +420,6 @@ export function Breakpoints({ breakpoints }: { breakpoints?: Record<string, stri
 const NAV_TITLES: Record<string, string> = {
   type: 'Type styles',
   colors: 'Colors',
-  motion: 'Motion',
   eases: 'Eases',
   breakpoints: 'Breakpoints',
 }
@@ -483,7 +431,6 @@ const NAV_TITLES: Record<string, string> = {
 export function Styleguide({
   type,
   colors,
-  motion,
   eases,
   breakpoints,
   children,
@@ -546,7 +493,6 @@ export function Styleguide({
         <div className="mdl-guide__main">
           {type && <TypeStyles spec={type} />}
           {colors && <Swatches colors={colors} />}
-          {motion && <MotionTokens modules={motion} />}
           <Eases eases={eases} />
           <Breakpoints breakpoints={breakpoints} />
           {children}
