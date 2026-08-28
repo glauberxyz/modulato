@@ -241,7 +241,6 @@ export default function modulato(options = {}) {
           lines.push(
             `boot({ routes, App, transitions, intros, behaviors, content, breakpoints, eases, typography, palette })`,
           )
-          // Tweak Mode overlay — dev only, and only when the site installed it.
           if (isServe && options.tweak !== false && resolvable('@modulato/tweak/overlay'))
             lines.push(
               `.then(() => import('@modulato/tweak/overlay')).then((m) => m.mount())`,

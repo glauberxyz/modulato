@@ -38,8 +38,6 @@ export function __registerMotion(file: string, tokens: unknown, keywords?: unkno
   motionRegistry.register(file, tokens, keywords)
 }
 
-// ————— Playback speed (Tweak Mode slow-mo) —————
-
 let speed = 1
 
 /** Slow-mo for everything: GSAP via timeScale (glue listens), WAAPI directly. */

@@ -494,7 +494,6 @@ export function check(root) {
   }
   walk(pagesDir, '')
 
-  // Page components must have a default export.
   for (const route of routes) {
     const source = fs.readFileSync(path.join(route.dir, 'page.tsx'), 'utf8')
     if (!/export\s+default/.test(source))

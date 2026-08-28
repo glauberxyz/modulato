@@ -1286,7 +1286,6 @@ function Overlay() {
 
           {active === 'motion' && (
             <>
-            {/* ── replay: what to play ─────────────────────────────────── */}
             <div className="rounded-xl bg-background p-3.5">
               <div className="mb-2.5 flex items-center justify-between">
                 <SectionTitle>Replay</SectionTitle>
@@ -1322,7 +1321,6 @@ function Overlay() {
               </div>
             </div>
 
-            {/* ── preview context: replays run AS this breakpoint/speed ──── */}
             <div className="rounded-xl bg-background p-3.5">
               <div className="flex items-center justify-between gap-2">
                 <SectionTitle>Preview as</SectionTitle>
@@ -1402,7 +1400,6 @@ function Overlay() {
                 ))}
               </div>
             </div>
-            {/* ── tokens ──────────────────────────────────────────────── */}
             <div className="rounded-xl bg-background p-3.5">
               <div className="flex items-center justify-between">
                 <SectionTitle>Tokens</SectionTitle>
@@ -1548,7 +1545,6 @@ function Overlay() {
 
           {active === 'type' && (
             <>
-            {/* ── typography ──────────────────────────────────────────── */}
             {/* The panel half of Type Mode. The popup on the page edits one
                 style where it sits; this is the whole system at once, with the
                 breakpoint tabs a click on a heading cannot reach. Both write the

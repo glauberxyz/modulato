@@ -34,8 +34,6 @@ const SOURCE_ATTR = 'data-modulato-source'
 const MARKER = '--modulato-type'
 const TYPE_FILE = '/type.ts'
 
-// ————— the mode flag, shared with the panel's toggle —————
-
 let enabled = false
 const listeners = new Set<() => void>()
 
@@ -66,8 +64,6 @@ export function useTypeMode(): boolean {
     () => false,
   )
 }
-
-// ————— finding what the pointer is over —————
 
 interface Target {
   el: HTMLElement
@@ -176,8 +172,6 @@ function resolve(x: number, y: number): Target | null {
   }
   return lastTarget
 }
-
-// ————— reading and writing the spec —————
 
 type Spec = {
   fonts?: Record<string, string>
@@ -289,8 +283,6 @@ export function TypeIcon(props: React.SVGProps<SVGSVGElement>) {
     </svg>
   )
 }
-
-// ————— controls —————
 
 /** lucide chevron-down — the same glyph the panel's ease control carries. */
 function ChevronDownIcon(props: React.SVGProps<SVGSVGElement>) {
@@ -416,8 +408,6 @@ function NumberRow({
     </Row>
   )
 }
-
-// ————— the popup —————
 
 const POPUP_WIDTH = 268
 
@@ -649,8 +639,6 @@ function Popup({
     </div>
   )
 }
-
-// ————— the on-page layer —————
 
 export function TypeMode() {
   const handle = useHandle()
