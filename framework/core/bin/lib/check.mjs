@@ -177,23 +177,6 @@ function checkEases(root, error) {
   }
 }
 
-/**
- * Validate the project's contracts. Every message says how to fix the
- * problem — errors teach, they don't just point.
- */
-
-/**
- * Every dotted path in a motion file's `keywords` export must name a real
- * group in that file's `motion({...})`.
- *
- * The keywords are what someone searching the Tweak overlay actually types —
- * a group is named for what it IS in the code, they search for what it DOES.
- * Nothing enforces the link at runtime: the overlay looks the path up, finds
- * nothing, and the group is simply unfindable by the word that was supposed
- * to find it. Renaming a group is exactly when that happens, and it happens
- * silently. A warning, not an error: a stale keyword costs discoverability,
- * never correctness.
- */
 function groupPathsIn(body, prefix = [], out = new Set()) {
   for (const entry of splitEntries(body)) {
     const m = entry.match(/^\s*(?:(['"])([^'"]+)\1|([\w$]+))\s*:\s*\{/)
@@ -207,6 +190,18 @@ function groupPathsIn(body, prefix = [], out = new Set()) {
   return out
 }
 
+/**
+ * Every dotted path in a motion file's `keywords` export must name a real
+ * group in that file's `motion({...})`.
+ *
+ * The keywords are what someone searching the Tweak overlay actually types —
+ * a group is named for what it IS in the code, they search for what it DOES.
+ * Nothing enforces the link at runtime: the overlay looks the path up, finds
+ * nothing, and the group is simply unfindable by the word that was supposed
+ * to find it. Renaming a group is exactly when that happens, and it happens
+ * silently. A warning, not an error: a stale keyword costs discoverability,
+ * never correctness.
+ */
 function checkMotionKeywords(root, warn) {
   const files = []
   const walk = (dir) => {
@@ -458,6 +453,10 @@ function sliceBraces(source, open) {
   return null
 }
 
+/**
+ * Validate the project's contracts. Every message says how to fix the
+ * problem — errors teach, they don't just point.
+ */
 export function check(root) {
   const errors = []
   const warnings = []
