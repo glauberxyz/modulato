@@ -65,5 +65,13 @@ menu on it with `body:has([data-modulato-styleguide]) .menu { display: none }`
 in the SSR HTML and the project keeps the last word about its own shell. The
 sheet carries a "Back to site" link of its own.
 
+**Upgrading an existing project** is three steps — swap `page.tsx` for the
+component call, delete the page's `styles.scss`, add the `body:has(…)` rule —
+and nothing breaks in the meantime, because the old page is the project's own
+code reading its own tokens. `modulato check` gained two warnings that say so
+with the steps in the message, since a stale styleguide is invisible otherwise:
+the dead stylesheet stays auto-imported, and the next agent to implement a
+design re-skins the page, which is the thing this change exists to stop.
+
 `viewportStore.breakpoints()` is new — the configured map, for a client that
 wants to print it.

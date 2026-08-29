@@ -304,9 +304,11 @@
   overflow: hidden;
   /* Masked rather than covered by a gradient of the page colour: the fade has
      to work over whatever is behind the sheet, and a mask fades the type
-     itself. The last fifth, so a cut line goes quiet rather than stopping. */
-  -webkit-mask-image: linear-gradient(to bottom, #000 80%, transparent 100%);
-  mask-image: linear-gradient(to bottom, #000 80%, transparent 100%);
+     itself. A fixed distance, not a percentage of the box: the fade is there
+     to soften the cut, and how much of a LETTER that costs depends on the
+     size of the type, not on how tall the box happens to be. */
+  -webkit-mask-image: linear-gradient(to bottom, #000 calc(100% - 24px), transparent 100%);
+  mask-image: linear-gradient(to bottom, #000 calc(100% - 24px), transparent 100%);
   min-width: 0;
   color: var(--mg-fg);
 }

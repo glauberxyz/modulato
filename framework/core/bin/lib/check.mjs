@@ -454,6 +454,47 @@ function sliceBraces(source, open) {
 }
 
 /**
+ * The styleguide page is the framework's now, and a project scaffolded before
+ * that still has the old hand-written one: ~200 lines of JSX plus a
+ * `styles.scss`, styled with the site's own type mixins and colour variables.
+ *
+ * Nothing breaks by keeping it — it is the project's own code reading the
+ * project's own tokens — so these are warnings, not errors. But nothing tells
+ * anyone it is out of date either: the stale stylesheet stays auto-imported
+ * and invisible, and every agent that implements a design re-skins the page
+ * along with the rest of `pages/`, which is the whole reason it moved into the
+ * framework. A project is allowed to keep its own page; just not by accident.
+ */
+function checkStyleguide(root, warn) {
+  // Any page folder, not just `styleguide/` — the demo's is `styles/`, and a
+  // project may have named it anything.
+  const pagesDir = path.resolve(root, 'pages')
+  if (!fs.existsSync(pagesDir)) return
+  const FIX =
+    "the styleguide ships with the framework now. Make page.tsx `import { Styleguide } from 'modulato/styleguide'` and render `<Styleguide type={type} colors={colors} />`, delete the page's styles.scss, and hide your shell on it with `body:has([data-modulato-styleguide]) .menu { display: none }` in styles/global.scss."
+  for (const entry of fs.readdirSync(pagesDir, { withFileTypes: true })) {
+    if (!entry.isDirectory()) continue
+    const dir = path.join(pagesDir, entry.name)
+    const page = path.join(dir, 'page.tsx')
+    if (!fs.existsSync(page)) continue
+    const source = fs.readFileSync(page, 'utf8')
+    if (source.includes('modulato/styleguide')) {
+      // Adopted the component but kept the old stylesheet beside it.
+      if (fs.existsSync(path.join(dir, 'styles.scss')))
+        warn(
+          `pages/${entry.name}/styles.scss`,
+          'the styleguide brings its own styles — this file is dead CSS targeting classes the page no longer renders. Delete it.',
+        )
+      continue
+    }
+    // The old scaffold, recognised by the classes it renders rather than by
+    // its folder name.
+    if (/className="guide|guide__specimen|type-\$\{name\}/.test(source))
+      warn(`pages/${entry.name}/page.tsx`, FIX)
+  }
+}
+
+/**
  * Validate the project's contracts. Every message says how to fix the
  * problem — errors teach, they don't just point.
  */
@@ -568,6 +609,7 @@ export function check(root) {
   checkMotionKeywords(root, warn)
   checkLoaderRequest(root, error)
   checkTypography(root, error, warn)
+  checkStyleguide(root, warn)
 
   return { ok: errors.length === 0, errors, warnings }
 }

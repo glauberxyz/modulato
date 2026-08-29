@@ -785,6 +785,19 @@ Add your shell's other selectors to that rule (a cursor, a scroll bar); delete
 it if the site wants its nav on the styleguide. The sheet has its own "Back to
 site" link either way.
 
+**Upgrading a project scaffolded before this.** Nothing breaks by doing
+nothing: the old hand-written page is your own code reading your own tokens,
+and it keeps working. To adopt the framework's, three steps —
+
+1. replace `pages/styleguide/page.tsx` with the component call above;
+2. delete that page's `styles.scss` (the sheet brings its own);
+3. add the `body:has(…)` rule to `styles/global.scss`, naming your shell's
+   selectors.
+
+`config.ts` stays as it is. `modulato check` warns while either the old page or
+its stylesheet is still there, and the message carries these steps — so an
+agent that runs the gate is told what to do without being asked.
+
 ## 7c. Color tokens (`color.ts`)
 
 The palette is data too, for the same reason type is.
