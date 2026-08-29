@@ -288,7 +288,15 @@ function checkTypography(root, error, warn) {
     for (const entry of splitEntries(scaleBody)) {
       const m = entry.match(/^\s*(?:(['"])([^'"]+)\1|([\w$]+))\s*:/)
       if (m) steps.add(m[2] ?? m[3])
+      fluidByHand(entry, 'scale step', warn)
     }
+  for (const entry of splitEntries(stylesBody)) {
+    const name = entry.match(/^\s*(?:(['"])([^'"]+)\1|([\w$]+))\s*:/)
+    // A quoted value is taken whole: a `clamp()` has commas inside it, so
+    // stopping at the first one would cut the string in half.
+    const size = entry.match(/\bsize\s*:\s*(?:(['"])([^'"]*)\1|([^,\n}]+))/)
+    if (name && size) fluidByHand(`${name[2] ?? name[3]}: ${size[2] ?? size[3]}`, 'style', warn)
+  }
 
   // The suffixes typeCss emits. Anything else after a style name is a typo in
   // its own right, but naming the known ones keeps this from firing on a
@@ -492,6 +500,40 @@ function checkStyleguide(root, warn) {
     if (/className="guide|guide__specimen|type-\$\{name\}/.test(source))
       warn(`pages/${entry.name}/page.tsx`, FIX)
   }
+}
+
+/** rem in `type.ts` is px as designed; the file's own unit rule (see remFrom). */
+const REM = 16
+
+/**
+ * A size written as a `clamp()` (or a bare `vw`) instead of as its two ends.
+ *
+ * It is legal and passed through untouched, which is exactly why it needs
+ * saying: the commonest way into a Modulato project is porting one, and the
+ * thing being ported is a stylesheet full of solved clamps. Translating them
+ * across verbatim is the obvious move and the wrong one — the string encodes a
+ * viewport range nobody wrote down, and Tweak can name it but not move it,
+ * while `{ min, max }` is two numbers with a slider each and a `fluid` range
+ * stated once for the whole scale.
+ *
+ * The ends are recoverable from a plain `clamp(A, …, B)`, so the warning says
+ * what to write rather than only what is wrong.
+ */
+function fluidByHand(entry, kind, warn) {
+  const m = entry.match(/^\s*(?:(['"])([^'"]+)\1|([\w$]+))\s*:\s*([\s\S]+)$/)
+  if (!m) return
+  const key = m[2] ?? m[3]
+  const value = m[4]
+  if (!/clamp\(|[\d.]v[wh]\b/.test(value)) return
+  const ends = value.match(/clamp\(\s*([\d.]+)(rem|px)\s*,[^,]*,\s*([\d.]+)(rem|px)\s*\)/)
+  const px = (n, unit) => Math.round(Number(n) * (unit === 'rem' ? REM : 1))
+  const fix = ends
+    ? `\`${key}: { min: ${px(ends[1], ends[2])}, max: ${px(ends[3], ends[4])} }\``
+    : `\`${key}: { min: <px>, max: <px> }\``
+  warn(
+    'type.ts',
+    `${kind} \`${key}\` is a hand-written fluid size. Write its two ends instead — ${fix} — and state the viewport range once in \`fluid\`. Modulato solves the clamp() from them, in rem, with the accessible intercept; a string encodes a range nobody wrote down and Tweak can name but not move.`,
+  )
 }
 
 /**

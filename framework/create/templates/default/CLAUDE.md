@@ -61,7 +61,9 @@ plain number — the px the design says — and Modulato ships it in rem, so a
 reader's browser font-size setting reaches the text. A size that should grow
 with the viewport is its two ends, `{ min: 44, max: 90 }`, and Modulato solves
 the `clamp()`; never hand-write one, and never write `rem` or `px` in that
-file. In stylesheets, layout (padding, gaps, widths, offsets) is **px**, so
+file. **When porting a design system in, convert its solved `clamp()` strings
+to `{ min, max }` rather than pasting them across** — `modulato check` warns
+and names the two ends for you. In stylesheets, layout (padding, gaps, widths, offsets) is **px**, so
 text can grow without the boxes around it inflating to match. Use `em`/`ch`
 only where the length genuinely tracks the type it holds, and `clamp()`/`vw`
 where it should follow the viewport.

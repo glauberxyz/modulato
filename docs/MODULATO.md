@@ -642,9 +642,21 @@ not a string you write:
   `clamp()` string is one value the overlay can name but not move — and on most
   sites the fluid steps are the headlines, i.e. exactly the sizes worth nudging.
 
-A hand-written `clamp()` still works and is still passed through untouched. It
-just encodes a viewport range its author never wrote down, which is the thing
-`fluid` exists to state.
+A hand-written `clamp()` is passed through untouched, and **`modulato check`
+warns about it**, naming the two ends to write instead:
+
+```
+type.ts  scale step `xs` is a hand-written fluid size. Write its two ends
+         instead — `xs: { min: 12, max: 20 }` — and state the viewport range
+         once in `fluid`.
+```
+
+This is aimed squarely at **porting**, which is the commonest way into a
+Modulato project: what is being ported is a stylesheet full of already-solved
+clamps, and translating them across verbatim is the obvious move and the wrong
+one. The string still renders, but it encodes a viewport range its author never
+wrote down — which is the thing `fluid` exists to state — and it arrives in the
+overlay as one value that can be named but not moved.
 
 **What Modulato generates.** `type.ts` is rendered to CSS and **inlined into
 every SSR response**, so the first painted glyph is already correct — there is
