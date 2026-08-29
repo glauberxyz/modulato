@@ -14,7 +14,10 @@ This is the Modulato framework itself (animation-first React, LLM-first DX).
   uses **Changesets + npm Trusted Publishing (OIDC)** — never hand-edit
   `version` fields. Add a changeset for the change (`npm run changeset`), land it
   on `main`, then merge the auto "Version Packages" PR — CI bumps, publishes over
-  OIDC, tags, and cuts a GitHub Release. Full steps + the manual fallback + the
+  OIDC, tags, and cuts a GitHub Release. **Check that PR contains your
+  changesets before merging it**: an already-open one predates them, and
+  merging it early bumps without publishing and burns a version number.
+  Full steps + the manual fallback + the
   docs/modulato.org redeploy: the **Release ritual** in
   [CONTRIBUTING.md](./CONTRIBUTING.md). The publish workflow filename
   (`.github/workflows/publish.yml`) is pinned by npm's trusted-publisher configs

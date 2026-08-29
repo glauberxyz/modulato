@@ -187,9 +187,26 @@ Internal deps cascade automatically: a `modulato` bump carries its dependents
 
 1. Land your changesets on `main`. CI opens/refreshes a **"Version Packages"**
    PR that applies every pending bump + writes changelogs.
-2. Merge that PR. CI then publishes each changed package to npm over OIDC,
-   tags it, and creates a **GitHub Release** per package.
-3. First real run: confirm the OIDC publish authenticated with no token (the
+2. **Check that PR carries YOUR changesets before merging it**, then merge.
+   CI publishes each changed package to npm over OIDC, tags it, and creates a
+   **GitHub Release** per package.
+
+   > A Version Packages PR that was already open is the trap. It was computed
+   > from the changesets that existed when it was raised, and CI needs a moment
+   > to refresh it after your merge — so merging it early applies a bump that
+   > covers only the older changesets. Nothing publishes (the action versions
+   > rather than publishes while any changeset is still pending), it opens a
+   > NEW Version Packages PR, and the version you just bumped to exists in the
+   > changelog and the git history but never on npm. Recoverable — merge the
+   > new PR and it publishes — but npm skips a version. `0.11.0` is that scar.
+   > `git log --oneline -1 origin/changeset-release/main` or a glance at the
+   > PR's file list tells you whether your changesets are in it.
+3. **Publishing succeeds before the registry agrees.** `npm view <pkg> version`
+   read the OLD version for ~2½ minutes after a green publish. Read the
+   workflow log ("🦋 Publishing …" / "New tag: …"), not `npm view`, to decide
+   whether a publish happened — and never re-run a publish on the strength of
+   `npm view` alone.
+4. First real run: confirm the OIDC publish authenticated with no token (the
    one thing to eyeball, since npm must be ≥ 11.5.1 on the runner — the
    workflow upgrades it).
 
