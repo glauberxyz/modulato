@@ -20,7 +20,7 @@
     "@modulato/tweak": "^0.7.0",
     "@modulato/vite": "^0.6.0",
     "gsap": "^3.13.0",
-    "modulato": "^0.11.0",
+    "modulato": "^0.12.0",
     "react": "^19.1.0",
     "react-dom": "^19.1.0"
   },
