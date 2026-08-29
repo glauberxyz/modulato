@@ -1,7 +1,7 @@
 import { useEffect, useLayoutEffect, useRef, type ReactNode } from 'react'
 import { resolveTokens } from 'modulato'
 import { useMotion } from '@modulato/gsap'
-import site from '../motion'
+import site from '../tokens/motion'
 import './statement.scss'
 
 /** useLayoutEffect on the client, useEffect on the server — the fit has to

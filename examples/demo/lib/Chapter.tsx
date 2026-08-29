@@ -3,7 +3,7 @@ import { ScrollTrigger } from 'gsap/ScrollTrigger'
 import { Fragment, useEffect, useRef } from 'react'
 import { resolveTokens, Shared, useNavigation, usePage } from 'modulato'
 import { useMotion } from '@modulato/gsap'
-import site from '../motion'
+import site from '../tokens/motion'
 import { NextChapter } from './NextChapter'
 import { Statement } from './Statement'
 import { Track } from './Track'
@@ -211,7 +211,7 @@ export function ChapterView({
   // `body.hold` is the beat before that: the page becomes active only after
   // the whole flight has resolved, so this waits on top of an arrival that
   // has already delivered the title and its lede. Site-wide, not per chapter
-  // — see the group's note in /motion.ts.
+  // — see the group's note in tokens/motion.ts.
   useEffect(() => {
     if (!element || phase !== 'active') return undefined
     // A return has no reveals to play — none were built. Cleared here rather

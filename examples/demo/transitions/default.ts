@@ -1,5 +1,5 @@
 import { transition, resolveTokens } from 'modulato'
-import tokens from '../motion'
+import tokens from '../tokens/motion'
 
 /**
  * The house fallback: an ink bleed. Any pair without a bespoke transition

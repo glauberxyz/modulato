@@ -49,6 +49,35 @@ const VIRTUAL = {
 const CONTENT_SNAPSHOT = '.modulato/content.json'
 
 /**
+ * Where a site-wide token module lives: `tokens/<name>.ts`, or the legacy
+ * `<name>.ts` at the root, or nowhere.
+ *
+ * Returns a ROOT-RELATIVE id, because that one string is three things at
+ * once — the specifier a virtual module re-exports from, the key the token
+ * registry holds the live object under, and the path Tweak's Save middleware
+ * writes back to. They have to agree, so they are all read from here.
+ *
+ * The root spelling is still accepted so a project scaffolded before the
+ * folder existed keeps working untouched; `modulato check` is what asks for
+ * the move.
+ */
+function tokenFile(root, name) {
+  const inFolder = path.resolve(root, 'tokens', `${name}.ts`)
+  if (fs.existsSync(inFolder)) return `/tokens/${name}.ts`
+  const atRoot = path.resolve(root, `${name}.ts`)
+  if (fs.existsSync(atRoot)) return `/${name}.ts`
+  return null
+}
+
+/** Is this absolute path the site's `<name>.ts`, in either spelling? */
+function isTokenFile(root, name, file) {
+  return (
+    file === path.resolve(root, 'tokens', `${name}.ts`) ||
+    file === path.resolve(root, `${name}.ts`)
+  )
+}
+
+/**
  * The Modulato Vite plugin.
  *
  * - Scans `pages/` and generates the route manifest (virtual module) for both
@@ -187,16 +216,16 @@ export default function modulato(options = {}) {
       // import at each call site: typography is optional, and `null` here is
       // what lets the client and server entries hold one unconditional import
       // instead of two conditional code paths that could drift.
-      if (id === VIRTUAL.typography)
-        return fs.existsSync(path.resolve(root, 'type.ts'))
-          ? `export { default } from '/type.ts'\n`
-          : `export default null\n`
+      if (id === VIRTUAL.typography) {
+        const file = tokenFile(root, 'type')
+        return file ? `export { default } from '${file}'\n` : `export default null\n`
+      }
       // The project's color.ts, or null — same shape and same reason as the
       // typography module above.
-      if (id === VIRTUAL.palette)
-        return fs.existsSync(path.resolve(root, 'color.ts'))
-          ? `export { default } from '/color.ts'\n`
-          : `export default null\n`
+      if (id === VIRTUAL.palette) {
+        const file = tokenFile(root, 'color')
+        return file ? `export { default } from '${file}'\n` : `export default null\n`
+      }
       if (id === VIRTUAL.app)
         return [
           `import { createElement } from 'react'`,
@@ -400,32 +429,42 @@ export default function modulato(options = {}) {
         }
       }
 
-      // Dev: the root type.ts self-registers into the typography registry and
+      // Dev: the site's type.ts self-registers into the typography registry and
       // self-accepts HMR. Same shape as the motion.ts transform above, and for
       // the same reason — re-registration merges into the live spec, so an
       // edit in the editor repaints the type stylesheet without a reload.
-      if (isServe && file === path.resolve(root, 'type.ts')) {
+      //
+      // The id is passed in rather than assumed: the file answers to two
+      // spellings (tokens/ and the legacy root), and it is the key Tweak
+      // later Saves back to.
+      // The basename test comes first: transform() runs for every module in the
+      // graph, and tokenFile() stats the disk.
+      const typeId =
+        isServe && path.basename(file) === 'type.ts' ? tokenFile(root, 'type') : null
+      if (typeId && file === path.resolve(root, typeId.slice(1))) {
         return {
           code: [
             code,
             `;import { __registerTypography as __modulatoRegisterType } from 'modulato'`,
-            `;import * as __modulatoTypeSelf from '/type.ts'`,
-            `;__modulatoRegisterType(__modulatoTypeSelf.default)`,
+            `;import * as __modulatoTypeSelf from ${JSON.stringify(typeId)}`,
+            `;__modulatoRegisterType(__modulatoTypeSelf.default, ${JSON.stringify(typeId)})`,
             `;if (import.meta.hot) import.meta.hot.accept()`,
           ].join('\n'),
           map: null,
         }
       }
 
-      // Dev: the root color.ts self-registers and self-accepts HMR, exactly
+      // Dev: the site's color.ts self-registers and self-accepts HMR, exactly
       // as type.ts does above.
-      if (isServe && file === path.resolve(root, 'color.ts')) {
+      const colorId =
+        isServe && path.basename(file) === 'color.ts' ? tokenFile(root, 'color') : null
+      if (colorId && file === path.resolve(root, colorId.slice(1))) {
         return {
           code: [
             code,
             `;import { __registerColors as __modulatoRegisterColors } from 'modulato'`,
-            `;import * as __modulatoColorSelf from '/color.ts'`,
-            `;__modulatoRegisterColors(__modulatoColorSelf.default)`,
+            `;import * as __modulatoColorSelf from ${JSON.stringify(colorId)}`,
+            `;__modulatoRegisterColors(__modulatoColorSelf.default, ${JSON.stringify(colorId)})`,
             `;if (import.meta.hot) import.meta.hot.accept()`,
           ].join('\n'),
           map: null,
@@ -455,9 +494,9 @@ export default function modulato(options = {}) {
               ? [VIRTUAL.behaviors]
               : file === path.resolve(root, 'intro.ts')
                 ? [VIRTUAL.intros, VIRTUAL.serverEntry]
-                : file === path.resolve(root, 'type.ts')
+                : isTokenFile(root, 'type', file)
                   ? [VIRTUAL.typography]
-                  : file === path.resolve(root, 'color.ts')
+                  : isTokenFile(root, 'color', file)
                     ? [VIRTUAL.palette]
                     : file === path.resolve(root, CONTENT_SNAPSHOT)
                       ? [VIRTUAL.content]

@@ -4,7 +4,7 @@ import { createTokenRegistry } from './registry'
 /**
  * Color tokens: the site's palette, as DATA.
  *
- *   // color.ts (project root)
+ *   // tokens/color.ts
  *   export default colors({
  *     paper: '#f4f1ea',
  *     ink: '#231f20',
@@ -33,7 +33,9 @@ export function colors<T extends ColorSpec>(spec: T): T {
 export type ColorSpec = Record<string, string>
 
 /** The one color.ts a project has; its id in the token registry. */
-export const COLOR_FILE = '/color.ts'
+export const COLOR_FILE = '/tokens/color.ts'
+
+let colorFile: string = COLOR_FILE
 
 /** The `<style>` element carrying the generated palette, in SSR and client. */
 export const COLOR_STYLE_ID = '__modulato-color'
@@ -89,7 +91,7 @@ export function initColors(spec: ColorSpec | null | undefined): void {
   const tokens = spec ?? null
   paint(tokens)
   if (!DEV || typeof window === 'undefined' || !tokens) return
-  colorRegistry.register(COLOR_FILE, tokens)
+  colorRegistry.register(colorFile, tokens)
   colorRegistry.subscribe(() => paint(tokens))
 }
 
@@ -98,8 +100,11 @@ export function initColors(spec: ColorSpec | null | undefined): void {
  * Registering is the whole job — `initColors`' subscription repaints from the
  * live object, so an edit in the editor and an edit in Tweak converge.
  */
-export function __registerColors(spec: unknown): void {
+export function __registerColors(spec: unknown, file?: string): void {
   if (!DEV || typeof window === 'undefined') return
   if (!spec || typeof spec !== 'object' || Array.isArray(spec)) return
-  colorRegistry.register(COLOR_FILE, spec)
+  // Records where the file actually is, for the same reason `type.ts` does —
+  // see the note on __registerTypography.
+  if (file) colorFile = file
+  colorRegistry.register(colorFile, spec)
 }

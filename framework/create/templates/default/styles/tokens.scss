@@ -1,15 +1,14 @@
 // Shared values that are neither type nor color.
 //
-// TYPE lives in `type.ts` and COLOR in `color.ts`, both at the project root,
-// both as data — that is what lets the Tweak overlay edit them live and write
+// TYPE lives in `tokens/type.ts` and COLOR in `tokens/color.ts`, both as data — that is what lets the Tweak overlay edit them live and write
 // them back. A stylesheet is not something it can safely author, so anything
 // declared here is yours alone and invisible to the overlay.
 //
-// Add a color? Put it in `color.ts` (or press + in the overlay's Colors tab).
+// Add a color? Put it in `tokens/color.ts` (or press + in the overlay's Colors tab).
 //
 // UNITS, since this is where a stylesheet starts: layout is px. Padding,
 // gaps, container widths, offsets — all px, all the way down. Type is the one
-// thing that ships in rem, and `type.ts` does that for you from the px numbers
+// thing that ships in rem, and `tokens/type.ts` does that for you from the px numbers
 // you write there.
 //
 // The split is the whole point. A reader who raises their browser's font size

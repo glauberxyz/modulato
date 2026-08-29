@@ -1,6 +1,6 @@
 import gsap from 'gsap'
 import { intro, resolveTokens } from 'modulato'
-import tokens from './motion'
+import tokens from './tokens/motion'
 
 /** Shell intro: first-load choreography for the persistent elements. */
 export default intro({

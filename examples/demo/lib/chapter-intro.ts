@@ -1,6 +1,6 @@
 import gsap from 'gsap'
 import { resolveTokens } from 'modulato'
-import site from '../motion'
+import site from '../tokens/motion'
 
 /**
  * A chapter's opening on a COLD landing — arriving from the index flies the
