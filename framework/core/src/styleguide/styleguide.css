@@ -36,6 +36,9 @@
   --mg-faint: oklch(0.7 0 0);
   --mg-line: oklch(0.91 0 0);
   --mg-panel: oklch(0.975 0 0);
+  --mg-red: oklch(0.577 0.245 27.325);
+  /* One loop of an easing diagram, long enough to read the slow end of it. */
+  --mg-run: 2s;
   --mg-font: 'Inter Modulato', Inter, system-ui, -apple-system, 'Segoe UI', sans-serif;
 
   display: grid;
@@ -397,28 +400,89 @@
 
 .mdl-guide .mdl-guide__ease {
   display: grid;
-  gap: 6px;
+  gap: 2px;
   margin: 0;
   padding: 0;
 }
 
+/* The same square a swatch is: this section and the palette are two grids of
+   the same cell, so they should read as one rhythm down the page. */
 .mdl-guide .mdl-guide__curve {
   display: block;
-  width: 64px;
-  height: 64px;
+  width: 100%;
+  aspect-ratio: 1;
   margin: 0 0 6px;
   overflow: visible;
 }
 
-.mdl-guide .mdl-guide__curveLinear {
-  fill: none;
-  stroke: var(--mg-line);
-  stroke-width: 1;
-}
-
+/* Every line here is one pixel, whatever the square is scaled to: the viewBox
+   is 100 units wide and the box is however wide the column is, so a plain
+   stroke-width would thicken with the container. `non-scaling-stroke` is
+   measured after the transform, so 1 means 1. The frame and the curve differ
+   by colour, not by weight. */
+.mdl-guide .mdl-guide__curveBox,
+.mdl-guide .mdl-guide__curveLinear,
 .mdl-guide .mdl-guide__curvePath {
   fill: none;
+  stroke-width: 1;
+  vector-effect: non-scaling-stroke;
+}
+
+/* The unit square itself — time across, progress up. */
+.mdl-guide .mdl-guide__curveBox,
+.mdl-guide .mdl-guide__curveLinear {
+  stroke: var(--mg-line);
+}
+
+/* Dotted, not solid: a zero-length dash with a round cap IS a dot, and the
+   gap is in screen units like the width, so the dots keep their spacing at
+   any size of square. */
+.mdl-guide .mdl-guide__curvePath {
   stroke: var(--mg-fg);
-  stroke-width: 2;
   stroke-linecap: round;
+  stroke-dasharray: 0 4;
+}
+
+/* The dot: red because it is the one thing on the sheet that MOVES, and a
+   monochrome page gives it nowhere else to stand out. Same red as the
+   overlay's destructive, so the two framework surfaces share a palette. */
+.mdl-guide .mdl-guide__curveDot {
+  fill: var(--mg-red);
+}
+
+/* Time carries the dot across at a constant rate; the easing lifts it. Two
+   animations of the same duration, so the pair reads as one point moving. */
+.mdl-guide .mdl-guide__curveTime {
+  animation: mdl-guide-across var(--mg-run) linear infinite;
+}
+
+.mdl-guide .mdl-guide__curveDot {
+  animation: mdl-guide-up var(--mg-run) infinite;
+}
+
+@keyframes mdl-guide-across {
+  from {
+    transform: translateX(0);
+  }
+  to {
+    transform: translateX(100px);
+  }
+}
+
+@keyframes mdl-guide-up {
+  from {
+    transform: translateY(0);
+  }
+  to {
+    transform: translateY(-100px);
+  }
+}
+
+/* A looping diagram is exactly the kind of motion a reader may have asked the
+   system to stop. The dot stays where the curve starts. */
+@media (prefers-reduced-motion: reduce) {
+  .mdl-guide .mdl-guide__curveTime,
+  .mdl-guide .mdl-guide__curveDot {
+    animation: none;
+  }
 }

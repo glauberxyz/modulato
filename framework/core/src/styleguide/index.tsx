@@ -160,6 +160,24 @@ function fluidText(value: FluidValue, spec: TypographySpec): string {
   return `${value.min} → ${value.max}px across ${from}–${to}px`
 }
 
+/**
+ * The px a style reaches at its largest — a plain size, or the top end of a
+ * fluid pair — resolving a scale key on the way. 0 when the size is raw CSS
+ * the sheet cannot read (a `clamp()` written by hand, say), which sorts those
+ * to the end rather than guessing at them.
+ *
+ * Only used for ordering: the specimens run big to small, which is how a
+ * scale is read, and is not the order `type.ts` happens to declare them in.
+ */
+function sizeRank(style: TypeStyle, spec: TypographySpec): number {
+  const raw = style.size
+  const value =
+    typeof raw === 'string' && spec.scale && raw in spec.scale ? spec.scale[raw] : raw
+  if (typeof value === 'number') return value
+  if (isFluid(value)) return value.max
+  return 0
+}
+
 /** A scale step or a raw size, as a short value: `18px`, `44→90px`, or the CSS. */
 function sizeText(value: unknown): string {
   if (typeof value === 'number') return `${value}px`
@@ -217,7 +235,11 @@ function useActiveSection(ids: string[]): string | null {
 
 /** The named styles: what `type.ts` declares, and the type it makes. */
 export function TypeStyles({ spec }: { spec: TypographySpec }) {
-  const names = Object.keys(spec.styles)
+  // Biggest first. Sort is stable, so two styles at the same size keep the
+  // order `type.ts` declares them in.
+  const names = Object.keys(spec.styles).sort(
+    (a, b) => sizeRank(spec.styles[b], spec) - sizeRank(spec.styles[a], spec),
+  )
   // Fields a style leaves undeclared fall back to `inherit`, and on the site
   // what they inherit is the document's `body` style. The stage wears it for
   // the same reason, so a style that says nothing about weight renders here
@@ -338,14 +360,39 @@ export function Swatches({ colors }: { colors: ColorSpec }) {
   )
 }
 
-/** A cubic-bezier as a 64×64 curve. Overshoot is allowed to leave the box. */
-function Curve({ points }: { points: DeclaredEase['points'] }) {
-  const [x1, y1, x2, y2] = points
-  const d = `M 0 64 C ${x1 * 64} ${64 - y1 * 64}, ${x2 * 64} ${64 - y2 * 64}, 64 0`
+/**
+ * A cubic-bezier drawn in its unit square, with a dot running it.
+ *
+ * The square is the frame every easing diagram uses — time across, progress
+ * up — so the diagonal is the linear ease and the curve's distance from it is
+ * what the easing DOES. The unit square IS the container: the viewBox is
+ * exactly 0–100 in both directions, and the SVG does not clip, so a curve that
+ * overshoots (y outside 0–1) is drawn past the frame rather than cut off by
+ * it — which is the overshoot being visible, and the point of drawing it.
+ *
+ * The dot is two animations, not one: an outer group carries it across at a
+ * constant rate (that is time), and the circle inside rises with the curve as
+ * its timing function (that is the easing). Running one animation along the
+ * path instead would move at constant ARC LENGTH, which is a different thing
+ * and would show the easing wrong — slow exactly where the curve is steep.
+ */
+function Curve({ ease }: { ease: DeclaredEase }) {
+  const [x1, y1, x2, y2] = ease.points
+  const d = `M 0 100 C ${x1 * 100} ${100 - y1 * 100}, ${x2 * 100} ${100 - y2 * 100}, 100 0`
   return (
-    <svg className="mdl-guide__curve" viewBox="0 0 64 64" width="64" height="64" aria-hidden>
-      <path d="M 0 64 L 64 0" className="mdl-guide__curveLinear" />
-      <path d={d} className="mdl-guide__curvePath" />
+    <svg className="mdl-guide__curve" viewBox="0 0 100 100" aria-hidden>
+      <rect className="mdl-guide__curveBox" x="0" y="0" width="100" height="100" />
+      <path className="mdl-guide__curveLinear" d="M 0 100 L 100 0" />
+      <path className="mdl-guide__curvePath" d={d} />
+      <g className="mdl-guide__curveTime">
+        <circle
+          className="mdl-guide__curveDot"
+          cx="0"
+          cy="100"
+          r="4.5"
+          style={{ animationTimingFunction: ease.css } as CSSProperties}
+        />
+      </g>
     </svg>
   )
 }
@@ -374,7 +421,7 @@ export function Eases({ eases }: { eases?: Record<string, string> }) {
       <ul className="mdl-guide__eases">
         {declared.map((ease) => (
           <li className="mdl-guide__ease" key={ease.name}>
-            <Curve points={ease.points} />
+            <Curve ease={ease} />
             <span className="mdl-guide__key">{ease.name}</span>
             <span className="mdl-guide__dim">{ease.css}</span>
           </li>
