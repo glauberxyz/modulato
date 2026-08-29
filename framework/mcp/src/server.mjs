@@ -122,7 +122,7 @@ server.registerTool(
     description:
       'Set token values in a motion.ts or in the root type.ts (AST-preserving file edit; the file’s own indentation is preserved). With the dev server running, values apply to the page live via HMR — follow with replay to see motion changes; type changes repaint on their own.',
     inputSchema: {
-      file: z.string().describe('root-relative, e.g. /pages/home/motion.ts or /type.ts'),
+      file: z.string().describe('root-relative, e.g. /pages/home/motion.ts or /tokens/type.ts'),
       changes: z.array(
         z.object({
           path: z

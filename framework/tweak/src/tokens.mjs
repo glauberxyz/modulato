@@ -5,23 +5,33 @@ import fs from 'node:fs'
 import path from 'node:path'
 import { generateCode, parseModule } from 'magicast'
 
-/** The project's palette module, as the registry keys it. */
-const COLOR_FILE = '/color.ts'
+/**
+ * Where a site-wide token module lives: `tokens/<name>.ts`, or the legacy
+ * `<name>.ts` at the root, or nowhere. Returns a root-relative id — the same
+ * string the registry keys the live object under and this file writes back to.
+ */
+function singleton(root, name) {
+  if (fs.existsSync(path.join(root, 'tokens', `${name}.ts`))) return `/tokens/${name}.ts`
+  if (fs.existsSync(path.join(root, `${name}.ts`))) return `/${name}.ts`
+  return null
+}
 
 /**
  * Root-relative ids of every token module in the project (registry keys).
  *
  * A token module is a file whose default export is plain data: `motion.ts`
- * and `*.motion.ts` (motion tokens, per page and per transition), the root
- * `type.ts` (the type system) and the root `color.ts` (the palette). Same
- * shape, same AST-preserving writeback — the only difference is which registry
- * the running page keeps them in.
+ * and `*.motion.ts` (motion tokens, per page and per transition), and the
+ * site-wide `tokens/type.ts` (the type system), `tokens/color.ts` (the
+ * palette) and `tokens/motion.ts` (the shell). Same shape, same AST-preserving
+ * writeback — the only difference is which registry the running page keeps
+ * them in.
  */
 export function scanMotionFiles(root) {
   const files = []
-  if (fs.existsSync(path.join(root, 'motion.ts'))) files.push('/motion.ts')
-  if (fs.existsSync(path.join(root, 'type.ts'))) files.push('/type.ts')
-  if (fs.existsSync(path.join(root, 'color.ts'))) files.push('/color.ts')
+  for (const name of ['motion', 'type', 'color']) {
+    const file = singleton(root, name)
+    if (file) files.push(file)
+  }
   const walk = (dir, prefix) => {
     if (!fs.existsSync(dir)) return
     for (const dirent of fs.readdirSync(dir, { withFileTypes: true })) {
@@ -42,14 +52,15 @@ export function resolveMotionFile(root, file) {
   if (typeof file !== 'string') throw new Error('file must be a string')
   const abs = path.resolve(root, `.${path.sep}${file.replace(/^\//, '')}`)
   const base = path.basename(abs)
-  // type.ts and color.ts are the ROOT ones only: a stray pages/x/type.ts is
-  // not a token module, and writing to it would be writing to a file nothing
-  // reads.
-  const isRootSingleton =
-    (base === 'type.ts' || base === 'color.ts') && abs === path.join(root, base)
+  // type.ts and color.ts are the SITE-WIDE ones only: a stray pages/x/type.ts
+  // is not a token module, and writing to it would be writing to a file
+  // nothing reads. Both spellings count — `tokens/` and the legacy root.
+  const isSiteSingleton =
+    (base === 'type.ts' || base === 'color.ts') &&
+    (abs === path.join(root, 'tokens', base) || abs === path.join(root, base))
   if (
     !abs.startsWith(root + path.sep) ||
-    !(base === 'motion.ts' || base.endsWith('.motion.ts') || isRootSingleton) ||
+    !(base === 'motion.ts' || base.endsWith('.motion.ts') || isSiteSingleton) ||
     !fs.existsSync(abs)
   )
     throw new Error(`not a token module in this project: ${file}`)
@@ -192,7 +203,9 @@ export function renameColor(root, from, to) {
     )
   if (oldName === newName) return { renamed: 0, files: [] }
 
-  const abs = resolveMotionFile(root, COLOR_FILE)
+  const colorFile = singleton(root, 'color')
+  if (!colorFile) throw new Error('no color.ts in this project')
+  const abs = resolveMotionFile(root, colorFile)
   const source = fs.readFileSync(abs, 'utf8')
 
   // Scope the key rename to the colors({...}) literal, so a color NAMED in a

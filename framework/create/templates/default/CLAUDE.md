@@ -14,7 +14,9 @@ file. The CLI is non-interactive and JSON-friendly; prefer it:
 - Agents can drive motion live: `claude mcp add modulato -- npx -y @modulato/mcp`
 
 Key conventions: a page is a folder in `pages/` with `page.tsx` (no
-registration); animation numbers live in `motion.ts` token modules;
+registration); how the site is SET lives in `tokens/` (`type.ts`, `color.ts`,
+the shell's `motion.ts`) — all data, all editable live in the overlay;
+animation numbers live in `motion.ts` token modules;
 transitions are `transitions/<from>__<to>.ts`; the persistent shell lives in
 `app.tsx` outside `<PageOutlet/>`.
 
@@ -40,7 +42,7 @@ CustomEase by hand. Use them in tokens by name in GSAP files (`ease:
 'swoosh'`) and as the cubic-bezier in transition files (WAAPI only speaks
 CSS); the Tweak overlay writes the right spelling for you.
 
-**Typography is data, in `type.ts` at the project root.** It holds the font
+**Typography is data, in `tokens/type.ts`.** It holds the font
 stacks, the size scale and the named styles; Modulato renders it into CSS
 custom properties and one `.type-<name>` class per style, inlined into every
 SSR response. Page stylesheets `@use 'styles/typography'` and
@@ -50,13 +52,13 @@ themselves. Page `styles.scss` files are layout only, and `modulato check`
 warns when one declares type.
 
 **Given a design to implement, or an instruction that changes how the site is
-set — encode it in `type.ts` FIRST.** A new size becomes a scale step; a new
+set — encode it in `tokens/type.ts` FIRST.** A new size becomes a scale step; a new
 kind of text becomes a style. Never reach for a literal `font-size` in a page
 stylesheet because the design has one more size than the scale does: add the
 step. The scale is deliberately closed, and that is what keeps a site to a
 type system instead of to forty-one accidental sizes.
 
-**Units: never write one for type; layout is px.** In `type.ts` a size is a
+**Units: never write one for type; layout is px.** In `tokens/type.ts` a size is a
 plain number — the px the design says — and Modulato ships it in rem, so a
 reader's browser font-size setting reaches the text. A size that should grow
 with the viewport is its two ends, `{ min: 44, max: 90 }`, and Modulato solves
@@ -68,7 +70,7 @@ text can grow without the boxes around it inflating to match. Use `em`/`ch`
 only where the length genuinely tracks the type it holds, and `clamp()`/`vw`
 where it should follow the viewport.
 
-**Colors are data too**, in `color.ts` at the project root: each key is a
+**Colors are data too**, in `tokens/color.ts`: each key is a
 `--variable`. Add one there, or press **+** in the overlay's Colors tab and name
 it. Renaming a color in the overlay rewrites every `var()` that reads it;
 renaming it by hand in the file does not. Theme overrides (`.is-dark { --bg: … }`)

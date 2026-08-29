@@ -1,7 +1,7 @@
 import { resolveTokens } from 'modulato'
 import { useMotion } from '@modulato/gsap'
 import { EntryTitle } from './EntryTitle'
-import site from '../motion'
+import site from '../tokens/motion'
 import type { Chapter } from './content'
 import './next-chapter.scss'
 

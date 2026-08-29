@@ -24,3 +24,20 @@ export function useHandle(): ModulatoDevHandle | null {
   }, [handle])
   return handle
 }
+
+/**
+ * The project's typography module, as the registry keys it.
+ *
+ * Asked rather than assumed: a site-wide token module lives in `tokens/`, but
+ * the root spelling predates that folder and still works, and this same string
+ * is what Save posts back to. The registry holds exactly one type file, so
+ * whichever one the app registered is the answer.
+ */
+export function typeFile(handle: ModulatoDevHandle | null): string {
+  return handle?.type?.list()[0]?.file ?? '/tokens/type.ts'
+}
+
+/** The project's palette module, as the registry keys it — see `typeFile`. */
+export function colorFile(handle: ModulatoDevHandle | null): string {
+  return handle?.colors?.list()[0]?.file ?? '/tokens/color.ts'
+}

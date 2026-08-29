@@ -45,8 +45,8 @@ import './styleguide.css'
  * The scaffolded `pages/styleguide/page.tsx` is:
  *
  *   import { Styleguide } from 'modulato/styleguide'
- *   import type from '../../type'
- *   import colors from '../../color'
+ *   import type from '../../tokens/type'
+ *   import colors from '../../tokens/color'
  *   export default () => <Styleguide type={type} colors={colors} />
  *
  * Props rather than the token registries because those are populated by the

@@ -1,8 +1,8 @@
 // Layout tokens, and the surface switch.
 //
 // NEITHER TYPE NOR COLOR IS HERE. Fonts, sizes, leading and tracking live in
-// `type.ts`; the palette lives in `color.ts`. Both are data at the project
-// root, which is what lets the Tweak overlay edit them live and write them
+// `tokens/type.ts`; the palette lives in `tokens/color.ts`. Both are data,
+// which is what lets the Tweak overlay edit them live and write them
 // back — a stylesheet is not something it can safely author.
 //
 // What is left is the grid, and `.is-dark`: a SELECTOR that redefines the
@@ -22,7 +22,7 @@
 // surface without the class — see global.scss.
 // Indirection, not duplication: each line points at the palette's own
 // `dark-*` entry, so an inverted surface has no colors of its own to keep in
-// step with color.ts. A custom property may reference another, and the read
+// step with tokens/color.ts. A custom property may reference another, and the read
 // resolves through.
 @mixin dark {
   --paper: var(--dark-paper);

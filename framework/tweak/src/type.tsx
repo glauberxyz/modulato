@@ -5,7 +5,7 @@ import { Button } from './ui/button'
 import { Slider } from './ui/slider'
 import { cn } from './ui/utils'
 import { OVERLAY_HOST } from './dom'
-import { useHandle } from './handle'
+import { typeFile, useHandle } from './handle'
 import { openInEditor, saveTokens } from './save'
 
 /**
@@ -32,7 +32,6 @@ import { openInEditor, saveTokens } from './save'
 
 const SOURCE_ATTR = 'data-modulato-source'
 const MARKER = '--modulato-type'
-const TYPE_FILE = '/type.ts'
 
 let enabled = false
 const listeners = new Set<() => void>()
@@ -216,7 +215,7 @@ function sortValue(value: unknown): number {
 }
 
 function specOf(handle: ModulatoDevHandle): Spec | null {
-  const entry = handle.type?.list().find((f) => f.file === TYPE_FILE)
+  const entry = handle.type?.list()[0]
   return (entry?.tokens as Spec | undefined) ?? null
 }
 
@@ -437,7 +436,7 @@ function Popup({
   const styleDef = (target.style ? spec?.styles?.[target.style] : null) ?? null
   const overrideDef = selector ? (spec?.overrides?.[selector] ?? null) : null
   const keys = scaleKeys(spec)
-  const dirty = handle.type?.dirty(TYPE_FILE) ?? []
+  const dirty = handle.type?.dirty(typeFile(handle)) ?? []
 
   // A breakpoint block shadows the base value at this width, so an edit here
   // would write a number the reader cannot see move. Say so rather than
@@ -456,10 +455,10 @@ function Popup({
       if (!selector) return
       // The override has to name the style it modifies — that is what tells
       // the generator which variables the selector is allowed to set.
-      handle.type.set(TYPE_FILE, ['overrides', selector, 'style'], target.style)
-      handle.type.set(TYPE_FILE, ['overrides', selector, field], value)
+      handle.type.set(typeFile(handle), ['overrides', selector, 'style'], target.style)
+      handle.type.set(typeFile(handle), ['overrides', selector, field], value)
     } else {
-      handle.type.set(TYPE_FILE, ['styles', target.style, field], value)
+      handle.type.set(typeFile(handle), ['styles', target.style, field], value)
     }
   }
 
@@ -467,9 +466,9 @@ function Popup({
     if (!handle.type || !dirty.length) return
     setStatus('saving…')
     try {
-      await saveTokens(TYPE_FILE, dirty)
-      handle.type.markSaved(TYPE_FILE)
-      setStatus(`saved ${TYPE_FILE}`)
+      await saveTokens(typeFile(handle), dirty)
+      handle.type.markSaved(typeFile(handle))
+      setStatus(`saved ${typeFile(handle)}`)
     } catch (error) {
       setStatus(`save failed: ${error instanceof Error ? error.message : String(error)}`)
     }
@@ -527,7 +526,7 @@ function Popup({
         </div>
       ) : !spec ? (
         <div className="rounded-xl bg-background p-3 text-muted-foreground">
-          no type.ts registered — create one at the project root.
+          no type.ts registered — create one at tokens/type.ts.
         </div>
       ) : (
         <>
@@ -627,7 +626,7 @@ function Popup({
                 size="sm"
                 className="h-9 flex-1 rounded-full text-xs"
                 disabled={!dirty.length}
-                onClick={() => handle.type?.reset(TYPE_FILE)}
+                onClick={() => handle.type?.reset(typeFile(handle))}
               >
                 Reset
               </Button>

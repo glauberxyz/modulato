@@ -8,7 +8,7 @@ import {
 } from 'react'
 import type { ModulatoDevHandle } from 'modulato/client'
 import type { DeclaredEase, TokenLeaf, TokenValue } from 'modulato'
-import { useHandle } from './handle'
+import { colorFile, typeFile, useHandle } from './handle'
 import { saveTokens } from './save'
 import { focusedOverlayField } from './dom'
 import { TypeIcon, TypeMode, formatSize, typeMode, useTypeMode } from './type'
@@ -169,8 +169,6 @@ function PlayIcon(props: React.SVGProps<SVGSVGElement>) {
 /** What Loop replays — the Replay button most recently pressed. */
 type LoopTarget = 'intro' | 'shell' | 'motions'
 
-/** The project's typography module, as the registry keys it. */
-const TYPE_FILE = '/type.ts'
 
 type PanelTab = 'motion' | 'type' | 'colors'
 
@@ -564,7 +562,7 @@ function slugRoute(id: string): string {
  * route is one of its `<from>__<to>` sides (default = the fallback, always).
  * Derived purely from the path — no core changes needed. */
 function relevantToRoute(file: string, route: string | null): boolean {
-  if (file === '/motion.ts') return true
+  if (file === '/tokens/motion.ts' || file === '/motion.ts') return true
   const page = file.match(/^\/pages\/(.+)\/motion\.ts$/)
   if (page) return route != null && page[1] === route
   const transition = file.match(/^\/transitions\/(.+)\.motion\.ts$/)
@@ -734,7 +732,6 @@ function GroupSection({
   )
 }
 
-const COLOR_FILE = '/color.ts'
 
 /** A CSS custom-property name, without the leading dashes. */
 const COLOR_NAME = /^[a-zA-Z_][a-zA-Z0-9_-]*$/
@@ -904,19 +901,19 @@ function ColorsCard({ handle }: { handle: ModulatoDevHandle }) {
     () => handle.colors?.version ?? 0,
   )
 
-  const leaves = handle.colors?.leaves(COLOR_FILE) ?? []
+  const leaves = handle.colors?.leaves(colorFile(handle)) ?? []
   const dirty = new Set(
-    (handle.colors?.dirty(COLOR_FILE) ?? []).map((l) => l.path.join('.')),
+    (handle.colors?.dirty(colorFile(handle)) ?? []).map((l) => l.path.join('.')),
   )
 
   const save = async () => {
-    const changes = handle.colors?.dirty(COLOR_FILE) ?? []
+    const changes = handle.colors?.dirty(colorFile(handle)) ?? []
     if (!handle.colors || !changes.length) return
     setStatus('saving…')
     try {
-      await saveTokens(COLOR_FILE, changes)
-      handle.colors.markSaved(COLOR_FILE)
-      setStatus(`saved ${COLOR_FILE}`)
+      await saveTokens(colorFile(handle), changes)
+      handle.colors.markSaved(colorFile(handle))
+      setStatus(`saved ${colorFile(handle)}`)
     } catch (error) {
       setStatus(`save failed: ${error instanceof Error ? error.message : String(error)}`)
     }
@@ -973,7 +970,7 @@ function ColorsCard({ handle }: { handle: ModulatoDevHandle }) {
             value={String(leaf.value)}
             dirty={dirty.has(leaf.path.join('.'))}
             renaming={false}
-            onValue={(v) => handle.colors?.set(COLOR_FILE, leaf.path, v)}
+            onValue={(v) => handle.colors?.set(colorFile(handle), leaf.path, v)}
             onRename={(to) => void rename(name, to)}
           />
         )
@@ -992,7 +989,7 @@ function ColorsCard({ handle }: { handle: ModulatoDevHandle }) {
           // Naming a draft is what promotes it into the token file — up to
           // then it is a row on screen and nothing else.
           onRename={(to) => {
-            handle.colors?.set(COLOR_FILE, [to], d.value)
+            handle.colors?.set(colorFile(handle), [to], d.value)
             setDrafts((list) => list.filter((x) => x.id !== d.id))
           }}
           onRemove={() => setDrafts((list) => list.filter((x) => x.id !== d.id))}
@@ -1028,7 +1025,7 @@ function ColorsCard({ handle }: { handle: ModulatoDevHandle }) {
           className="h-9 flex-1 rounded-full text-xs"
           disabled={!dirty.size && !drafts.length}
           onClick={() => {
-            handle.colors?.reset(COLOR_FILE)
+            handle.colors?.reset(colorFile(handle))
             setDrafts([])
           }}
         >
@@ -1192,13 +1189,13 @@ function Overlay() {
   }
 
   const saveType = async () => {
-    const changes = handle.type?.dirty(TYPE_FILE) ?? []
+    const changes = handle.type?.dirty(typeFile(handle)) ?? []
     if (!handle.type || !changes.length) return
     setStatus('saving…')
     try {
-      await saveTokens(TYPE_FILE, changes)
-      handle.type.markSaved(TYPE_FILE)
-      setStatus(`saved ${TYPE_FILE}`)
+      await saveTokens(typeFile(handle), changes)
+      handle.type.markSaved(typeFile(handle))
+      setStatus(`saved ${typeFile(handle)}`)
     } catch (error) {
       setStatus(`save failed: ${String(error)}`)
     }
@@ -1210,7 +1207,7 @@ function Overlay() {
   // the page was the wrong shape. Only offered when the project has a type.ts —
   // without one every click would answer "this text wears no style", which is
   // a tool that only knows how to say no.
-  const hasType = !!handle.type && handle.type.leaves(TYPE_FILE).length > 0
+  const hasType = !!handle.type && handle.type.leaves(typeFile(handle)).length > 0
 
   // `tab` is what was CLICKED; `active` is what can actually be shown. Deleting
   // type.ts while the Typography tab is open must not leave the panel blank.
@@ -1549,7 +1546,7 @@ function Overlay() {
                 style where it sits; this is the whole system at once, with the
                 breakpoint tabs a click on a heading cannot reach. Both write the
                 same registry and save through the same endpoint. */}
-            {handle.type && handle.type.leaves(TYPE_FILE).length > 0 && (() => {
+            {handle.type && handle.type.leaves(typeFile(handle)).length > 0 && (() => {
               // Font stacks are READ-ONLY here — deliberately not offered.
               //
               // A stack is a comma-separated list of quoted family names, and a
@@ -1561,13 +1558,13 @@ function Overlay() {
               // next to the @font-face or the Typekit link it depends on; it is
               // not a thing to fat-finger while looking at a heading.
               const leaves = handle.type
-                .leaves(TYPE_FILE)
+                .leaves(typeFile(handle))
                 .filter((l) => l.path[0] !== 'fonts')
               // The catalogs the file itself declares. A style's `size` and
               // `font` are KEYS into these, so they are closed sets and belong
               // in a select — typing `lgg` into a text box is not an error, it
               // is `var(--type-size-lgg)` falling back silently.
-              const spec = (handle.type.list().find((f) => f.file === TYPE_FILE)
+              const spec = (handle.type.list()[0]
                 ?.tokens ?? {}) as {
                 fonts?: Record<string, unknown>
                 scale?: Record<string, unknown>
@@ -1607,7 +1604,7 @@ function Overlay() {
                 }
               }
               const typeDirty = new Set(
-                handle.type.dirty(TYPE_FILE).map((l) => l.path.join('.')),
+                handle.type.dirty(typeFile(handle)).map((l) => l.path.join('.')),
               )
               const query = filter.trim().toLowerCase()
               const groups = groupLeaves(leaves, overrideKeys, blockOrder).filter((g) =>
@@ -1637,9 +1634,9 @@ function Overlay() {
                         declared={[]}
                         optionsFor={typeOptions}
                         onChange={(leaf, value) =>
-                          handle.type?.set(TYPE_FILE, leaf.path, value)
+                          handle.type?.set(typeFile(handle), leaf.path, value)
                         }
-                        onReset={(leaf) => handle.type?.resetLeaf(TYPE_FILE, leaf.path)}
+                        onReset={(leaf) => handle.type?.resetLeaf(typeFile(handle), leaf.path)}
                       />
                     ))}
                   </div>
@@ -1657,7 +1654,7 @@ function Overlay() {
                       size="sm"
                       className="h-9 flex-1 rounded-full text-xs"
                       disabled={!typeDirty.size}
-                      onClick={() => handle.type?.reset(TYPE_FILE)}
+                      onClick={() => handle.type?.reset(typeFile(handle))}
                     >
                       Reset
                     </Button>

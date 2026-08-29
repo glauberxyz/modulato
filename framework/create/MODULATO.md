@@ -36,10 +36,11 @@ Three ideas carry everything:
 my-site/
   app.tsx                      ← the shell: persistent components + <PageOutlet/>
   intro.ts                     ← OPTIONAL shell intro (first-load choreography)
-  motion.ts                    ← OPTIONAL shell motion tokens
-  type.ts                      ← OPTIONAL typography tokens (the site's type system)
-  color.ts                     ← OPTIONAL color tokens (the site's palette)
   modulato.config.ts           ← content adapter, breakpoints, site-wide <head>
+  tokens/                      ← how the site is SET — all data, all live-editable
+    type.ts                    ← OPTIONAL typography tokens (the site's type system)
+    color.ts                   ← OPTIONAL color tokens (the site's palette)
+    motion.ts                  ← OPTIONAL shell motion tokens
   pages/
     home/                      ← route "/"        (the folder named `home` is the index)
       page.tsx                 ← REQUIRED — the page component (markup + behavior)
@@ -61,6 +62,21 @@ my-site/
   content/                     ← content source for @modulato/content-local
   .modulato/                   ← generated: content snapshot + types (commit it)
 ```
+
+**`tokens/` is how the site is set.** Type, colour and the shell's motion are
+one set — all data, all rendered into CSS custom properties or read by
+animations, all editable live in the Tweak overlay and written back to disk.
+They sit together because they are the same kind of thing, and apart from
+`modulato.config.ts` because that file runs in Node and may hold secrets, while
+these are read by the browser.
+
+Projects scaffolded before the folder existed keep `type.ts`, `color.ts` and
+`motion.ts` at the root, and that still works — nothing was removed. To move
+them: `mkdir -p tokens && git mv type.ts color.ts motion.ts tokens/`, repoint
+the imports that name them (`../motion` → `../tokens/motion`, `../../type` →
+`../../tokens/type`; a page's own `./motion` is its companion and does not
+move), and swap the three `tsconfig.json` `include` entries for `"tokens"`.
+`modulato check` warns until they are moved and prints those steps.
 
 **A page is a folder in `pages/` containing `page.tsx`. There is NO
 registration anywhere** — no route tables, no imports to add. Params use
@@ -536,7 +552,7 @@ NOT run check):
   use GSAP's built-in `elastic.out`/`bounce.out` names in GSAP tokens, and
   keep transitions on a cubic.
 
-## 7b. Typography tokens (`type.ts`)
+## 7b. Typography tokens (`tokens/type.ts`)
 
 Type is data, for the same reason motion is: a size or a leading is a number
 somebody wants to nudge while looking at the page, so it belongs in a file that
@@ -544,7 +560,7 @@ can be read, edited and written back — not spread across stylesheets as
 literals.
 
 ```ts
-// type.ts — at the project root, one per site
+// tokens/type.ts — one per site
 import { typography } from 'modulato'
 
 export default typography({
@@ -752,8 +768,8 @@ scaffolds `pages/styleguide/page.tsx` as one component call:
 
 ```tsx
 import { Styleguide } from 'modulato/styleguide'
-import type from '../../type'
-import colors from '../../color'
+import type from '../../tokens/type'
+import colors from '../../tokens/color'
 
 export default () => <Styleguide type={type} colors={colors} />
 ```
@@ -810,12 +826,12 @@ and it keeps working. To adopt the framework's, three steps —
 its stylesheet is still there, and the message carries these steps — so an
 agent that runs the gate is told what to do without being asked.
 
-## 7c. Color tokens (`color.ts`)
+## 7c. Color tokens (`tokens/color.ts`)
 
 The palette is data too, for the same reason type is.
 
 ```ts
-// color.ts — at the project root, one per site
+// tokens/color.ts — one per site
 import { colors } from 'modulato'
 
 export default colors({

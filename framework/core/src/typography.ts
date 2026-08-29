@@ -4,7 +4,7 @@ import { createTokenRegistry } from './registry'
 /**
  * Typography tokens: the type system of a site, as DATA.
  *
- *   // type.ts (project root)
+ *   // tokens/type.ts
  *   export default typography({
  *     fonts: { sans: 'ui-sans-serif, system-ui, sans-serif' },
  *     fluid: { from: 390, to: 1440 },
@@ -129,8 +129,19 @@ export interface TypographySpec {
   overrides?: Record<string, TypeOverride>
 }
 
-/** The one type.ts a project has; its id in the token registry. */
-export const TYPE_FILE = '/type.ts'
+/**
+ * The one type.ts a project has; its id in the token registry, and the path
+ * Tweak's Save writes back to.
+ *
+ * A site-wide token module lives in `tokens/`, but the root spelling predates
+ * that folder and still works, so where it is cannot be assumed here. The dev
+ * transform in @modulato/vite evaluates the file first and hands the resolved
+ * id to `__registerTypography` below; this is the fallback for the case where
+ * that transform did not run.
+ */
+export const TYPE_FILE = '/tokens/type.ts'
+
+let typeFile: string = TYPE_FILE
 
 /** The `<style>` element carrying the generated CSS, in SSR and in the client. */
 export const TYPE_STYLE_ID = '__modulato-type'
@@ -378,7 +389,7 @@ export function typeCss(
 
 /**
  * Dev-only typography registry — the same shape as the motion one, and read
- * by the same Save path (`POST /__modulato/tokens` writes `/type.ts` with an
+ * by the same Save path (`POST /__modulato/tokens` writes `tokens/type.ts` with an
  * AST-preserving edit, exactly as it writes a motion.ts).
  *
  * Separate from `motionRegistry` on purpose: the Tokens panel scopes its files
@@ -421,7 +432,7 @@ export function initTypography(
   const tokens = spec ?? null
   paint(tokens)
   if (!DEV || typeof window === 'undefined' || !tokens) return
-  typeRegistry.register(TYPE_FILE, tokens)
+  typeRegistry.register(typeFile, tokens)
   typeRegistry.subscribe(() => paint(tokens))
 }
 
@@ -435,8 +446,13 @@ export function initTypography(
  * which on first load is before boot() has supplied the breakpoints, and the
  * page would be painted once without its media queries and once with.
  */
-export function __registerTypography(spec: unknown): void {
+export function __registerTypography(spec: unknown, file?: string): void {
   if (!DEV || typeof window === 'undefined') return
   if (!isPlainObject(spec)) return
-  typeRegistry.register(TYPE_FILE, spec)
+  // The module evaluates before boot() runs — an import is evaluated before
+  // the body of whatever imported it — so recording the id here is what makes
+  // `initTypography`'s later register() land on the same registry entry
+  // rather than opening a second one under the wrong name.
+  if (file) typeFile = file
+  typeRegistry.register(typeFile, spec)
 }

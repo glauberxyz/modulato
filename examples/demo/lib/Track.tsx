@@ -1,7 +1,7 @@
 import { resolveTokens } from 'modulato'
 import { useMotion } from '@modulato/gsap'
 import { useRef, type ReactNode } from 'react'
-import site from '../motion'
+import site from '../tokens/motion'
 import './track.scss'
 
 /**

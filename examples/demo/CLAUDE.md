@@ -34,7 +34,7 @@ non-interactive and JSON-friendly — prefer it over doing things by hand:
   `eases` (a `cubic-bezier()` string), then used in tokens by name in GSAP
   files (`ease: 'swoosh'`) and as the cubic-bezier in transition files (WAAPI
   only speaks CSS). Never register a CustomEase by hand.
-- **Typography is data**, in `type.ts` at the project root: the two font
+- **Typography is data**, in `tokens/type.ts`: the two font
   stacks, the size scale, and every named style. Modulato renders it into CSS
   custom properties plus a `.type-<name>` class per style and inlines the
   result into every SSR response. `styles/typography.scss` is the SCSS
@@ -44,7 +44,7 @@ non-interactive and JSON-friendly — prefer it over doing things by hand:
   `npx modulato check` warns on the first and errors on a `--type-…` variable
   that names nothing. `/styles` is the specimen, read from the live values; the round **Aa**
   button beside the ✦ Tweak launcher edits any text where it sits.
-- **The palette is data**, in `color.ts` at the project root — each key is a
+- **The palette is data**, in `tokens/color.ts` — each key is a
   `--variable`, inlined into every SSR response. `styles/tokens.scss` keeps
   only the grid and the `.is-dark` surface switch, which points back at the
   palette's own `dark-*` entries rather than duplicating them.

@@ -1,6 +1,6 @@
 import { resolveTokens, useScroll, useTicker } from 'modulato'
 import { useRef } from 'react'
-import tokens from '../motion'
+import tokens from '../tokens/motion'
 import './scroll-bar.scss'
 
 /**

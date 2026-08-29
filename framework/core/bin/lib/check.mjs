@@ -4,6 +4,17 @@ import { scanRoutes, scanTransitions, slugRouteId } from './scan.mjs'
 
 const COMPANIONS = ['styles.scss', 'config.ts', 'intro.ts', 'motion.ts', 'server.ts']
 
+/**
+ * Where a site-wide token module lives: `tokens/<name>.ts`, or the legacy
+ * `<name>.ts` at the root, or nowhere. Root-relative, so it doubles as the
+ * label a message names the file by.
+ */
+function tokenFile(root, name) {
+  if (fs.existsSync(path.join(root, 'tokens', `${name}.ts`))) return `tokens/${name}.ts`
+  if (fs.existsSync(path.join(root, `${name}.ts`))) return `${name}.ts`
+  return null
+}
+
 // GSAP's built-in ease vocabulary — a declared ease may not shadow one of
 // these, since registering the name would clobber GSAP's own for the page.
 // Includes the legacy aliases (quad/cubic/quart/quint/strong/power0) that
@@ -261,20 +272,24 @@ function checkMotionKeywords(root, warn) {
  *    just not by accident.
  */
 function checkTypography(root, error, warn) {
-  const typeFile = path.resolve(root, 'type.ts')
-  if (!fs.existsSync(typeFile)) return
+  const rel = tokenFile(root, 'type')
+  if (!rel) return
+  const typeFile = path.resolve(root, rel)
+  // Messages name the file where it actually is: a project on the legacy root
+  // layout should not be told to look in tokens/.
+  const label = rel
 
   const src = stripComments(fs.readFileSync(typeFile, 'utf8'))
   const callAt = src.search(/\btypography\s*\(/)
   if (callAt === -1) {
-    error('type.ts', 'no typography({...}) call — the default export must be one, or nothing reads it.')
+    error(label, 'no typography({...}) call — the default export must be one, or nothing reads it.')
     return
   }
   const body = sliceBraces(src, src.indexOf('{', callAt))
   if (body === null) return
   const stylesBody = objectBody(body, 'styles')
   if (stylesBody === null) {
-    error('type.ts', 'no `styles` — a type system with no named styles emits no CSS.')
+    error(label, 'no `styles` — a type system with no named styles emits no CSS.')
     return
   }
   const styles = new Set()
@@ -288,14 +303,15 @@ function checkTypography(root, error, warn) {
     for (const entry of splitEntries(scaleBody)) {
       const m = entry.match(/^\s*(?:(['"])([^'"]+)\1|([\w$]+))\s*:/)
       if (m) steps.add(m[2] ?? m[3])
-      fluidByHand(entry, 'scale step', warn)
+      fluidByHand(entry, 'scale step', warn, label)
     }
   for (const entry of splitEntries(stylesBody)) {
     const name = entry.match(/^\s*(?:(['"])([^'"]+)\1|([\w$]+))\s*:/)
     // A quoted value is taken whole: a `clamp()` has commas inside it, so
     // stopping at the first one would cut the string in half.
     const size = entry.match(/\bsize\s*:\s*(?:(['"])([^'"]*)\1|([^,\n}]+))/)
-    if (name && size) fluidByHand(`${name[2] ?? name[3]}: ${size[2] ?? size[3]}`, 'style', warn)
+    if (name && size)
+      fluidByHand(`${name[2] ?? name[3]}: ${size[2] ?? size[3]}`, 'style', warn, label)
   }
 
   // The suffixes typeCss emits. Anything else after a style name is a typo in
@@ -519,7 +535,7 @@ const REM = 16
  * The ends are recoverable from a plain `clamp(A, …, B)`, so the warning says
  * what to write rather than only what is wrong.
  */
-function fluidByHand(entry, kind, warn) {
+function fluidByHand(entry, kind, warn, label) {
   const m = entry.match(/^\s*(?:(['"])([^'"]+)\1|([\w$]+))\s*:\s*([\s\S]+)$/)
   if (!m) return
   const key = m[2] ?? m[3]
@@ -531,8 +547,33 @@ function fluidByHand(entry, kind, warn) {
     ? `\`${key}: { min: ${px(ends[1], ends[2])}, max: ${px(ends[3], ends[4])} }\``
     : `\`${key}: { min: <px>, max: <px> }\``
   warn(
-    'type.ts',
+    label,
     `${kind} \`${key}\` is a hand-written fluid size. Write its two ends instead — ${fix} — and state the viewport range once in \`fluid\`. Modulato solves the clamp() from them, in rem, with the accessible intercept; a string encodes a range nobody wrote down and Tweak can name but not move.`,
+  )
+}
+
+/**
+ * The site-wide token modules belong in `tokens/`.
+ *
+ * `type.ts`, `color.ts` and the shell's `motion.ts` are one set — the three
+ * files that say how the site is set, all data, all editable in the overlay —
+ * and a folder says so where three loose files at the root do not. The root
+ * spelling still works, so this is a warning: nothing breaks, but a project
+ * that stays split between the two layouts is the one place a reader has to
+ * guess which file is live.
+ */
+function checkTokensFolder(root, warn) {
+  const stray = ['type', 'color', 'motion'].filter(
+    (name) =>
+      fs.existsSync(path.join(root, `${name}.ts`)) &&
+      !fs.existsSync(path.join(root, 'tokens', `${name}.ts`)),
+  )
+  if (!stray.length) return
+  const list = stray.map((name) => `${name}.ts`).join(', ')
+  const moves = stray.map((name) => `git mv ${name}.ts tokens/${name}.ts`).join(' && ')
+  warn(
+    'tokens/',
+    `${list} ${stray.length === 1 ? 'is' : 'are'} at the project root — move ${stray.length === 1 ? 'it' : 'them'} into \`tokens/\`: \`mkdir -p tokens && ${moves}\`. Then fix the imports that name ${stray.length === 1 ? 'it' : 'them'} (\`../motion\` becomes \`../tokens/motion\`, \`../../type\` becomes \`../../tokens/type\`) and add \`"tokens"\` to tsconfig.json's \`include\` in place of the ${stray.length === 1 ? 'entry' : 'entries'} for ${list}.`,
   )
 }
 
@@ -652,6 +693,7 @@ export function check(root) {
   checkLoaderRequest(root, error)
   checkTypography(root, error, warn)
   checkStyleguide(root, warn)
+  checkTokensFolder(root, warn)
 
   return { ok: errors.length === 0, errors, warnings }
 }

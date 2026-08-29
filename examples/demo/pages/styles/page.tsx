@@ -1,6 +1,6 @@
 import { Styleguide } from 'modulato/styleguide'
-import type from '../../type'
-import colors from '../../color'
+import type from '../../tokens/type'
+import colors from '../../tokens/color'
 
 /**
  * The specimen — the framework's styleguide page, fed this site's tokens.
