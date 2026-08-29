@@ -110,19 +110,6 @@ function wireScrollTrigger(lenis: { on: (e: 'scroll', cb: () => void) => void })
 }
 
 /**
- * Page-scoped GSAP. `create` runs inside a `gsap.context()` bound to the
- * page element: selector strings in tweens are scoped to the page, and every
- * animation/ScrollTrigger created inside is reverted automatically when the
- * page unmounts — Lisergia's manual destroy() bookkeeping, made structural.
- *
- *   useMotion(({ q, gsap }) => {
- *     gsap.from(q('.home__card'), { y: 80, stagger: 0.08 })
- *   })
- *
- * Return a function for extra teardown (observers, listeners); it runs before
- * the context reverts.
- */
-/**
  * Motions that have MOUNTED but whose create effect has not run yet.
  *
  * A page mounts during its own transition, and `useMotion` creates in a
@@ -184,6 +171,19 @@ function holdUntilActive(el: HTMLElement): void {
   }
 }
 
+/**
+ * Page-scoped GSAP. `create` runs inside a `gsap.context()` bound to the
+ * page element: selector strings in tweens are scoped to the page, and every
+ * animation/ScrollTrigger created inside is reverted automatically when the
+ * page unmounts — Lisergia's manual destroy() bookkeeping, made structural.
+ *
+ *   useMotion(({ q, gsap }) => {
+ *     gsap.from(q('.home__card'), { y: 80, stagger: 0.08 })
+ *   })
+ *
+ * Return a function for extra teardown (observers, listeners); it runs before
+ * the context reverts.
+ */
 export function useMotion(
   create: (scope: MotionScope) => void | (() => void),
   deps: unknown[] = [],
@@ -196,7 +196,6 @@ export function useMotion(
   const phaseRef = useRef(phase)
   phaseRef.current = phase
 
-  // Sync ScrollTrigger to this page's Lenis when both are present (idempotent).
   useEffect(() => {
     if (lenis) wireScrollTrigger(lenis)
   }, [lenis])

@@ -33,15 +33,15 @@ function names(routeId) {
   return { className, component, title }
 }
 
+function write(root, relPath, content, queued) {
+  queued.push({ relPath, content })
+}
+
 /**
  * Scaffolds are ATOMIC: every target path is checked before anything is
  * written, so a failed scaffold changes nothing — agents can retry with a
  * different name without cleaning up partial output first.
  */
-function write(root, relPath, content, queued) {
-  queued.push({ relPath, content })
-}
-
 function commit(root, queued) {
   for (const { relPath } of queued) {
     if (fs.existsSync(path.resolve(root, relPath)))

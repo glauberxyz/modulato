@@ -177,23 +177,6 @@ function checkEases(root, error) {
   }
 }
 
-/**
- * Validate the project's contracts. Every message says how to fix the
- * problem — errors teach, they don't just point.
- */
-
-/**
- * Every dotted path in a motion file's `keywords` export must name a real
- * group in that file's `motion({...})`.
- *
- * The keywords are what someone searching the Tweak overlay actually types —
- * a group is named for what it IS in the code, they search for what it DOES.
- * Nothing enforces the link at runtime: the overlay looks the path up, finds
- * nothing, and the group is simply unfindable by the word that was supposed
- * to find it. Renaming a group is exactly when that happens, and it happens
- * silently. A warning, not an error: a stale keyword costs discoverability,
- * never correctness.
- */
 function groupPathsIn(body, prefix = [], out = new Set()) {
   for (const entry of splitEntries(body)) {
     const m = entry.match(/^\s*(?:(['"])([^'"]+)\1|([\w$]+))\s*:\s*\{/)
@@ -207,6 +190,18 @@ function groupPathsIn(body, prefix = [], out = new Set()) {
   return out
 }
 
+/**
+ * Every dotted path in a motion file's `keywords` export must name a real
+ * group in that file's `motion({...})`.
+ *
+ * The keywords are what someone searching the Tweak overlay actually types —
+ * a group is named for what it IS in the code, they search for what it DOES.
+ * Nothing enforces the link at runtime: the overlay looks the path up, finds
+ * nothing, and the group is simply unfindable by the word that was supposed
+ * to find it. Renaming a group is exactly when that happens, and it happens
+ * silently. A warning, not an error: a stale keyword costs discoverability,
+ * never correctness.
+ */
 function checkMotionKeywords(root, warn) {
   const files = []
   const walk = (dir) => {
@@ -293,7 +288,15 @@ function checkTypography(root, error, warn) {
     for (const entry of splitEntries(scaleBody)) {
       const m = entry.match(/^\s*(?:(['"])([^'"]+)\1|([\w$]+))\s*:/)
       if (m) steps.add(m[2] ?? m[3])
+      fluidByHand(entry, 'scale step', warn)
     }
+  for (const entry of splitEntries(stylesBody)) {
+    const name = entry.match(/^\s*(?:(['"])([^'"]+)\1|([\w$]+))\s*:/)
+    // A quoted value is taken whole: a `clamp()` has commas inside it, so
+    // stopping at the first one would cut the string in half.
+    const size = entry.match(/\bsize\s*:\s*(?:(['"])([^'"]*)\1|([^,\n}]+))/)
+    if (name && size) fluidByHand(`${name[2] ?? name[3]}: ${size[2] ?? size[3]}`, 'style', warn)
+  }
 
   // The suffixes typeCss emits. Anything else after a style name is a typo in
   // its own right, but naming the known ones keeps this from firing on a
@@ -458,6 +461,85 @@ function sliceBraces(source, open) {
   return null
 }
 
+/**
+ * The styleguide page is the framework's now, and a project scaffolded before
+ * that still has the old hand-written one: ~200 lines of JSX plus a
+ * `styles.scss`, styled with the site's own type mixins and colour variables.
+ *
+ * Nothing breaks by keeping it — it is the project's own code reading the
+ * project's own tokens — so these are warnings, not errors. But nothing tells
+ * anyone it is out of date either: the stale stylesheet stays auto-imported
+ * and invisible, and every agent that implements a design re-skins the page
+ * along with the rest of `pages/`, which is the whole reason it moved into the
+ * framework. A project is allowed to keep its own page; just not by accident.
+ */
+function checkStyleguide(root, warn) {
+  // Any page folder, not just `styleguide/` — the demo's is `styles/`, and a
+  // project may have named it anything.
+  const pagesDir = path.resolve(root, 'pages')
+  if (!fs.existsSync(pagesDir)) return
+  const FIX =
+    "the styleguide ships with the framework now. Make page.tsx `import { Styleguide } from 'modulato/styleguide'` and render `<Styleguide type={type} colors={colors} />`, delete the page's styles.scss, and hide your shell on it with `body:has([data-modulato-styleguide]) .menu { display: none }` in styles/global.scss."
+  for (const entry of fs.readdirSync(pagesDir, { withFileTypes: true })) {
+    if (!entry.isDirectory()) continue
+    const dir = path.join(pagesDir, entry.name)
+    const page = path.join(dir, 'page.tsx')
+    if (!fs.existsSync(page)) continue
+    const source = fs.readFileSync(page, 'utf8')
+    if (source.includes('modulato/styleguide')) {
+      // Adopted the component but kept the old stylesheet beside it.
+      if (fs.existsSync(path.join(dir, 'styles.scss')))
+        warn(
+          `pages/${entry.name}/styles.scss`,
+          'the styleguide brings its own styles — this file is dead CSS targeting classes the page no longer renders. Delete it.',
+        )
+      continue
+    }
+    // The old scaffold, recognised by the classes it renders rather than by
+    // its folder name.
+    if (/className="guide|guide__specimen|type-\$\{name\}/.test(source))
+      warn(`pages/${entry.name}/page.tsx`, FIX)
+  }
+}
+
+/** rem in `type.ts` is px as designed; the file's own unit rule (see remFrom). */
+const REM = 16
+
+/**
+ * A size written as a `clamp()` (or a bare `vw`) instead of as its two ends.
+ *
+ * It is legal and passed through untouched, which is exactly why it needs
+ * saying: the commonest way into a Modulato project is porting one, and the
+ * thing being ported is a stylesheet full of solved clamps. Translating them
+ * across verbatim is the obvious move and the wrong one — the string encodes a
+ * viewport range nobody wrote down, and Tweak can name it but not move it,
+ * while `{ min, max }` is two numbers with a slider each and a `fluid` range
+ * stated once for the whole scale.
+ *
+ * The ends are recoverable from a plain `clamp(A, …, B)`, so the warning says
+ * what to write rather than only what is wrong.
+ */
+function fluidByHand(entry, kind, warn) {
+  const m = entry.match(/^\s*(?:(['"])([^'"]+)\1|([\w$]+))\s*:\s*([\s\S]+)$/)
+  if (!m) return
+  const key = m[2] ?? m[3]
+  const value = m[4]
+  if (!/clamp\(|[\d.]v[wh]\b/.test(value)) return
+  const ends = value.match(/clamp\(\s*([\d.]+)(rem|px)\s*,[^,]*,\s*([\d.]+)(rem|px)\s*\)/)
+  const px = (n, unit) => Math.round(Number(n) * (unit === 'rem' ? REM : 1))
+  const fix = ends
+    ? `\`${key}: { min: ${px(ends[1], ends[2])}, max: ${px(ends[3], ends[4])} }\``
+    : `\`${key}: { min: <px>, max: <px> }\``
+  warn(
+    'type.ts',
+    `${kind} \`${key}\` is a hand-written fluid size. Write its two ends instead — ${fix} — and state the viewport range once in \`fluid\`. Modulato solves the clamp() from them, in rem, with the accessible intercept; a string encodes a range nobody wrote down and Tweak can name but not move.`,
+  )
+}
+
+/**
+ * Validate the project's contracts. Every message says how to fix the
+ * problem — errors teach, they don't just point.
+ */
 export function check(root) {
   const errors = []
   const warnings = []
@@ -495,7 +577,6 @@ export function check(root) {
   }
   walk(pagesDir, '')
 
-  // Page components must have a default export.
   for (const route of routes) {
     const source = fs.readFileSync(path.join(route.dir, 'page.tsx'), 'utf8')
     if (!/export\s+default/.test(source))
@@ -570,6 +651,7 @@ export function check(root) {
   checkMotionKeywords(root, warn)
   checkLoaderRequest(root, error)
   checkTypography(root, error, warn)
+  checkStyleguide(root, warn)
 
   return { ok: errors.length === 0, errors, warnings }
 }

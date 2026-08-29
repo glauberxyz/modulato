@@ -61,7 +61,9 @@ plain number — the px the design says — and Modulato ships it in rem, so a
 reader's browser font-size setting reaches the text. A size that should grow
 with the viewport is its two ends, `{ min: 44, max: 90 }`, and Modulato solves
 the `clamp()`; never hand-write one, and never write `rem` or `px` in that
-file. In stylesheets, layout (padding, gaps, widths, offsets) is **px**, so
+file. **When porting a design system in, convert its solved `clamp()` strings
+to `{ min, max }` rather than pasting them across** — `modulato check` warns
+and names the two ends for you. In stylesheets, layout (padding, gaps, widths, offsets) is **px**, so
 text can grow without the boxes around it inflating to match. Use `em`/`ch`
 only where the length genuinely tracks the type it holds, and `clamp()`/`vw`
 where it should follow the viewport.
@@ -72,8 +74,15 @@ it. Renaming a color in the overlay rewrites every `var()` that reads it;
 renaming it by hand in the file does not. Theme overrides (`.is-dark { --bg: … }`)
 stay in CSS — that is a selector question, not a palette one.
 
-`pages/styleguide/` is a specimen of both, read from the live values —
-**delete the folder** (and its Menu entry) if the project does not want it.
+`pages/styleguide/` is a specimen of both, rendered by the framework's own
+`<Styleguide>` from `modulato/styleguide`. Its look is Modulato's, the same in
+every project — **never redesign it or give it a `styles.scss`**; the page file
+is one component call and stays that way. Motion is deliberately not on it:
+those numbers are worked on live in the overlay, against the animation they
+drive. Add sections of your own with `Section` from the same module. The shell
+hides itself on that page through the `body:has([data-modulato-styleguide])`
+rule in `styles/global.scss` — add new shell selectors to it. **Delete the
+folder** (and its Menu entry) if the project does not want it.
 
 In dev, the round **Aa** button beside the ✦ Tweak launcher turns the page into
 the control: click any text to edit the style it is set in, saving either to the

@@ -241,7 +241,6 @@ export default function modulato(options = {}) {
           lines.push(
             `boot({ routes, App, transitions, intros, behaviors, content, breakpoints, eases, typography, palette })`,
           )
-          // Tweak Mode overlay — dev only, and only when the site installed it.
           if (isServe && options.tweak !== false && resolvable('@modulato/tweak/overlay'))
             lines.push(
               `.then(() => import('@modulato/tweak/overlay')).then((m) => m.mount())`,
@@ -336,7 +335,7 @@ export default function modulato(options = {}) {
       }
 
       // Dev: point a project file's JSX runtime at our wrapper, so each host
-      // element it creates carries the file, line and column that authored it.
+      // element it creates carries the file and line that authored it.
       //
       // Rewriting the SPECIFIER here, rather than aliasing the module, is what
       // makes it work at all: an alias is applied before dependency
@@ -776,13 +775,8 @@ async function collectDevCss(server, entryFiles) {
 }
 
 /**
- * Scan pagesDir for intro.ts files and emit the intros manifest. A root
- * intro.ts (next to app.tsx) becomes the shell intro — first-load
- * choreography for the persistent shell, run alongside the page intro.
- */
-/**
  * A drop-in `react/jsx-dev-runtime` that stamps each host element with the
- * file, line and column that authored it.
+ * file and line that authored it.
  *
  * Dev's JSX runtime is already handed `{ fileName, lineNumber, columnNumber }`
  * for every element — React keeps it on the fiber, where only devtools can
@@ -797,9 +791,6 @@ async function collectDevCss(server, entryFiles) {
  * element is written, so a component that does not spread its props drops it —
  * here the attribute is only ever added to a HOST element, whose props go
  * straight to the DOM.
- *
- * The real runtime is imported by resolved path: importing it by name would
- * resolve back through the alias to this module.
  */
 function generateJsxDevRuntime(root) {
   // NAMED imports, and by SPECIFIER not path: the file behind it is CJS
@@ -838,6 +829,11 @@ function generateJsxDevRuntime(root) {
   ].join('\n')
 }
 
+/**
+ * Scan pagesDir for intro.ts files and emit the intros manifest. A root
+ * intro.ts (next to app.tsx) becomes the shell intro — first-load
+ * choreography for the persistent shell, run alongside the page intro.
+ */
 function generateIntros(pagesDir, root) {
   const entries = []
   const walk = (dir, prefix) => {

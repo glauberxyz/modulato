@@ -42,7 +42,7 @@ export interface ModulatoPluginOptions {
    */
   vercel?: boolean | VercelOutputOptions
   /**
-   * Stamp every host element with `data-modulato-source="/file.tsx:line:col"`
+   * Stamp every host element with `data-modulato-source="/file.tsx:line"`
    * in dev. Default: true.
    *
    * Dev's JSX runtime is already handed the source location for every element;

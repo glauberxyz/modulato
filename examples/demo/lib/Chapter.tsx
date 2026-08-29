@@ -29,22 +29,6 @@ const DIAGRAMS: Record<string, () => React.JSX.Element> = {
 }
 
 /**
- * A movement's heading, always over two lines.
- *
- * These sit in a narrow column beside their prose, and left to the line
- * breaker they came out as one, two, three or four lines depending on the
- * viewport and on how long the words happened to be — so the column changed
- * shape as you resized, and two headings of similar length could look like
- * different sizes of thing. Two lines is the shape that reads, so it is
- * decided here rather than discovered at layout time.
- *
- * The break goes at the word boundary that leaves the halves closest in
- * length. That is what `text-wrap: balance` optimizes for, but balance cannot
- * be told HOW MANY lines to balance across — it takes the count the width
- * gives it. Choosing the split makes the count the constant and lets the
- * width vary, which is the way round we want.
- */
-/**
  * Consecutive movements sharing a `track` id, gathered into one run. Anything
  * without a track is its own run of ordinary sections, so the page is a list
  * of runs rather than a list of movements — which is what lets a group of
@@ -62,6 +46,22 @@ function runs(movements: Movement[]): Array<{ track?: string; items: Array<[Move
   return out
 }
 
+/**
+ * A movement's heading, always over two lines.
+ *
+ * These sit in a narrow column beside their prose, and left to the line
+ * breaker they came out as one, two, three or four lines depending on the
+ * viewport and on how long the words happened to be — so the column changed
+ * shape as you resized, and two headings of similar length could look like
+ * different sizes of thing. Two lines is the shape that reads, so it is
+ * decided here rather than discovered at layout time.
+ *
+ * The break goes at the word boundary that leaves the halves closest in
+ * length. That is what `text-wrap: balance` optimizes for, but balance cannot
+ * be told HOW MANY lines to balance across — it takes the count the width
+ * gives it. Choosing the split makes the count the constant and lets the
+ * width vary, which is the way round we want.
+ */
 function MovementHeading({ text, className = 'movement__h col-side' }: { text: string; className?: string }) {
   const words = text.split(' ')
   let at = 0

@@ -220,7 +220,6 @@ export async function boot({
     )
   }
 
-  // ————— First-load intros —————
   // The server injected a <style> hiding the outlet (or the whole app when a
   // shell intro exists). Same discipline as transitions: the reveal — removing
   // that style tag — happens in the SAME task that starts the intro

@@ -42,10 +42,6 @@
   @include style('subhead');
 }
 
-@mixin plate-title {
-  @include style('plate-title');
-}
-
 @mixin statement {
   @include style('statement');
 }

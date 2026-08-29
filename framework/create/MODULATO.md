@@ -642,9 +642,21 @@ not a string you write:
   `clamp()` string is one value the overlay can name but not move — and on most
   sites the fluid steps are the headlines, i.e. exactly the sizes worth nudging.
 
-A hand-written `clamp()` still works and is still passed through untouched. It
-just encodes a viewport range its author never wrote down, which is the thing
-`fluid` exists to state.
+A hand-written `clamp()` is passed through untouched, and **`modulato check`
+warns about it**, naming the two ends to write instead:
+
+```
+type.ts  scale step `xs` is a hand-written fluid size. Write its two ends
+         instead — `xs: { min: 12, max: 20 }` — and state the viewport range
+         once in `fluid`.
+```
+
+This is aimed squarely at **porting**, which is the commonest way into a
+Modulato project: what is being ported is a stylesheet full of already-solved
+clamps, and translating them across verbatim is the obvious move and the wrong
+one. The string still renders, but it encodes a viewport range its author never
+wrote down — which is the thing `fluid` exists to state — and it arrives in the
+overlay as one value that can be named but not moved.
 
 **What Modulato generates.** `type.ts` is rendered to CSS and **inlined into
 every SSR response**, so the first painted glyph is already correct — there is
@@ -733,9 +745,70 @@ stylesheet without a reload. It's a mode, not a bare click handler, so links
 keep working while the tool is installed.
 
 **Given a design to implement, encode it in `type.ts` first.** A new size is a
-scale step; a new kind of text is a style. `create-modulato` scaffolds a
-`/styleguide` page that renders the styles, the scale and the color variables
-from the live values — delete `pages/styleguide/` if you don't want it.
+scale step; a new kind of text is a style.
+
+**The styleguide page is the framework's, not the site's.** `create-modulato`
+scaffolds `pages/styleguide/page.tsx` as one component call:
+
+```tsx
+import { Styleguide } from 'modulato/styleguide'
+import type from '../../type'
+import colors from '../../color'
+
+export default () => <Styleguide type={type} colors={colors} />
+```
+
+Its markup and chrome ship with Modulato — white page, shades of gray, the
+framework's own Inter, px throughout — so it looks the same in every project
+and there is nothing in the page file to restyle. **Do not redesign it, and do
+not give it a `styles.scss`.** It reads what it is handed and never restates
+it: the type styles — every authored field on one line, breakpoint blocks and
+the fluid range included, each named by its `--type-<style>-size` variable —
+the palette, the eases declared in `modulato.config.ts` as drawn curves, and
+the breakpoints. The specimens render through the site's real `.type-*`
+classes, so the page cannot disagree with the site.
+
+**Motion is deliberately not on it**, and neither is a table of the `scale`
+steps or a list of the `fonts` stacks. A step is the size of some style
+already and a stack is the face it is set in — both are on show in the
+specimens, and a second table of the same facts is a second place to read one
+thing. Motion numbers have no shape on a sheet: they are worked on live in the
+overlay (✦), against the animation they drive.
+
+The type specimens are set the way a foundry sets one: every style gets the
+**same paragraph** in a box of fixed height, so a big style fills it in two
+lines and a small one in a dozen, and the amount you can read is the size. The
+sheet says **nothing about what a style is for** — where a style gets used is
+the project's decision, and the setting is the specification. A project's own
+sections go in as children with `Section` from the same module and appear in
+the side nav. Delete `pages/styleguide/`
+(and its entry in `shell/Menu.tsx`) if the project does not want the page.
+
+**The shell steps aside on it.** The page's root carries
+`data-modulato-styleguide`, and the scaffolded `styles/global.scss` hides the
+menu on it with one rule — CSS, so it is already true in the SSR HTML and the
+shell never flashes before hydration:
+
+```scss
+body:has([data-modulato-styleguide]) .menu { display: none; }
+```
+
+Add your shell's other selectors to that rule (a cursor, a scroll bar); delete
+it if the site wants its nav on the styleguide. The sheet has its own "Back to
+site" link either way.
+
+**Upgrading a project scaffolded before this.** Nothing breaks by doing
+nothing: the old hand-written page is your own code reading your own tokens,
+and it keeps working. To adopt the framework's, three steps —
+
+1. replace `pages/styleguide/page.tsx` with the component call above;
+2. delete that page's `styles.scss` (the sheet brings its own);
+3. add the `body:has(…)` rule to `styles/global.scss`, naming your shell's
+   selectors.
+
+`config.ts` stays as it is. `modulato check` warns while either the old page or
+its stylesheet is still there, and the message carries these steps — so an
+agent that runs the gate is told what to do without being asked.
 
 ## 7c. Color tokens (`color.ts`)
 

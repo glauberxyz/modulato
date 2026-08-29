@@ -16,6 +16,15 @@ body {
   min-height: 100dvh;
 }
 
+// The styleguide is the framework's page, not the site's: the shell steps
+// aside there. `:has()` rather than a route check inside <Menu/>, so it is
+// already true in the SSR HTML — no frame of menu before hydration — and so
+// this stays the site's decision: delete the rule if you want the menu on
+// that page too. The sheet carries its own "Back to site" link.
+body:has([data-modulato-styleguide]) .menu {
+  display: none;
+}
+
 // Lenis (per-page smooth scroll) base styles.
 html.lenis, html.lenis body { height: auto; }
 .lenis.lenis-smooth { scroll-behavior: auto !important; }

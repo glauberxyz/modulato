@@ -11,6 +11,7 @@
   "exports": {
     ".": "./src/index.ts",
     "./client": "./src/client.tsx",
+    "./styleguide": "./src/styleguide/index.tsx",
     "./cli": "./bin/lib/index.mjs",
     "./config": {
       "types": "./src/config.ts",

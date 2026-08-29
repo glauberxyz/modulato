@@ -20,7 +20,6 @@ import { readFileSync, writeFileSync } from 'node:fs'
 const file = new URL('../src/overlay.css', import.meta.url)
 let css = readFileSync(file, 'utf8')
 
-// —— 1. un-gate @layer properties ——
 const layerStart = css.indexOf('@layer properties{')
 if (layerStart === -1) throw new Error('postprocess: no @layer properties block found')
 const supportsStart = css.indexOf('@supports', layerStart)
@@ -42,7 +41,6 @@ for (let i = bodyStart; i < css.length; i += 1) {
 if (bodyEnd === -1) throw new Error('postprocess: unbalanced braces in @supports block')
 css = css.slice(0, supportsStart) + css.slice(bodyStart + 1, bodyEnd) + css.slice(bodyEnd + 1)
 
-// —— 2. rem → px ——
 let remCount = 0
 css = css.replace(/(\d*\.?\d+)rem\b/g, (_, n) => {
   remCount += 1

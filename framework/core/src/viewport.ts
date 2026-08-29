@@ -94,6 +94,10 @@ export const viewportStore = {
   breakpointNames(): string[] {
     return [...Object.keys(breakpoints), 'desktop']
   },
+  /** The configured map itself, name → media query (the styleguide prints it). */
+  breakpoints(): Record<string, string> {
+    return { ...breakpoints }
+  },
 }
 
 /** Dev-only (Tweak Mode): preview tokens/motions under another breakpoint. */
@@ -129,8 +133,6 @@ export function useViewport(): Viewport {
     isDesktop: state.breakpoint === 'desktop',
   }
 }
-
-// ————— Responsive token resolution —————
 
 function isPlainObject(value: unknown): value is Record<string, unknown> {
   return !!value && typeof value === 'object' && !Array.isArray(value)
