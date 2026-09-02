@@ -979,7 +979,11 @@ export function meta({ props }) {
 
 `MetaResult` (returned by `meta()`) accepts `title`, `description`, `link[]`,
 `meta[]`, `script[]`. Head tags are SSR-only; `document.title` still updates
-on client navigation. Public files live in `public/` and are served from the
+on client navigation. `meta()` therefore runs on the server for the first
+paint and again on each client navigation, but **not during hydration** —
+the server's answer is already in the document, and the content snapshot is
+deliberately unfetched there. Keep it a pure function of `props`/`content`;
+side effects in it will not fire on first load. Public files live in `public/` and are served from the
 root (`public/favicon.svg` → `/favicon.svg`).
 
 ### Response headers (the `response` hook)

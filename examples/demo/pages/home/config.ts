@@ -16,11 +16,17 @@ export function load({ content, request }: LoadArgs) {
   return { chapters, canonical: `${url.origin}${url.pathname}` }
 }
 
-export function meta({ props }: LoadArgs & { props: ReturnType<typeof load> }) {
+// `meta()` reads the SNAPSHOT here, not just `props` — the case every other
+// config in this demo happens to avoid, and the one that broke: on hydration
+// the snapshot is deliberately empty, so a `meta()` reaching into it threw and
+// took `boot()` down with it, leaving a fully SSR'd page blank behind the
+// intro cloak. Keep at least one route reading `content` in `meta()`; it is
+// the documented way to build a title and nothing else covers it.
+export function meta({ props, content }: LoadArgs & { props: ReturnType<typeof load> }) {
+  const { chapters } = content as unknown as Content
   return {
     title: 'Halftone — how a printed photograph is made of dots',
-    description:
-      'A mini-site about the halftone process: where it came from, how the four screens work, and how it becomes a fragment shader. Built with Modulato.',
+    description: `A mini-site about the halftone process, in ${chapters.length} chapters: where it came from, how the four screens work, and how it becomes a fragment shader. Built with Modulato.`,
     link: props.canonical ? [{ rel: 'canonical', href: props.canonical }] : [],
   }
 }

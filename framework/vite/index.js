@@ -1,7 +1,7 @@
 import fs from 'node:fs'
 import { createRequire } from 'node:module'
 import path from 'node:path'
-import { transformWithEsbuild } from 'vite'
+import * as vite from 'vite'
 
 const require = createRequire(import.meta.url)
 
@@ -1036,6 +1036,28 @@ function defaultVercelRuntime(warn = console.warn) {
 }
 
 /**
+ * Strip TS types with whichever transform the installed Vite has.
+ *
+ * Vite 8 moved to rolldown/oxc: `transformWithOxc` is the current API and
+ * `transformWithEsbuild` is deprecated there AND now requires esbuild to be
+ * installed separately, so on a stock Vite 8 install it throws. Vite 6 and 7
+ * ship only the esbuild one. The peer range covers all three, so this picks
+ * at runtime rather than at import — a named import of `transformWithOxc`
+ * would fail to LINK on 6/7, which is why `vite` comes in as a namespace.
+ */
+async function stripTypes(source, file) {
+  if (typeof vite.transformWithOxc === 'function') {
+    const { code } = await vite.transformWithOxc(source, file, { lang: 'ts' })
+    return code
+  }
+  const { code } = await vite.transformWithEsbuild(source, file, {
+    loader: 'ts',
+    sourcemap: false,
+  })
+  return code
+}
+
+/**
  * Statically extract one literal string map (`breakpoints`, `eases`) from
  * modulato.config.ts — the config executes in Node for `modulato content`,
  * but the CLIENT only needs these plain literal objects, so they're read
@@ -1047,10 +1069,7 @@ async function extractConfigStringMap(root, ctx, key) {
   const file = path.join(root, 'modulato.config.ts')
   if (!fs.existsSync(file)) return null
   try {
-    const { code } = await transformWithEsbuild(fs.readFileSync(file, 'utf8'), file, {
-      loader: 'ts',
-      sourcemap: false,
-    })
+    const code = await stripTypes(fs.readFileSync(file, 'utf8'), file)
     const ast = ctx.parse(code)
     let config = null
     for (const node of ast.body) {
@@ -1077,7 +1096,14 @@ async function extractConfigStringMap(root, ctx, key) {
     }
     return Object.keys(map).length ? map : null
   } catch (error) {
-    console.warn(`[modulato] could not read ${key} from modulato.config.ts: ${error.message}`)
+    // NOT harmless: the client falls back to the framework defaults while SSR
+    // keeps reading the config directly, so the two disagree — a `phone` block
+    // in a token module silently stops matching. Say so.
+    console.warn(
+      `[modulato] could not read \`${key}\` from modulato.config.ts: ${error.message}\n` +
+        `  The client will use the framework's default ${key} instead of yours, ` +
+        `while SSR still uses yours — they will disagree.`,
+    )
     return null
   }
 }

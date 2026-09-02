@@ -50,7 +50,18 @@ export async function resolveEntry(
   const resolvedProps = (props ??
     (cfg.load ? await cfg.load(loadArgs) : {}) ??
     {}) as Record<string, unknown>
-  const meta = cfg.meta?.({ ...loadArgs, props: resolvedProps }) ?? {}
+  // Hydration (`props` given) does not run `meta()` at all. The server ran it
+  // and the answer is already in the document — the title in `<title>`, the
+  // rest in the head — so running it again computes a string nobody reads.
+  // It also cannot be run correctly here: the snapshot above is deliberately
+  // `{}` on first paint, and a `meta()` reading `content` is the documented
+  // way to build a title, so it would throw on the empty object and take
+  // `boot()` down with it. `Entry.meta` is only ever consumed on navigation
+  // (root.tsx applies `next.meta.title`), and a navigation resolves with
+  // `props === undefined` — so the entry that skips it here is the one entry
+  // whose meta is never read.
+  const meta =
+    props === undefined ? (cfg.meta?.({ ...loadArgs, props: resolvedProps }) ?? {}) : {}
 
   return {
     key,
