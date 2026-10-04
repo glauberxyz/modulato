@@ -731,6 +731,12 @@ Size steps through the `scale` — never a free pixel slider. That is the point
 of a closed scale: a site with six sizes reads as a system, and a site with a
 free slider ends up with forty-one sizes nobody chose.
 
+The sliders under the size select are not that slider: they move the step
+ITSELF — one for a fixed size, two side by side for a fluid pair's `min` and
+`max` — so every style set in that step moves with the one you clicked, and the
+card says which when there are others. A size that should differ for one
+heading is still a different step, picked from the select.
+
 Each edit picks a target first, so the preview is what the save will keep:
 
 - **the style** — every element set in it moves;

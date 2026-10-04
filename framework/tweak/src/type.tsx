@@ -1,4 +1,11 @@
-import { useCallback, useEffect, useRef, useState, useSyncExternalStore } from 'react'
+import {
+  useCallback,
+  useEffect,
+  useLayoutEffect,
+  useRef,
+  useState,
+  useSyncExternalStore,
+} from 'react'
 import type { ModulatoDevHandle } from 'modulato/client'
 import type { TokenValue } from 'modulato'
 import { Button } from './ui/button'
@@ -174,6 +181,7 @@ function resolve(x: number, y: number): Target | null {
 
 type Spec = {
   fonts?: Record<string, string>
+  fluid?: { from: number; to: number }
   scale?: Record<string, TokenValue | FluidPair>
   styles?: Record<string, Record<string, unknown>>
   overrides?: Record<string, Record<string, unknown>>
@@ -313,11 +321,12 @@ function Row({ label, children }: { label: string; children: React.ReactNode }) 
 }
 
 /**
- * Font size, as a pick from the project's scale — never a pixel slider.
+ * Font size, as a pick from the project's scale — never a free pixel value.
  *
  * That is the whole point of a scale: a site with six sizes stays legible as a
  * system, and a site with a free slider ends up with forty-one sizes that
- * nobody chose. A select rather than steppers, because a scale is a short list
+ * nobody chose. (The sliders under this are not that slider — see
+ * `SizeSliders`.) A select rather than steppers, because a scale is a short list
  * you choose FROM — stepping through it one press at a time is the same
  * decision made slowly, and it hides the other steps while you make it.
  *
@@ -366,6 +375,115 @@ function SizeSelect({
   )
 }
 
+/** What a row shows in place of a slider when the value is raw CSS. */
+function CssOnly() {
+  return (
+    <span className="flex h-9 min-w-0 flex-1 items-center rounded-full border border-border bg-background px-3.5 text-xs text-muted-foreground">
+      set in CSS — edit it in type.ts
+    </span>
+  )
+}
+
+/** The styles set in a scale step — at any width, so breakpoint blocks count. */
+function stylesOn(spec: Spec, step: string): string[] {
+  return Object.entries(spec.styles ?? {})
+    .filter(
+      ([, style]) =>
+        style.size === step ||
+        Object.values(style).some(
+          (block) =>
+            !!block && typeof block === 'object' && (block as { size?: unknown }).size === step,
+        ),
+    )
+    .map(([name]) => name)
+}
+
+function SizeSlider({
+  value,
+  title,
+  onChange,
+}: {
+  value: number
+  title?: string
+  onChange: (v: number) => void
+}) {
+  // Bounds are frozen at mount so the track never shifts mid-drag: half to
+  // double the size the card opened on.
+  const [range] = useState(() => {
+    const min = Math.max(1, Math.round(value / 2))
+    return { min, max: Math.max(min + 1, Math.round(value * 2)) }
+  })
+  return (
+    <Slider
+      className="min-w-0 flex-1"
+      title={title}
+      label={`${parseFloat(value.toFixed(2))}px`}
+      min={Math.min(range.min, value)}
+      max={Math.max(range.max, value)}
+      step={1}
+      value={[value]}
+      onValueChange={(v: number | readonly number[]) =>
+        onChange(Array.isArray(v) ? v[0] : (v as number))
+      }
+    />
+  )
+}
+
+/**
+ * The px behind the size, as sliders: one for a fixed size, two side by side
+ * for a fluid pair — its `min` and its `max`, the numbers the select prints as
+ * `44→90`.
+ *
+ * Not the free pixel slider the select above refuses to be. A style still only
+ * PICKS a step; these move the step itself (`scale.display.min`), so every
+ * style set in it moves together and the site keeps exactly as many sizes as
+ * it had. The popup went without them at first, on the theory that a scale is
+ * tuned once, in the panel's Typography tab — but the number that turns out to
+ * be wrong is the one on the heading you just clicked.
+ *
+ * A size written inline rather than named from the scale is edited where it
+ * is written; one that is raw CSS has no number to move.
+ */
+function SizeSliders({
+  value,
+  fluid,
+  onChange,
+}: {
+  value: unknown
+  fluid?: { from: number; to: number }
+  onChange: (end: 'min' | 'max' | null, v: number) => void
+}) {
+  // No size at all — the select above already says so.
+  if (value === undefined || value === null) return null
+  if (isFluid(value)) {
+    const from = value.from ?? fluid?.from
+    const to = value.to ?? fluid?.to
+    return (
+      <Row label="">
+        <SizeSlider
+          value={value.min}
+          title={from === undefined ? 'min' : `min — the size at a ${from}px viewport`}
+          onChange={(v) => onChange('min', v)}
+        />
+        <SizeSlider
+          value={value.max}
+          title={to === undefined ? 'max' : `max — the size at a ${to}px viewport`}
+          onChange={(v) => onChange('max', v)}
+        />
+      </Row>
+    )
+  }
+  return (
+    <Row label="">
+      {typeof value === 'number' ? (
+        <SizeSlider value={value} onChange={(v) => onChange(null, v)} />
+      ) : (
+        <CssOnly />
+      )}
+    </Row>
+  )
+}
+
 function NumberRow({
   label,
   value,
@@ -386,9 +504,7 @@ function NumberRow({
   if (value === null)
     return (
       <Row label={label}>
-        <span className="flex h-9 min-w-0 flex-1 items-center rounded-full border border-border bg-background px-3.5 text-xs text-muted-foreground">
-          set in CSS — edit it in type.ts
-        </span>
+        <CssOnly />
       </Row>
     )
   return (
@@ -427,6 +543,16 @@ function Popup({
   const [selector, setSelector] = useState(target.selectors[0] ?? '')
   const [status, setStatus] = useState('')
 
+  // The card's own height, measured rather than assumed: it depends on which
+  // rows and notes are showing, and a guessed constant left Save below the
+  // fold for text sitting low in the window.
+  const card = useRef<HTMLDivElement>(null)
+  const [height, setHeight] = useState(0)
+  useLayoutEffect(() => {
+    const measured = card.current?.offsetHeight ?? 0
+    if (measured !== height) setHeight(measured)
+  })
+
   const version = useSyncExternalStore(
     useCallback((cb: () => void) => handle.type?.subscribe(cb) ?? (() => {}), [handle]),
     () => handle.type?.version ?? 0,
@@ -462,6 +588,31 @@ function Popup({
     }
   }
 
+  // Where the NUMBERS behind the size live, which is what the sliders write —
+  // and rarely the style: `size` is usually a key, so the px are the scale
+  // step's, shared by every style naming it. Only a size written inline
+  // carries its own, on the style or on the class's override.
+  const size = read('size')
+  const step = typeof size === 'string' && spec?.scale?.[size] !== undefined ? size : null
+  const sizeValue = step ? spec?.scale?.[step] : size
+  const sizePath = step
+    ? ['scale', step]
+    : scope === 'selector' && overrideDef?.size !== undefined
+      ? ['overrides', selector, 'size']
+      : ['styles', target.style, 'size']
+
+  // Said out loud whenever a drag reaches past what the scope tab promises: a
+  // step can be shared by other styles, and is never one class's to move.
+  const sharing = step && spec ? stylesOn(spec, step).filter((s) => s !== target.style) : []
+  const sizeNote =
+    sizePath[0] === 'overrides' || !(typeof sizeValue === 'number' || isFluid(sizeValue))
+      ? ''
+      : scope === 'selector'
+        ? `Moves the ${step ? `“${step}” step` : `“${target.style}” style`} itself, not only ${selector}.`
+        : sharing.length
+          ? `Moves the “${step}” step — and ${sharing.join(', ')} with it.`
+          : ''
+
   const save = async () => {
     if (!handle.type || !dirty.length) return
     setStatus('saving…')
@@ -480,11 +631,12 @@ function Popup({
   const vw = document.documentElement.clientWidth
   const vh = document.documentElement.clientHeight
   const below = target.rect.bottom + 8
-  const top = below + 220 < vh ? below : Math.max(8, target.rect.top - 228)
+  const top = below + height + 8 <= vh ? below : Math.max(8, target.rect.top - height - 8)
   const left = Math.max(8, Math.min(target.rect.left, vw - POPUP_WIDTH - 8))
 
   return (
     <div
+      ref={card}
       className="pointer-events-auto absolute flex flex-col gap-2 rounded-2xl border bg-muted p-2 text-xs shadow-[0_24px_64px_-12px_rgba(0,0,0,0.3)]"
       style={{ top, left, width: POPUP_WIDTH }}
       data-version={version}
@@ -594,6 +746,19 @@ function Popup({
                 onChange={(key) => write('size', key)}
               />
             </Row>
+            {/* Keyed by where it writes, so picking another step re-freezes
+                the slider bounds around that step's own numbers. */}
+            <SizeSliders
+              key={sizePath.join('.')}
+              value={sizeValue}
+              fluid={spec.fluid}
+              onChange={(end, v) =>
+                handle.type?.set(typeFile(handle), end ? [...sizePath, end] : sizePath, v)
+              }
+            />
+            {sizeNote && (
+              <div className="pb-1 text-[11px] text-muted-foreground">{sizeNote}</div>
+            )}
             <NumberRow
               label="Leading"
               value={asNumber(read('leading'))}
