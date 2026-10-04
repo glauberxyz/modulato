@@ -1,5 +1,12 @@
 # @modulato/mcp
 
+## 0.1.10
+
+### Patch Changes
+
+- Updated dependencies [4889858]
+  - @modulato/tweak@0.9.0
+
 ## 0.1.9
 
 ### Patch Changes
