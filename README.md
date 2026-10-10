@@ -28,6 +28,7 @@ npm create modulato@latest my-site
 ## Demo
 - [Halftone](https://halftone.modulato.org) — a mini-site about the halftone shader, built with Modulato
 - [Glauber.org](https://glauber.org)
+- [enclose.dev](https://enclose.dev)
 
 Full reference: [docs/MODULATO.md](./docs/MODULATO.md) (ships inside every scaffolded project).
 
