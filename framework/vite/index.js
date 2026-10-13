@@ -422,7 +422,9 @@ export default function modulato(options = {}) {
             // costs nothing, and reading it off the namespace means a file
             // gains searchability by exporting one const, with no build step
             // and nothing to keep in sync.
-            `;__modulatoRegister(${JSON.stringify(rel)}, __modulatoSelf.default, __modulatoSelf.keywords)`,
+            // `options` likewise: the closed set a string token picks from,
+            // which the overlay turns into a select.
+            `;__modulatoRegister(${JSON.stringify(rel)}, __modulatoSelf.default, __modulatoSelf.keywords, __modulatoSelf.options)`,
             `;if (import.meta.hot) import.meta.hot.accept()`,
           ].join('\n'),
           map: null,

@@ -468,6 +468,23 @@ export default motion({
   what a rename leaves behind. A separate export, not a key inside `motion({…})`:
   the token tree is numbers-and-eases and goes straight to animation code, so a
   `keywords` key would become a row in the panel and widen the resolved type.
+- **Give a string token its choices.** A string token is free text in the
+  overlay unless it is an ease — the wrong control for a closed set, where a
+  typo is not an error but a silent fallback. Export an `options` map beside
+  the default, from a dotted TOKEN path to the values it may take, and the
+  overlay offers them as a select (the control an ease gets):
+
+  ```ts
+  export default motion({ flowers: { theme: 'bloom', speed: 0.07 } })
+
+  export const options: Record<string, string[]> = {
+    'flowers.theme': ['bloom', 'candy', 'mono'],
+  }
+  ```
+
+  A value in the file that is not in the list still shows, marked unknown.
+  `modulato check` warns when an entry names no token. A separate export for
+  the same reason `keywords` is one.
 - Non-token animation code still works — it just doesn't appear in the
   overlay. Convention nudges toward tokens.
 - Breakpoints are defined ONCE in `modulato.config.ts` (literal strings —

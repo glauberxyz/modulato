@@ -202,6 +202,27 @@ function groupPathsIn(body, prefix = [], out = new Set()) {
 }
 
 /**
+ * Every dotted path to a TOKEN in a motion body — an entry whose value is not
+ * a group — spelled the way the Tweak overlay looks one up: without the
+ * override block it sits in, so `flowers.reduced.theme` is `flowers.theme`.
+ */
+function tokenPathsIn(body, overrides, prefix = [], out = new Set()) {
+  for (const entry of splitEntries(body)) {
+    const m = entry.match(/^\s*(?:(['"])([^'"]+)\1|([\w$]+))\s*(?::\s*(\{)?|$)/)
+    if (!m) continue
+    const name = m[2] ?? m[3]
+    const here = overrides.has(name) ? prefix : [...prefix, name]
+    if (!m[4]) {
+      out.add(here.join('.'))
+      continue
+    }
+    const nested = sliceBraces(entry, m[0].length - 1)
+    if (nested !== null) tokenPathsIn(nested, overrides, here, out)
+  }
+  return out
+}
+
+/**
  * Every dotted path in a motion file's `keywords` export must name a real
  * group in that file's `motion({...})`.
  *
@@ -226,14 +247,26 @@ function checkMotionKeywords(root, warn) {
   }
   walk(root)
 
+  // An override block is not part of a token's name: the overlay drops
+  // `reduced` and the breakpoint names before it looks an `options` entry up.
+  const overrides = new Set(['reduced'])
+  const config = path.resolve(root, 'modulato.config.ts')
+  const bps = fs.existsSync(config)
+    ? objectBody(stripComments(fs.readFileSync(config, 'utf8')), 'breakpoints')
+    : null
+  for (const entry of bps === null ? [] : splitEntries(bps)) {
+    const m = entry.match(/^\s*(?:(['"])([^'"]+)\1|([\w$]+))\s*:/)
+    if (m) overrides.add(m[2] ?? m[3])
+  }
+
   for (const abs of files) {
     const src = stripComments(fs.readFileSync(abs, 'utf8'))
     // `export const keywords: Record<string, string[]> = {` — the annotation
     // sits between the name and the brace, so this cannot use objectBody(),
     // which looks for `name: {`.
     const kwAt = src.search(/export\s+const\s+keywords\b/)
-    if (kwAt === -1) continue
-    const kw = sliceBraces(src, src.indexOf('{', kwAt))
+    if (kwAt === -1 && !/export\s+const\s+options\b/.test(src)) continue
+    const kw = kwAt === -1 ? '' : sliceBraces(src, src.indexOf('{', kwAt))
     if (kw === null) continue
     const callAt = src.search(/\bmotion\s*\(/)
     if (callAt === -1) continue
@@ -249,6 +282,22 @@ function checkMotionKeywords(root, warn) {
         warn(
           rel,
           `keywords entry "${dotted}" names no group in this file — a rename left it dangling, so nothing it lists will find anything in the Tweak overlay. Point it at a real group or drop it.`,
+        )
+    }
+
+    // `options` is the same kind of link, one level down: each entry names a
+    // TOKEN. Dangling, the token is quietly a text box again.
+    const optAt = src.search(/export\s+const\s+options\b/)
+    const opt = optAt === -1 ? null : sliceBraces(src, src.indexOf('{', optAt))
+    const tokens = opt === null ? null : tokenPathsIn(tokenBody, overrides)
+    for (const entry of opt === null ? [] : splitEntries(opt)) {
+      const m = entry.match(/^\s*(?:(['"])([^'"]+)\1|([\w$]+))\s*:/)
+      if (!m) continue
+      const dotted = m[2] ?? m[3]
+      if (!tokens.has(dotted))
+        warn(
+          rel,
+          `options entry "${dotted}" names no token in this file — a rename left it dangling, so the Tweak overlay shows that token as free text again. Point it at a real token or drop it.`,
         )
     }
   }
