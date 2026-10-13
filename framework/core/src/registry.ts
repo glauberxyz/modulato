@@ -28,6 +28,8 @@ interface TokenEntry {
   original: Record<string, unknown>
   /** Search terms per group, from the file's optional `keywords` export. */
   keywords: Record<string, string[]>
+  /** The choices per string token, from the file's optional `options` export. */
+  options: Record<string, string[]>
 }
 
 function clone<T>(value: T): T {
@@ -128,6 +130,20 @@ function assignInPlace(target: Record<string, unknown>, next: Record<string, unk
  * numbers-and-eases, `resolveTokens` hands it straight to animation code, and a
  * `keywords` key would become a row in the panel, widen the resolved type, and
  * need special-casing at every consumer.
+ *
+ * A token file may also export `options`: a map from a dotted TOKEN path to
+ * the values that token may take.
+ *
+ *     export const options = { 'flowers.theme': ['bloom', 'candy', 'mono'] }
+ *
+ * A string token is free text in the overlay unless it is an ease, and free
+ * text is the wrong control for a closed set: a typo is not an error, it is a
+ * silent fallback to whatever the code does with a name it does not know.
+ * Declared here, the overlay offers the set as a select — the same control an
+ * ease gets. A separate export for the same reason `keywords` is one: the
+ * token tree goes straight to animation code and must stay values only.
+ *
+ * Same shape as `keywords`, so the same normalizer reads both.
  */
 function normalizeKeywords(input: unknown): Record<string, string[]> {
   if (!input || typeof input !== 'object') return {}
@@ -141,10 +157,11 @@ function normalizeKeywords(input: unknown): Record<string, string[]> {
 
 export interface TokenRegistry {
   readonly version: number
-  register(file: string, tokens: unknown, keywords?: unknown): void
+  register(file: string, tokens: unknown, keywords?: unknown, options?: unknown): void
   list(): { file: string; tokens: Record<string, unknown> }[]
   leaves(file: string): TokenLeaf[]
   keywords(file: string): Record<string, string[]>
+  options(file: string): Record<string, string[]>
   set(file: string, path: string[], value: TokenValue): void
   dirty(file: string): TokenLeaf[]
   reset(file: string): void
@@ -174,9 +191,10 @@ export function createTokenRegistry(): TokenRegistry {
      * lets an edit in the editor reach an already-mounted animation, or an
      * already-painted stylesheet, without a reload.
      */
-    register(file, tokens, keywords) {
+    register(file, tokens, keywords, options) {
       if (!tokens || typeof tokens !== 'object') return
       const words = normalizeKeywords(keywords)
+      const choices = normalizeKeywords(options)
       const existing = registry.get(file)
       if (existing) {
         if (existing.tokens !== tokens) {
@@ -184,6 +202,7 @@ export function createTokenRegistry(): TokenRegistry {
           existing.original = clone(tokens) as Record<string, unknown>
         }
         existing.keywords = words
+        existing.options = choices
         emit()
         return
       }
@@ -192,6 +211,7 @@ export function createTokenRegistry(): TokenRegistry {
         tokens: tokens as Record<string, unknown>,
         original: clone(tokens) as Record<string, unknown>,
         keywords: words,
+        options: choices,
       })
       emit()
     },
@@ -205,6 +225,10 @@ export function createTokenRegistry(): TokenRegistry {
     /** Search terms per dotted group path — see `normalizeKeywords`. */
     keywords(file) {
       return registry.get(file)?.keywords ?? {}
+    },
+    /** Choices per dotted token path — see `normalizeKeywords`. */
+    options(file) {
+      return registry.get(file)?.options ?? {}
     },
     set(file, path, value) {
       const entry = registry.get(file)

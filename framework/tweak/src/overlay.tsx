@@ -1465,6 +1465,17 @@ function Overlay() {
                   (fileKeywords[g.path.join('.')] ?? []).some((w) =>
                     w.toLowerCase().includes(query),
                   )
+                // A string token whose file declares its choices (`options`)
+                // is a select, like an ease, not a text box. Looked up without
+                // the override block's key, so `reduced: { theme }` gets the
+                // same list as the `theme` it overrides. Optional call: an
+                // older core has no `options()`.
+                const fileOptions = handle.tokens.options?.(file) ?? {}
+                const motionOptions = (leaf: TokenLeaf) => {
+                  if (typeof leaf.value !== 'string') return null
+                  const list = fileOptions[leaf.path.filter((seg) => !overrideKeys.has(seg)).join('.')]
+                  return list?.length ? list.map((value) => ({ label: value, value })) : null
+                }
                 const groups = groupLeaves(leaves, overrideKeys, blockOrder)
                 const groupVisible = (g: TokenGroup) =>
                   fileHit ||
@@ -1501,6 +1512,7 @@ function Overlay() {
                           query={query}
                           groupHit={fileHit || keywordHit(group)}
                           declared={declaredEases}
+                          optionsFor={motionOptions}
                           onChange={(leaf, value) => {
                             handle.tokens.set(file, leaf.path, value)
                             queueReplay()

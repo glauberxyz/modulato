@@ -33,9 +33,14 @@ export const motionRegistry = createTokenRegistry()
  * Called by the @modulato/vite dev transform when a motion.ts evaluates
  * (first load AND every HMR re-evaluation).
  */
-export function __registerMotion(file: string, tokens: unknown, keywords?: unknown): void {
+export function __registerMotion(
+  file: string,
+  tokens: unknown,
+  keywords?: unknown,
+  options?: unknown,
+): void {
   if (!DEV || typeof window === 'undefined') return
-  motionRegistry.register(file, tokens, keywords)
+  motionRegistry.register(file, tokens, keywords, options)
 }
 
 let speed = 1
