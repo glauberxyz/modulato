@@ -1,5 +1,13 @@
 # @modulato/mcp
 
+## 0.1.11
+
+### Patch Changes
+
+- Updated dependencies [76c63da]
+  - modulato@0.14.0
+  - @modulato/tweak@0.10.0
+
 ## 0.1.10
 
 ### Patch Changes
