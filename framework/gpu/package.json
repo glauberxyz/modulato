@@ -1,6 +1,6 @@
 {
   "name": "@modulato/gpu",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "GPU passes for Modulato: WGSL on WebGPU, GLSL on WebGL2, hot-swapped shaders and uniforms driven by tokens.",
   "license": "MIT",
   "homepage": "https://github.com/glauberxyz/modulato#readme",
