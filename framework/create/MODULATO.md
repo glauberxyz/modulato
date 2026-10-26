@@ -1444,7 +1444,8 @@ fragment })`, or to a pass with `gpu.texture(await loadImage(logo.url))`.
 
 **`?points`** — an outline sampled every `pitch` pixels of arc length, for
 particles and morphs: `[x, y, x, y, …]`, y down, origin at the shape's
-top-left. From an SVG (viewBox units, or `size` px on the longer side) or a
+top-left. A closed outline is divided evenly — the pitch rounded to fit its
+length — so no two points crowd where it closes. From an SVG (viewBox units, or `size` px on the longer side) or a
 font — `.ttf`, `.otf`, `.woff`, with `text` laid out at `size` px (default
 100). Fonts are read by `opentype.js`, which the PROJECT installs as a dev
 dependency (`npm i -D opentype.js`); it runs at build time and never ships.

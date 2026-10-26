@@ -551,16 +551,30 @@ function png(width, height, gray) {
 
 // ── points ──────────────────────────────────────────────────────────────
 
-/** Walk each contour and drop a point every `pitch` units of arc length. */
+/**
+ * Walk each contour and drop a point every `pitch` units of arc length. A
+ * closed contour divides its length evenly instead — the pitch rounded to
+ * fit — or the last point crowds the first where the outline closes.
+ */
 function sample(contours, pitch) {
   const out = []
   for (const c of contours) {
     const p = c.points
     const n = p.length / 2
     if (n < 2) continue
-    const count = c.closed ? n : n - 1
-    let carry = 0
+    const closed = c.closed || n > 2
+    const count = closed ? n : n - 1
+    let total = 0
     for (let k = 0; k < count; k++) {
+      const j = (k + 1) % n
+      total += Math.hypot(p[j * 2] - p[k * 2], p[j * 2 + 1] - p[k * 2 + 1])
+    }
+    if (!total) continue
+    const step = closed ? total / Math.max(1, Math.round(total / pitch)) : pitch
+    const wanted = closed ? Math.round(total / step) : Math.floor(total / step) + 1
+    let carry = 0
+    let placed = 0
+    for (let k = 0; k < count && placed < wanted; k++) {
       const j = (k + 1) % n
       const ax = p[k * 2]
       const ay = p[k * 2 + 1]
@@ -568,9 +582,10 @@ function sample(contours, pitch) {
       const dy = p[j * 2 + 1] - ay
       const len = Math.hypot(dx, dy)
       let t = carry
-      while (t <= len) {
+      while (t <= len && placed < wanted) {
         out.push(ax + (dx * t) / (len || 1), ay + (dy * t) / (len || 1))
-        t += pitch
+        placed++
+        t += step
       }
       carry = t - len
     }

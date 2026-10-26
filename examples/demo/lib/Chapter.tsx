@@ -18,6 +18,7 @@ import { SeparationDiagram } from './diagrams/SeparationDiagram'
 import { NeighborDiagram } from './diagrams/NeighborDiagram'
 import { InkDiagram } from './diagrams/InkDiagram'
 import { RulingDiagram } from './diagrams/RulingDiagram'
+import { ShapeDiagram } from './diagrams/ShapeDiagram'
 import { PlaneImg } from './PlaneImg'
 import './chapter.scss'
 
@@ -27,6 +28,7 @@ const DIAGRAMS: Record<string, () => React.JSX.Element> = {
   neighbors: NeighborDiagram,
   ink: InkDiagram,
   ruling: RulingDiagram,
+  shape: ShapeDiagram,
 }
 
 /**

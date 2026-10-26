@@ -280,6 +280,15 @@
             "A dot at high coverage grows past its own cell. Ask only that cell and the dots get chopped off square at the walls, and the image can never reach solid black. Switch this diagram to one-by-one and drag coverage up to watch it happen."
           ],
           "note": "The shader is Paper Design’s HalftoneCmyk, used verbatim under Apache-2.0 — the only change is the input, pointed at a live raymarched scene instead of a still photograph. Everything it was built from is in the sources below."
+        },
+        {
+          "kind": "diagram",
+          "diagram": "shape",
+          "heading": "Any shape is a distance test",
+          "body": [
+            "A halftone dot is the simplest distance field there is: the distance to one point, thresholded. Nothing in the test needs the shape to be a point. Measure the distance to the edge of any outline instead — here, the smile from the front page, cut as a stencil — and the same threshold prints it, at any size, with an edge as sharp as the screen allows.",
+            "Measuring distance to an outline is the expensive part, so this site does it once, when it is built, and ships the answer as an image: every pixel holds how far it is from the edge, and the shader only reads it. Switch to Dots and the same outline, sampled into evenly spaced points at build time, prints as a screen that follows the shape rather than a grid."
+          ]
         }
       ],
       "sources": [
