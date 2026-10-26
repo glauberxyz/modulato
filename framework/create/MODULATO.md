@@ -1214,9 +1214,10 @@ GLSL on WebGL2, one API.** A pass given both languages runs whichever the
 browser has. Shader files hot-swap in place, uniforms take a `motion.ts`
 token group as-is, and nothing it creates outlives the component.
 
-Scope today: fragment passes, chained through offscreen targets. No meshes,
-instancing, blending or compute — a scene that needs those stays on its own
-engine (the recipe above).
+Two levels: **passes** — a fragment shader on a canvas you place — and
+**planes** — page elements the GPU draws where they stand (below). No meshes,
+instancing or compute — a scene that needs those stays on its own engine (the
+recipe above).
 
 ```sh
 npm i @modulato/gpu
@@ -1281,7 +1282,9 @@ An unknown name warns once in dev.
 | `gpu.pass({ fragment, target?, vertex? })` | `→ Promise<Pass>`. `fragment` is a shader or `{ wgsl, glsl }`. `target` draws offscreen. `vertex` is a GLSL vertex shader for a fragment that expects something other than `v_uv` (it must take `a_position`). |
 | `pass.set(name, value)` / `pass.set(values)` | Uniforms, chainable. Kept across hot reloads. |
 | `pass.texture(name, texture)` | Bind a texture or target. |
-| `pass.draw()` | Resize if the canvas changed, recompile if the shader changed, draw. Every draw covers the whole target. |
+| `pass.draw({ rect?, clip? })` | Resize if the canvas changed, recompile if the shader changed, draw. With no `rect` (and no blending) it replaces the whole target; a `rect` (CSS px from the canvas's top-left) draws into just that box, `uv` 0→1 across it, over what is there. `clip` is a scissor, same units. A pass can be drawn many times a frame; each draw uses the uniforms set just before it. |
+| `gpu.pass({ …, blend: 'alpha' })` | Composite over what is there (source-over). The shader must output PREMULTIPLIED color — `vec4(rgb * a, a)`. |
+| `gpu.clear()` | Clear the canvas to transparent — the start of a frame of rect draws. |
 | `pass.error` | The current compile error, or `null`. |
 | `gpu.texture(source, { filter, wrap, mipmaps, flipY })` | From an image, canvas, video, `ImageBitmap` or raw `{ width, height, data }` RGBA bytes. `.update(source)` re-uploads — same size is cheap. `mipmaps: true` keeps an image sharp when drawn smaller than it is. |
 | `gpu.target({ scale, filter })` | Render-to-texture, sized from the canvas (`scale` × backing store) and resized with it. Contents don't survive a resize — redraw. |
@@ -1325,6 +1328,93 @@ resolves a PNG data URL of the next frame drawn there; it marks the surface
 dirty, so a loop that checks `gpu.dirty` draws one.
 `?gpu=webgl2` or `?gpu=webgpu` in the page URL overrides every surface's
 backend — the quickest look at the fallback.
+
+### Planes — page elements drawn by the GPU
+
+A plane is an element that stays exactly where it is — server-rendered, in
+the accessibility tree, laid out by CSS, moved by your animations — while the
+GPU draws it, with a shader, wherever it is each frame. One `<GpuStage/>` in
+the shell draws every plane on the page:
+
+```tsx
+// app.tsx — once, so it survives navigation
+import { GpuStage } from '@modulato/gpu'
+<PageOutlet />
+<GpuStage />
+
+// any page
+import { usePlane } from '@modulato/gpu'
+import ripple from './ripple.wgsl'
+import rippleGl from './ripple.frag'
+
+const img = useRef<HTMLImageElement>(null)
+usePlane(img)       // drawn by the GPU, looks identical — and morphs sharp (below)
+usePlane(img, {     // or with a shader of your own
+  fragment: { wgsl: ripple, glsl: rippleGl },
+  uniforms: ({ time, pointer }) => ({ time, ...resolveTokens(tokens).ripple }),
+})
+return <img ref={img} src={cover} alt={title} />
+```
+
+Until the GPU has the picture — or with no stage, no WebGPU/WebGL2, or a
+cross-origin image served without CORS — the element is simply itself. Once
+it does, the DOM copy is hidden with `filter: opacity(0)` (NOT `opacity` or
+`visibility`, which your animations own) and `usePlane` returns `true`.
+
+**What the stage copies from the DOM, every frame:** the element's box
+(`getBoundingClientRect`, so transforms and `scale` count); its opacity times
+every ancestor's (a GSAP fade, a page crossfade); the clip of the viewport and
+of every ancestor whose `overflow` is not `visible` (masks, reveals,
+carousels); `object-fit` fill/cover/contain and `border-radius` (default
+shader). During a transition the page stacked on top covers the other page's
+planes, at its own opacity — the same stacking the DOM shows. All of it is
+read in `onLateFrame`, after every animation-frame callback (Lenis,
+`useTicker`, GSAP) and after layout, so a plane never trails its element by a
+frame. A frame where nothing moved is not redrawn, and with no planes on the
+page the stage does no per-frame work at all.
+
+**What it does not copy:** rotation and skew (a plane fills the element's
+bounding box), `clip-path`, `mask`, CSS `filter`, `object-position` (always
+centered), per-corner radii (the top-left one is used), and stacking among
+elements of one page (planes draw in document order). The stage sits at
+`z-index: 2`, OVER the pages (they paint opaque backgrounds), so text that
+must sit on top of a plane needs its own `position: relative; z-index: 3`,
+and shell UI meant to cover planes (a menu) needs a higher one than that.
+
+| `usePlane(ref, options)` | |
+|---|---|
+| `fragment` | The shader. Default: the element's image as CSS shows it. |
+| `texture` | What `image` samples: `'element'` (default for `<img>`, `<video>`, `<canvas>`), any texture source, or `null`. Any other element needs a `fragment`. |
+| `uniforms` | An object, or `({ time, delta, rect, pointer }) => object` called every frame — `time` on the motion clock, so Tweak's slow-mo slows it. |
+| `mipmaps` | Default `true`. |
+| `live` | Re-upload every frame (a `<canvas>` something else draws into). A playing `<video>` always is. |
+
+A plane's shader is a pass with these filled in by the stage — declare the
+ones you use, and output premultiplied color multiplied by `planeOpacity`, or
+page fades will not reach it:
+
+| uniform | |
+|---|---|
+| `planeSize` | the plane's size in canvas pixels |
+| `planeOpacity` | effective opacity, including what covers it |
+| `planeRadius` | `border-radius`, canvas pixels |
+| `planeFit` | `object-fit`: 0 fill, 1 cover, 2 contain |
+| `planePointer` | the pointer in the plane's `uv` (outside 0–1 when it is elsewhere) |
+| `image`, `imageSize` | the element's picture and its size in pixels |
+| `imageTo`, `imageToSize`, `planeMorph` | mid-flight: the destination's picture, and 0→1 |
+
+**`<Shared>` morphs are drawn by the GPU.** When a `<Shared>` element is a
+live plane, the clone `flipShared` flies is drawn on the stage with the
+plane's own shader — mipmapped, so the picture stays sharp at every size it
+passes through — and crossfades to the destination's image as it lands
+(`imageTo` by `planeMorph`, read off the clone's position, so it follows
+whatever easing the flight uses). Nothing to configure: `flipShared` announces
+each flight with a `modulato:flip` window event (`{ clone, pair }`), and the
+stage takes it from there. With a `modulato` older than the event, the clone
+simply flies as DOM.
+
+`onLateFrame(callback)` — the hook the stage draws in — is exported too: any
+canvas that mirrors the DOM wants the same moment.
 
 ### Migrating an existing canvas to `@modulato/gpu`
 
@@ -1376,6 +1466,8 @@ canvas.toDataURL('image/png')    // keep these — IndexedDB holds them across r
   moving them into `motion.ts` is a feature, so it is a separate ask.
 - **Keep draw-on-demand logic**, and add `|| gpu.dirty` to it — that is what
   replaces a hand-rolled `ResizeObserver` that forced a redraw.
+- **Planes are a new feature, not part of a port.** Never turn an existing
+  `<img>` into a plane, or add a `<GpuStage>`, while migrating a canvas.
 - Delete only plumbing the package now does: context creation, shader
   compile/link, the full-screen quad, uniform-location lookup, DPR resize,
   texture setup. If the old vertex shader did more than pass `v_uv`, keep it
@@ -1464,8 +1556,8 @@ human in the overlay and an agent over MCP always converge on the same file.
 
 Dev-page introspection: `window.__MODULATO__` exposes route, tokens, speed,
 replay functions, viewport forcing, and `tick()`.
-`window.__MODULATO_GPU__` lists live GPU surfaces and captures their frames
-(§11).
+`window.__MODULATO_GPU__` lists live GPU surfaces (the stage included) and
+captures their frames (§11).
 
 ## 14. Build & deploy
 

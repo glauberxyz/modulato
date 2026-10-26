@@ -7,15 +7,19 @@
  * way it edits a tween. The full reference is the GPU section of MODULATO.md.
  */
 export { createGpu, type SurfaceInfo } from './gpu'
-export { useGpu } from './react'
+export { GpuStage, type GpuStageProps, useGpu, usePlane } from './react'
+export { createStage, type PlaneFrame, type PlaneOptions, type Stage, type StageOptions } from './stage'
+export { onLateFrame } from './late'
 export { isShader } from './shader'
 export type {
   Backend,
+  DrawOptions,
   FragmentInput,
   Gpu,
   GpuOptions,
   Pass,
   PassOptions,
+  Rect,
   Shader,
   ShaderLang,
   ShaderSource,

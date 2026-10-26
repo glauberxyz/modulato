@@ -71,17 +71,29 @@ export async function createGpu(canvas: HTMLCanvasElement, options: GpuOptions =
   const wanted = override() ?? options.backend ?? 'auto'
 
   const captures: ((url: string) => void)[] = []
+  let captureQueued = false
   const surface: Surface = {
     width: canvas.width,
     height: canvas.height,
+    cssWidth: canvas.clientWidth,
+    cssHeight: canvas.clientHeight,
     dirty: true,
     drawn() {
-      if (!captures.length) return
-      const url = canvas.toDataURL('image/png')
-      for (const resolve of captures.splice(0)) resolve(url)
+      if (!captures.length || captureQueued) return
+      // A frame can be many draws (one per plane). A microtask runs after the
+      // last of them but still inside the task that drew, while the picture
+      // is still readable.
+      captureQueued = true
+      queueMicrotask(() => {
+        captureQueued = false
+        const url = canvas.toDataURL('image/png')
+        for (const resolve of captures.splice(0)) resolve(url)
+      })
     },
     resize() {
       const dpr = Math.min(window.devicePixelRatio || 1, maxDpr)
+      surface.cssWidth = canvas.clientWidth
+      surface.cssHeight = canvas.clientHeight
       const w = Math.max(1, Math.round(canvas.clientWidth * dpr))
       const h = Math.max(1, Math.round(canvas.clientHeight * dpr))
       if (canvas.width === w && canvas.height === h && surface.width === w && surface.height === h) return false
@@ -150,6 +162,10 @@ export async function createGpu(canvas: HTMLCanvasElement, options: GpuOptions =
       return surface.dirty
     },
     pass: (o) => b.pass(o),
+    clear: () => {
+      if (surface.resize()) b.resized()
+      b.clear()
+    },
     texture: (s, o) => b.texture(s, o),
     target: (o) => b.target(o),
     resize() {

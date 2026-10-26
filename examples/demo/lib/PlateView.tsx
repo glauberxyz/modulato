@@ -1,5 +1,6 @@
 import { Shared } from 'modulato'
 import type { Figure } from './content'
+import { PlaneImg } from './PlaneImg'
 import './plate-view.scss'
 
 /**
@@ -21,7 +22,7 @@ export function PlateView({ figure, chapter }: { figure: Figure; chapter: string
     <article className="plate" data-page={`${chapter}/${figure.slug}`}>
       <div className="plate__stage">
         <Shared id={`plate:${figure.slug}`}>
-          <img src={`/plates/${figure.slug}.jpg`} alt={figure.title} />
+          <PlaneImg src={`/plates/${figure.slug}.jpg`} alt={figure.title} />
         </Shared>
       </div>
 

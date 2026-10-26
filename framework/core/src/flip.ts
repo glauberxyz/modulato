@@ -23,6 +23,13 @@ export interface SharedPair {
   withinTrigger: boolean
 }
 
+/** `event.detail` of the `modulato:flip` window event `flipShared` fires. */
+export interface FlipEventDetail {
+  /** The element that flies — fixed-position, in <body>, gone when it lands. */
+  clone: HTMLElement
+  pair: SharedPair
+}
+
 /**
  * Find elements marked `data-shared` (via <Shared>) that exist on BOTH pages.
  * Call after the outgoing page is prepared, so both rects are in final
@@ -104,6 +111,12 @@ export async function flipShared(
   document.body.appendChild(clone)
   pair.from.style.visibility = 'hidden'
   pair.to.style.visibility = 'hidden'
+  // Announce the flight. Something that draws the shared element somewhere
+  // other than the DOM — an @modulato/gpu plane — follows the clone from here
+  // until it leaves the document. The clone is a copy of the original down to
+  // its inline styles, so a renderer that hid the original has hidden this
+  // too; it is that renderer's job to draw it.
+  window.dispatchEvent(new CustomEvent<FlipEventDetail>('modulato:flip', { detail: { clone, pair } }))
 
   if (delay > 0) await new Promise((resolve) => setTimeout(resolve, delay))
 

@@ -90,7 +90,7 @@ export type {
   TransitionEntry,
   TransitionsManifest,
 } from './transitions'
-export type { SharedPair } from './flip'
+export type { FlipEventDetail, SharedPair } from './flip'
 export type {
   RouteDef,
   RouteInfo,

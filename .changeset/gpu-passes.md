@@ -1,6 +1,7 @@
 ---
 '@modulato/gpu': minor
 '@modulato/vite': minor
+'modulato': minor
 'create-modulato': patch
 ---
 
@@ -32,6 +33,27 @@ useTicker((time) => pass.current?.set(resolveTokens(tokens).wash).set('time', ti
 - Dev only: `window.__MODULATO_GPU__` lists live surfaces with their errors
   and uniforms, and `capture()` returns a frame as PNG, so an agent can check
   work it cannot see. `?gpu=webgl2` forces the fallback.
+
+**Planes.** Put `<GpuStage/>` in the shell, and `usePlane(ref)` lets the GPU
+draw a page element wherever it is each frame. The element stays in the DOM,
+server-rendered and accessible, and is hidden only once the GPU has it. The
+stage copies:
+
+- the box, read after every rAF callback (Lenis, `useTicker`, GSAP) and after
+  layout, so a plane never trails its element;
+- the effective opacity;
+- `overflow` clipping;
+- `object-fit` and `border-radius`;
+- page stacking during transitions.
+
+Frames with nothing moving aren't redrawn, and a page without planes costs
+nothing.
+
+**`<Shared>` morphs on the GPU.** `flipShared` now fires a `modulato:flip`
+window event (`{ clone, pair }`; `modulato` minor). When the shared element
+is a live plane, the stage draws the flying clone with the plane's shader,
+mipmapped so it stays sharp at every size, and crossfades it to the
+destination's image as it lands.
 
 MODULATO.md §11 documents it, along with a migration guide for existing WebGL
 canvases. The guide is written for an agent: inventory first, port one canvas

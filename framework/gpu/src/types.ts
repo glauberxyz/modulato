@@ -96,6 +96,25 @@ export interface Target extends Texture {
   readonly scale: number
 }
 
+/** A rectangle in CSS pixels, from the canvas's top-left corner. */
+export interface Rect {
+  x: number
+  y: number
+  width: number
+  height: number
+}
+
+export interface DrawOptions {
+  /**
+   * Draw into this rectangle instead of the whole target. `uv` still runs
+   * 0→1 across it. A drawn rect paints over what is there; the rest of the
+   * target is untouched.
+   */
+  rect?: Rect
+  /** Nothing outside this rectangle is touched (a scissor). */
+  clip?: Rect
+}
+
 export interface PassOptions {
   fragment: FragmentInput
   /**
@@ -107,6 +126,12 @@ export interface PassOptions {
   vertex?: ShaderSource
   /** Draw into this instead of the canvas. */
   target?: Target
+  /**
+   * `'none'` (default) writes the shader's output as-is. `'alpha'` composites
+   * it over what is there, source-over — and expects PREMULTIPLIED output
+   * (`vec4(rgb * a, a)`), which is what keeps edges free of dark fringes.
+   */
+  blend?: 'none' | 'alpha'
 }
 
 export interface Pass {
@@ -119,8 +144,13 @@ export interface Pass {
   set(values: Readonly<Record<string, unknown>>): Pass
   /** Bind a texture or target to a sampler. A `u_` prefix is optional. */
   texture(name: string, texture: Texture): Pass
-  /** Draw a fullscreen triangle into the target, or the canvas. */
-  draw(): void
+  /**
+   * Draw into the target, or the canvas. With no `rect` and no blending it
+   * replaces the whole target; with either, it paints over what is there.
+   * One pass can be drawn many times a frame — each draw uses the uniforms
+   * set just before it.
+   */
+  draw(options?: DrawOptions): void
   /** The current compile or validation error, or `null`. */
   readonly error: string | null
   dispose(): void
@@ -157,6 +187,8 @@ export interface Gpu {
   pass(options: PassOptions): Promise<Pass>
   texture(source: TextureSource, options?: TextureOptions): Texture
   target(options?: TargetOptions): Target
+  /** Clear the canvas to transparent — the start of a frame of rect draws. */
+  clear(): void
   /** Match the backing store to the canvas's CSS size. Runs on every draw. */
   resize(): boolean
   /** Everything this surface created. The canvas itself is left alone. */

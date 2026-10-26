@@ -1,8 +1,11 @@
 import {
+  areaOf,
   type BackendImpl,
   collect,
   isData,
   type PassInfo,
+  PLANE_UNIFORMS,
+  scissorOf,
   sourceSize,
   type Surface,
   type UniformStore,
@@ -50,7 +53,8 @@ interface GPUDeviceLike {
     beginRenderPass(desc: Desc): {
       setPipeline(p: unknown): void
       setBindGroup(i: number, g: unknown): void
-      draw(n: number): void
+      setScissorRect(x: number, y: number, w: number, h: number): void
+      draw(vertexCount: number, instanceCount?: number, firstVertex?: number): void
       end(): void
     }
     finish(): unknown
@@ -86,6 +90,7 @@ const BUFFER_COPY_DST = 0x8
 const TEXTURE_COPY_DST = 0x2
 const TEXTURE_BINDING = 0x4
 const TEXTURE_RENDER = 0x10
+const STAGE_VERTEX = 0x1
 const STAGE_FRAGMENT = 0x2
 
 export function gpuNavigator(): NavigatorGPU | null {
@@ -121,8 +126,10 @@ export function requestDevice(): Promise<GPUDeviceLike | null> {
 }
 
 /**
- * The framework's vertex stage, the WGSL twin of the GLSL one: a triangle
- * that covers clip space, `uv` 0→1 left to right and BOTTOM to top.
+ * The framework's vertex stage, the WGSL twin of the GLSL one: a quad placed
+ * by `area` (clip-space left, bottom, right, top — the whole target unless a
+ * draw names a rect), `uv` 0→1 left to right and BOTTOM to top across it.
+ * `area` lives in group 1, which is the framework's; group 0 is the shader's.
  *
  * `vs_target` writes the same picture upside down. A render target's row 0 is
  * the top of what was drawn, and a texture's v = 0 is its row 0, so drawing
@@ -132,17 +139,34 @@ export function requestDevice(): Promise<GPUDeviceLike | null> {
  */
 const VERTEX = /* wgsl */ `
 struct VOut { @builtin(position) position: vec4f, @location(0) uv: vec2f }
+@group(1) @binding(0) var<uniform> area: vec4f;
+// Vertices 0–2: one triangle covering the area, for whole-target draws (the
+// geometry the GLSL side uses, so the two rasterize alike). 3–8: a quad, for
+// rect draws.
 fn corner(i: u32) -> vec2f {
-  var p = array<vec2f, 3>(vec2f(-1.0, -1.0), vec2f(3.0, -1.0), vec2f(-1.0, 3.0));
-  return p[i];
+  var c = array<vec2f, 9>(
+    vec2f(0.0, 0.0), vec2f(2.0, 0.0), vec2f(0.0, 2.0),
+    vec2f(0.0, 0.0), vec2f(1.0, 0.0), vec2f(0.0, 1.0),
+    vec2f(0.0, 1.0), vec2f(1.0, 0.0), vec2f(1.0, 1.0),
+  );
+  return c[i];
 }
 @vertex fn vs(@builtin(vertex_index) i: u32) -> VOut {
-  let p = corner(i);
-  return VOut(vec4f(p, 0.0, 1.0), p * 0.5 + 0.5);
+  let c = corner(i);
+  return VOut(vec4f(mix(area.xy, area.zw, c), 0.0, 1.0), c);
 }
 @vertex fn vs_target(@builtin(vertex_index) i: u32) -> VOut {
-  let p = corner(i);
-  return VOut(vec4f(p.x, -p.y, 0.0, 1.0), p * 0.5 + 0.5);
+  let c = corner(i);
+  let p = mix(area.xy, area.zw, c);
+  return VOut(vec4f(p.x, -p.y, 0.0, 1.0), c);
+}`
+
+/** A plain covering triangle, written flipped — for building mip levels. */
+const BLIT_VERTEX = /* wgsl */ `
+struct VOut { @builtin(position) position: vec4f, @location(0) uv: vec2f }
+@vertex fn vs(@builtin(vertex_index) i: u32) -> VOut {
+  var p = array<vec2f, 3>(vec2f(-1.0, -1.0), vec2f(3.0, -1.0), vec2f(-1.0, 3.0));
+  return VOut(vec4f(p[i].x, -p[i].y, 0.0, 1.0), p[i] * 0.5 + 0.5);
 }`
 
 const BLIT = /* wgsl */ `
@@ -175,6 +199,9 @@ export async function createWebGPU(
   context.configure({ device, format, alphaMode: alpha ? 'premultiplied' : 'opaque' })
 
   const vertexModule = device.createShaderModule({ code: VERTEX })
+  const areaLayout = device.createBindGroupLayout({
+    entries: [{ binding: 0, visibility: STAGE_VERTEX, buffer: { type: 'uniform' } }],
+  })
   const textures = new Set<GPUTex>()
   const targets = new Set<GPUTarget>()
   const passes = new Set<{ info(): PassInfo; dispose(): void }>()
@@ -205,7 +232,7 @@ export async function createWebGPU(
     blit ??= {
       pipeline: device!.createRenderPipeline({
         layout: 'auto',
-        vertex: { module: vertexModule, entryPoint: 'vs_target' },
+        vertex: { module: device!.createShaderModule({ code: BLIT_VERTEX }), entryPoint: 'vs' },
         fragment: {
           module: device!.createShaderModule({ code: BLIT }),
           entryPoint: 'main',
@@ -358,7 +385,46 @@ export async function createWebGPU(
     buffers: Map<number, { buffer: GPUHandle; data: ArrayBuffer }>
   }
 
-  async function compile(shader: Shader, intoTarget: boolean): Promise<Compiled | string> {
+  const PREMULTIPLIED_OVER = {
+    color: { srcFactor: 'one', dstFactor: 'one-minus-src-alpha', operation: 'add' },
+    alpha: { srcFactor: 'one', dstFactor: 'one-minus-src-alpha', operation: 'add' },
+  }
+
+  type Built = Omit<Compiled, 'buffers'>
+
+  /**
+   * Pipelines by source, shared between passes: a page of planes drawing the
+   * same shader compiles it once. Uniform buffers stay per pass (see
+   * compile), so what one plane sets never leaks into another. A hot edit
+   * is new source, so a new entry — the old one is simply never asked for.
+   */
+  const built = new Map<string, Promise<Built | string>>()
+
+  async function compile(
+    shader: Shader,
+    intoTarget: boolean,
+    blend: boolean,
+  ): Promise<Compiled | string> {
+    const key = `${intoTarget}|${blend}|${shader.code}`
+    let pending = built.get(key)
+    if (!pending) {
+      pending = build(shader, intoTarget, blend)
+      built.set(key, pending)
+    }
+    const result = await pending
+    if (typeof result === 'string') return result
+    const buffers: Compiled['buffers'] = new Map()
+    for (const b of result.reflection.bindings) {
+      if (b.kind !== 'uniform') continue
+      buffers.set(b.binding, {
+        buffer: device!.createBuffer({ size: b.byteSize, usage: BUFFER_UNIFORM | BUFFER_COPY_DST }),
+        data: new ArrayBuffer(b.byteSize),
+      })
+    }
+    return { ...result, buffers }
+  }
+
+  async function build(shader: Shader, intoTarget: boolean, blend: boolean): Promise<Built | string> {
     let reflection: Reflection
     try {
       reflection = reflect(shader.code, shader.id ?? 'WGSL')
@@ -379,9 +445,13 @@ export async function createWebGPU(
       })),
     })
     const pipeline = device!.createRenderPipeline({
-      layout: device!.createPipelineLayout({ bindGroupLayouts: [layout] }),
+      layout: device!.createPipelineLayout({ bindGroupLayouts: [layout, areaLayout] }),
       vertex: { module: vertexModule, entryPoint: intoTarget ? 'vs_target' : 'vs' },
-      fragment: { module, entryPoint: reflection.entry, targets: [{ format }] },
+      fragment: {
+        module,
+        entryPoint: reflection.entry,
+        targets: [blend ? { format, blend: PREMULTIPLIED_OVER } : { format }],
+      },
       primitive: { topology: 'triangle-list' },
     })
     const [info, failure] = await Promise.all([module.getCompilationInfo(), device!.popErrorScope()])
@@ -389,16 +459,7 @@ export async function createWebGPU(
     if (errors.length)
       return errors.map((m) => `${shader.id ?? 'WGSL'}:${m.lineNum}:${m.linePos} ${m.message}`).join('\n')
     if (failure) return failure.message
-
-    const buffers: Compiled['buffers'] = new Map()
-    for (const b of reflection.bindings) {
-      if (b.kind !== 'uniform') continue
-      buffers.set(b.binding, {
-        buffer: device!.createBuffer({ size: b.byteSize, usage: BUFFER_UNIFORM | BUFFER_COPY_DST }),
-        data: new ArrayBuffer(b.byteSize),
-      })
-    }
-    return { pipeline, layout, reflection, buffers }
+    return { pipeline, layout, reflection }
   }
 
   function release(c: Compiled) {
@@ -419,8 +480,15 @@ export async function createWebGPU(
     let compiled: Compiled | null = null
     let compiledAt = fragment.version
     let compiling = false
+    const blend = options.blend === 'alpha'
+    // The rect this pass draws into, rewritten before every draw.
+    const areaBuffer = device!.createBuffer({ size: 16, usage: BUFFER_UNIFORM | BUFFER_COPY_DST })
+    const areaGroup = device!.createBindGroup({
+      layout: areaLayout,
+      entries: [{ binding: 0, resource: { buffer: areaBuffer } }],
+    })
 
-    const first = await compile(fragment, !!into)
+    const first = await compile(fragment, !!into, blend)
     if (typeof first === 'string') {
       error = first
       console.error(`[modulato/gpu] ${first}`)
@@ -429,7 +497,7 @@ export async function createWebGPU(
     function recompile() {
       compiling = true
       compiledAt = fragment.version
-      void compile(fragment, !!into).then((next) => {
+      void compile(fragment, !!into, blend).then((next) => {
         compiling = false
         if (typeof next === 'string') {
           error = next
@@ -461,11 +529,16 @@ export async function createWebGPU(
       get error() {
         return error
       },
-      draw() {
+      draw(drawOptions = {}) {
         if (surface.resize()) for (const t of targets) t.allocate()
         if (fragment.version !== compiledAt && !compiling) recompile()
         if (!compiled) return
         const c = compiled
+        const width = into ? into.width : surface.width
+        const height = into ? into.height : surface.height
+        const scissor = drawOptions.clip ? scissorOf(drawOptions.clip, surface, width, height) : null
+        if (drawOptions.clip && !scissor) return
+        device!.queue.writeBuffer(areaBuffer, 0, new Float32Array(areaOf(drawOptions.rect, surface)).buffer)
 
         // Uniforms: every value the page set, written where the struct says.
         for (const [name, value] of values) {
@@ -487,7 +560,7 @@ export async function createWebGPU(
             for (let i = 0; i < field.size; i++)
               view[i] = field.kind === 'f32' ? numbers[i] : Math.round(numbers[i])
           }
-          if (!found) warnOnce(`${fragment.id ?? 'shader'} has no uniform \`${name}\`.`)
+          if (!found && !PLANE_UNIFORMS.has(name)) warnOnce(`${fragment.id ?? 'shader'} has no uniform \`${name}\`.`)
         }
         for (const { buffer, data } of c.buffers.values()) device!.queue.writeBuffer(buffer, 0, data)
 
@@ -509,23 +582,29 @@ export async function createWebGPU(
           return { binding: b.binding, resource: owner ? owner.sampler() : samplerFor({}, false) }
         })
         for (const [name] of bound)
-          if (!lookup(c.reflection.bindings, name, 'texture'))
+          if (!PLANE_UNIFORMS.has(name) && !lookup(c.reflection.bindings, name, 'texture'))
             warnOnce(`${fragment.id ?? 'shader'} has no texture \`${name}\`.`)
 
+        // Each draw is its own submission: a pass drawn several times in a
+        // frame (one per plane) gets the uniforms written just before it,
+        // because the queue runs writes and submits in order.
         const encoder = device!.createCommandEncoder()
         const rp = encoder.beginRenderPass({
           colorAttachments: [
             {
               view: into ? into.view() : context!.getCurrentTexture().createView(),
-              loadOp: 'clear',
+              loadOp: !drawOptions.rect && !blend ? 'clear' : 'load',
               storeOp: 'store',
               clearValue: [0, 0, 0, 0],
             },
           ],
         })
         rp.setPipeline(c.pipeline)
-        if (entries.length) rp.setBindGroup(0, device!.createBindGroup({ layout: c.layout, entries }))
-        rp.draw(3)
+        rp.setBindGroup(0, device!.createBindGroup({ layout: c.layout, entries }))
+        rp.setBindGroup(1, areaGroup)
+        if (scissor) rp.setScissorRect(scissor.x, scissor.y, scissor.width, scissor.height)
+        if (drawOptions.rect) rp.draw(6, 1, 3)
+        else rp.draw(3)
         rp.end()
         device!.queue.submit([encoder.finish()])
         // Only a draw onto the canvas puts a new frame on screen; a target is
@@ -547,6 +626,7 @@ export async function createWebGPU(
       dispose() {
         if (compiled) release(compiled)
         compiled = null
+        areaBuffer.destroy?.()
         passes.delete(self)
       },
     }
@@ -558,6 +638,22 @@ export async function createWebGPU(
     pass,
     texture,
     target,
+    clear() {
+      const encoder = device!.createCommandEncoder()
+      encoder
+        .beginRenderPass({
+          colorAttachments: [
+            {
+              view: context!.getCurrentTexture().createView(),
+              loadOp: 'clear',
+              storeOp: 'store',
+              clearValue: [0, 0, 0, 0],
+            },
+          ],
+        })
+        .end()
+      device!.queue.submit([encoder.finish()])
+    },
     resized() {
       for (const t of targets) t.allocate()
     },

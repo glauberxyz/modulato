@@ -21,12 +21,22 @@ export function Wash() {
 }
 ```
 
+**Planes.** Put `<GpuStage/>` in the shell, and `usePlane(ref)` lets the
+GPU draw a page element, wherever it is each frame. The element stays in the
+DOM, so it is still server-rendered, accessible and laid out by CSS, and is
+hidden only once the GPU has it. The stage copies the element's position,
+opacity, overflow clipping, `object-fit` and `border-radius`. During page
+transitions it copies the page stacking too, and it reads all of it after
+Lenis and GSAP have moved things that frame, so a plane never lags.
+`<Shared>` morphs between planes are drawn on the GPU, mipmapped so they stay
+sharp at every size.
+
 Opt in to shader-import types in `tsconfig.json`:
 `"types": ["vite/client", "@modulato/gpu/shaders"]`.
 
-Fragment passes only, for now — a scene with meshes or blending stays on its
-own engine. The full reference, including the step-by-step guide for
-migrating an existing WebGL canvas without changing a pixel, is §11 of
+No meshes, instancing or compute: a 3D scene stays on its own engine.
+
+The full reference, including the step-by-step guide for migrating an existing WebGL canvas without changing a pixel, is §11 of
 [MODULATO.md](https://github.com/glauberxyz/modulato/blob/main/docs/MODULATO.md).
 
 Part of [modulato](https://www.npmjs.com/package/modulato) — scaffold a site

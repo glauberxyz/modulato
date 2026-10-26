@@ -1,8 +1,11 @@
 import {
+  areaOf,
   type BackendImpl,
   collect,
   isData,
   type PassInfo,
+  PLANE_UNIFORMS,
+  scissorOf,
   sourceSize,
   type Surface,
   type UniformStore,
@@ -22,24 +25,27 @@ import type {
 } from './types'
 
 /**
- * The framework's vertex stage: one triangle that covers clip space, with
- * `v_uv` running 0→1 left to right and BOTTOM to top. A pass that brings
- * GLSL from an existing site usually expects exactly this.
+ * The framework's vertex stage: a quad placed by `u_modulatoArea` (clip-space
+ * left, bottom, right, top — the whole target unless a draw names a rect),
+ * with `v_uv` running 0→1 left to right and BOTTOM to top across it. A pass
+ * that brings GLSL from an existing site usually expects exactly this.
  */
 const VERTEX_300 = `#version 300 es
 in vec2 a_position;
+uniform vec4 u_modulatoArea;
 out vec2 v_uv;
 void main() {
   v_uv = a_position * 0.5 + 0.5;
-  gl_Position = vec4(a_position, 0.0, 1.0);
+  gl_Position = vec4(mix(u_modulatoArea.xy, u_modulatoArea.zw, v_uv), 0.0, 1.0);
 }`
 
 /** The same, for a GLSL ES 1.00 fragment shader (WebGL1-era, `gl_FragColor`). */
 const VERTEX_100 = `attribute vec2 a_position;
+uniform vec4 u_modulatoArea;
 varying vec2 v_uv;
 void main() {
   v_uv = a_position * 0.5 + 0.5;
-  gl_Position = vec4(a_position, 0.0, 1.0);
+  gl_Position = vec4(mix(u_modulatoArea.xy, u_modulatoArea.zw, v_uv), 0.0, 1.0);
 }`
 
 interface GLTexture extends Texture {
@@ -48,6 +54,8 @@ interface GLTexture extends Texture {
 
 interface Program {
   program: WebGLProgram
+  /** The framework's rect uniform; absent under a custom vertex shader. */
+  area: WebGLUniformLocation | null
   uniforms: Map<string, { location: WebGLUniformLocation; type: number }>
   /** Sampler name → texture unit. */
   samplers: Map<string, number>
@@ -64,7 +72,17 @@ export function createWebGL2(
 
   const triangle = gl.createBuffer()
   gl.bindBuffer(gl.ARRAY_BUFFER, triangle)
-  gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([-1, -1, 3, -1, -1, 3]), gl.STATIC_DRAW)
+  // Two shapes in one buffer. Vertices 0–2: ONE triangle covering clip space,
+  // for whole-target draws — the exact geometry GL code has always used, so a
+  // ported shader rasterizes bit-for-bit as it did (a two-triangle quad
+  // interpolates `v_uv` a hair differently along its diagonal). Vertices 3–8:
+  // a quad, for rect draws, where the area must be exact. A custom `vertex`
+  // shader gets these corners in `a_position` unchanged.
+  gl.bufferData(
+    gl.ARRAY_BUFFER,
+    new Float32Array([-1, -1, 3, -1, -1, 3, -1, -1, 1, -1, -1, 1, -1, 1, 1, -1, 1, 1]),
+    gl.STATIC_DRAW,
+  )
   const vao = gl.createVertexArray()
   gl.bindVertexArray(vao)
   gl.enableVertexAttribArray(0)
@@ -135,11 +153,11 @@ export function createWebGL2(
         const unit = samplers.size
         samplers.set(name, unit)
         gl.uniform1i(location, unit)
-      } else {
+      } else if (name !== 'u_modulatoArea') {
         uniforms.set(name, { location, type: active.type })
       }
     }
-    return { program, uniforms, samplers }
+    return { program, area: gl.getUniformLocation(program, 'u_modulatoArea'), uniforms, samplers }
   }
 
   function upload(prog: Program, name: string, value: UniformValue) {
@@ -303,7 +321,7 @@ export function createWebGL2(
       get error() {
         return error
       },
-      draw() {
+      draw(drawOptions = {}) {
         if (surface.resize()) for (const t of targets) t.allocate()
         // Hot reload: the shader object is the one the import handed us, and
         // dev re-evaluation bumps its version in place. Swap only on success —
@@ -325,26 +343,48 @@ export function createWebGL2(
         }
         if (!prog) return
         const into = options.target as GLTarget | undefined
+        const width = into ? into.width : surface.width
+        const height = into ? into.height : surface.height
+        const scissor = drawOptions.clip ? scissorOf(drawOptions.clip, surface, width, height) : null
+        if (drawOptions.clip && !scissor) return
         gl.bindFramebuffer(gl.FRAMEBUFFER, into ? into.framebuffer : null)
-        gl.viewport(0, 0, into ? into.width : surface.width, into ? into.height : surface.height)
+        gl.viewport(0, 0, width, height)
+        if (scissor) {
+          gl.enable(gl.SCISSOR_TEST)
+          // GL counts scissor rows from the bottom.
+          gl.scissor(scissor.x, height - scissor.y - scissor.height, scissor.width, scissor.height)
+        }
+        if (options.blend === 'alpha') {
+          gl.enable(gl.BLEND)
+          gl.blendFunc(gl.ONE, gl.ONE_MINUS_SRC_ALPHA)
+        }
         gl.useProgram(prog.program)
         gl.bindVertexArray(vao)
+        if (prog.area) gl.uniform4fv(prog.area, areaOf(drawOptions.rect, surface))
+        else if (drawOptions.rect) warnOnce('a custom `vertex` shader places itself — `rect` is ignored.')
         for (const [name, value] of values) {
-          if (!upload(prog, name, value) && !aliases(name).some((n) => fragment.code.includes(n)))
+          if (
+            !upload(prog, name, value) &&
+            !PLANE_UNIFORMS.has(name) &&
+            !aliases(name).some((n) => fragment.code.includes(n))
+          )
             warnOnce(`${fragment.id ?? 'shader'} has no uniform \`${name}\` (or \`${aliases(name)[1]}\`).`)
         }
         for (const [name, tex] of bound) {
           const key = aliases(name).find((n) => prog!.samplers.has(n))
           if (key === undefined) {
-            if (!aliases(name).some((n) => fragment.code.includes(n)))
+            if (!PLANE_UNIFORMS.has(name) && !aliases(name).some((n) => fragment.code.includes(n)))
               warnOnce(`${fragment.id ?? 'shader'} has no sampler \`${name}\`.`)
             continue
           }
           gl.activeTexture(gl.TEXTURE0 + prog.samplers.get(key)!)
           gl.bindTexture(gl.TEXTURE_2D, tex.handle)
         }
-        gl.drawArrays(gl.TRIANGLES, 0, 3)
+        if (drawOptions.rect) gl.drawArrays(gl.TRIANGLES, 3, 6)
+        else gl.drawArrays(gl.TRIANGLES, 0, 3)
         gl.bindVertexArray(null)
+        gl.disable(gl.SCISSOR_TEST)
+        gl.disable(gl.BLEND)
         // Only a draw onto the canvas puts a new frame on screen; a target is
         // an intermediate the canvas pass has yet to read.
         if (!into) {
@@ -375,6 +415,12 @@ export function createWebGL2(
     pass,
     texture,
     target,
+    clear() {
+      gl.bindFramebuffer(gl.FRAMEBUFFER, null)
+      gl.viewport(0, 0, surface.width, surface.height)
+      gl.clearColor(0, 0, 0, 0)
+      gl.clear(gl.COLOR_BUFFER_BIT)
+    },
     resized() {
       for (const t of targets) t.allocate()
     },
