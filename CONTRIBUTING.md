@@ -162,8 +162,10 @@ rename it**.
 lets you configure a trusted publisher on a package that already exists, so
 the first version goes out by hand (`npm publish --access public` from the
 package folder, logged in as an owner), then add the trusted publisher on
-npmjs.com (repo `glauberxyz/modulato`, workflow `publish.yml`), and from then
-on it releases with the rest. Do that first publish BEFORE merging the
+npmjs.com (repo `glauberxyz/modulato`, workflow `publish.yml`, no environment,
+and **tick "Allow `npm publish`"** — npm leaves it off by default, which only
+permits `npm stage publish`, and CI then fails with `403 OIDC permission
+denied`), and from then on it releases with the rest. Do that first publish BEFORE merging the
 Version Packages PR that carries the package's first changeset — CI has no
 way to authenticate for it until the trusted publisher exists. Only public `framework/*` packages publish (`demo`, `modulato-org` are
 `private` and skipped automatically).
