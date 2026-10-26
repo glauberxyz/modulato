@@ -2,7 +2,7 @@ import { useRef } from 'react'
 import gsap from 'gsap'
 import { SplitText } from 'gsap/SplitText'
 import { ScrollTrigger } from 'gsap/ScrollTrigger'
-import { resolveTokens, Shared } from 'modulato'
+import { resolveTokens, Shared, useTicker } from 'modulato'
 import { useMotion } from '@modulato/gsap'
 import type { Chapter } from '../../lib/content'
 import { EntryTitle } from '../../lib/EntryTitle'
@@ -12,21 +12,46 @@ import tokens from './motion'
 
 gsap.registerPlugin(SplitText, ScrollTrigger)
 
+interface SmileTokens {
+  size: number
+  contrast: number
+  softness: number
+  grain: number
+  gainC: number
+  gainM: number
+  gainY: number
+  gainK: number
+  paper: string
+  inkC: string
+  inkM: string
+  inkY: string
+  inkK: string
+}
+
+/** The `smile` token group as the press's uniforms. */
+const smileUniforms = (s: SmileTokens): HalftoneUniforms => ({
+  ...DEFAULTS,
+  size: s.size,
+  contrast: s.contrast,
+  softness: s.softness,
+  grainOverlay: s.grain,
+  gains: [s.gainC, s.gainM, s.gainY, s.gainK],
+  paper: s.paper,
+  inks: [s.inkC, s.inkM, s.inkY, s.inkK],
+})
+
+const resolveSmile = () =>
+  smileUniforms((resolveTokens(tokens as never) as { smile: SmileTokens }).smile)
+
 export default function Home({ chapters }: { chapters: Chapter[] }) {
   // The smile is the shader's calling card: a 100px canvas running the same
-  // halftone the site is about, on the page before a word of it.
-  const smile = useRef<HalftoneUniforms>({
-    ...DEFAULTS,
-    // Coarse on purpose: at 100px a fine screen puts the dots under a pixel
-    // and the whole thing grays out. ~30 cells reads as dots.
-    size: 0.88,
-    contrast: 1.5,
-    softness: 0.1,
-    grainOverlay: 0,
-    // Yellow at full gain — it is the only plate doing real work here.
-    gains: [-0.17, -0.3, 0, 0],
-    paper: '#14110f',
-    inks: ['#00a0c6', '#d81e78', '#f5c400', '#14110f'],
+  // halftone the site is about, on the page before a word of it. Its numbers
+  // are the `smile` group in ./motion.ts, re-read every frame so a drag in
+  // Tweak reaches the shader the frame it happens — the press redraws only
+  // when one of them actually moved.
+  const smile = useRef<HalftoneUniforms>(resolveSmile())
+  useTicker(() => {
+    smile.current = resolveSmile()
   })
 
   // A reading head down the lede: each word takes the ink color and hands

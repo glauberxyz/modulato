@@ -1,0 +1,35 @@
+{
+  "name": "@modulato/gpu",
+  "version": "0.0.0",
+  "description": "GPU passes for Modulato: WGSL on WebGPU, GLSL on WebGL2, hot-swapped shaders and uniforms driven by tokens.",
+  "license": "MIT",
+  "homepage": "https://github.com/glauberxyz/modulato#readme",
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts",
+    "./shaders": {
+      "types": "./src/shaders.d.ts"
+    }
+  },
+  "files": [
+    "src",
+    "README.md",
+    "LICENSE"
+  ],
+  "engines": {
+    "node": ">=20"
+  },
+  "peerDependencies": {
+    "modulato": ">=0.14.0 <1.0.0",
+    "react": "^18.0.0 || ^19.0.0"
+  },
+  "devDependencies": {
+    "@types/react": "^19.0.0"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/glauberxyz/modulato.git",
+    "directory": "framework/gpu"
+  },
+  "bugs": "https://github.com/glauberxyz/modulato/issues"
+}

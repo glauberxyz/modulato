@@ -42,6 +42,7 @@ Version Packages PR. Verifying such a change locally needs `npm ci` too —
 - `framework/vite` → `@modulato/vite` — routing manifest, dev SSR, prod builds, Vercel output
 - `framework/server` → `@modulato/server` — React SSR + server-action runner
 - `framework/gsap` → `@modulato/gsap` — `useMotion`, Lenis↔ScrollTrigger sync
+- `framework/gpu` → `@modulato/gpu` — shader passes (WebGPU + WebGL2), `useGpu`, shader hot-swap
 - `framework/tweak` → `@modulato/tweak` — dev overlay + AST token writeback
 - `framework/content-local`, `framework/mcp`, `framework/create` — adapter, agents, scaffolder
 - `examples/demo` — the proving ground. Every framework change must keep it green
@@ -153,9 +154,18 @@ Run it after ANY docs edit. The copies still only reach users via a
 
 Releases run on [Changesets](https://github.com/changesets/changesets) +
 npm **Trusted Publishing (OIDC)** — there is no `NPM_TOKEN`, and versions are
-never hand-edited. The CI is `.github/workflows/publish.yml`; all 8 packages'
-trusted-publisher configs on npm point at that filename, so **do not rename
-it**. Only public `framework/*` packages publish (`demo`, `modulato-org` are
+never hand-edited. The CI is `.github/workflows/publish.yml`; every
+package's trusted-publisher config on npm points at that filename, so **do not
+rename it**.
+
+**A brand-new package cannot publish over OIDC the first time.** npm only
+lets you configure a trusted publisher on a package that already exists, so
+the first version goes out by hand (`npm publish --access public` from the
+package folder, logged in as an owner), then add the trusted publisher on
+npmjs.com (repo `glauberxyz/modulato`, workflow `publish.yml`), and from then
+on it releases with the rest. Do that first publish BEFORE merging the
+Version Packages PR that carries the package's first changeset — CI has no
+way to authenticate for it until the trusted publisher exists. Only public `framework/*` packages publish (`demo`, `modulato-org` are
 `private` and skipped automatically).
 
 **As you make a publishable change** — add a changeset in the same commit:

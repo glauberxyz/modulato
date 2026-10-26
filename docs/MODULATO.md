@@ -10,7 +10,8 @@
 > site — it is the in-project scaffolder, not the site creator.)
 
 Stack: React 19 · Vite 7 · GSAP (sole animation engine) · Lenis (smooth
-scroll) · classic SSR + hydration (no RSC, no streaming).
+scroll) · classic SSR + hydration (no RSC, no streaming) · optional
+`@modulato/gpu` for shaders (WGSL on WebGPU, GLSL on WebGL2).
 
 ## 1. Mental model
 
@@ -1179,10 +1180,11 @@ export const whoami = action(async ({ cookies, request }) => ({
 `load()` cannot set a cookie — it also runs in the browser (§3). Setting
 belongs in an action or the `response` hook (§9b); reading, in either.
 
-## 11. Feeding custom components (canvas, WebGL, r3f)
+## 11. Canvas, WebGL and the GPU
 
-Modulato ships no 3D features on purpose. Instead, ANY persistent component
-gets the site's state through the same hooks:
+Modulato never bundles a 3D engine — three.js, r3f, p5 and OGL stay your
+choice and your dependency. Any persistent component gets the site's state
+through the same hooks:
 
 ```tsx
 // shell/Scene.tsx — the recipe (works identically for react-three-fiber)
@@ -1203,6 +1205,347 @@ For r3f specifically: put `<Canvas>` in the shell, read `useNavigation`/
 `useRoute` OUTSIDE the canvas and pass values in as props or a store —
 `useScroll`/`useTicker` work anywhere (they don't depend on React context
 when used in the shell).
+
+### GPU passes — `@modulato/gpu` (optional)
+
+For fragment-shader work — a full-screen effect, a screened image, a
+generative background — `@modulato/gpu` does the plumbing: **WGSL on WebGPU,
+GLSL on WebGL2, one API.** A pass given both languages runs whichever the
+browser has. Shader files hot-swap in place, uniforms take a `motion.ts`
+token group as-is, and nothing it creates outlives the component.
+
+Two levels: **passes** — a fragment shader on a canvas you place — and
+**planes** — page elements the GPU draws where they stand (below). No meshes,
+instancing or compute — a scene that needs those stays on its own engine (the
+recipe above).
+
+```sh
+npm i @modulato/gpu
+```
+
+```jsonc
+// tsconfig.json — types for `.wgsl`/`.glsl`/`.frag`/`.vert` imports. Opt-in,
+// because a site that already types `*.glsl` through another plugin would
+// get two declarations that disagree.
+"types": ["vite/client", "@modulato/gpu/shaders"]
+```
+
+```tsx
+// pages/home/Wash.tsx
+import { useRef } from 'react'
+import { resolveTokens, useTicker } from 'modulato'
+import { useGpu } from '@modulato/gpu'
+import wash from './wash.wgsl'        // WebGPU
+import washGl from './wash.frag'      // the WebGL2 fallback — optional
+import tokens from './motion'
+
+export function Wash() {
+  const canvas = useRef<HTMLCanvasElement>(null)
+  const pass = useGpu(canvas, (gpu) => gpu.pass({ fragment: { wgsl: wash, glsl: washGl } }))
+  useTicker((time) => {
+    const { wash } = resolveTokens(tokens) as { wash: Record<string, number | string> }
+    pass.current?.set(wash).set('time', time / 1000).draw()
+  })
+  return <canvas ref={canvas} className="home__wash" aria-hidden="true" />
+}
+```
+
+**The shader contract.** The framework supplies the vertex stage — one
+triangle covering the target — so a pass is just a fragment shader:
+
+| | WGSL (WebGPU) | GLSL (WebGL2) |
+|---|---|---|
+| entry | `@fragment fn main(@location(0) uv: vec2f) -> @location(0) vec4f` | `#version 300 es` + `in vec2 v_uv; out vec4 fragColor;` — or GLSL ES 1.00 with `varying vec2 v_uv` and `gl_FragColor` |
+| uniforms | fields of a struct: `@group(0) @binding(0) var<uniform> u: Uniforms;` — `f32`/`i32`/`u32` and their `vec2/3/4` | one `uniform` per value |
+| textures | `var image: texture_2d<f32>;` plus `var imageSampler: sampler;` — a sampler named `<texture>Sampler` takes that texture's filter and wrap | `uniform sampler2D u_image;` |
+| bindings | all in `@group(0)`, any binding numbers | — |
+
+`uv` runs 0→1 left to right and **bottom to top** in both languages, and
+every texture is uploaded so that `v = 0` is its bottom row (images flipped
+on upload, as `UNPACK_FLIP_Y_WEBGL` does; render targets drawn the same way).
+GLSL written for a WebGL canvas usually needs no change at all.
+
+**Uniforms** are set by name; `set('size', …)` finds `size`, `u_size` or
+`size_`. The last one is for WGSL, which reserves a long list of ordinary
+words (`type`, `target`, `filter`, `smooth`, `set`…): name the field `type_`
+and the page keeps calling `set('type', …)`. Values: a number or boolean
+fills a scalar, an array fills a vector, and a `#rgb`/`#rrggbb`/`#rrggbbaa`
+string fills a `vec3`/`vec4` with the color in 0–1. `set(object)` takes every
+top-level number, string, boolean and number array, so a whole token group
+goes in at once — Tweak edits it live (a hex string edits as text there).
+An unknown name warns once in dev.
+
+| API | What |
+|---|---|
+| `useGpu(canvasRef, setup, deps?, options?)` | A surface for as long as the component is mounted. `setup(gpu)` (may be async) returns what the frame loop needs; you get it back as a ref, `null` until ready — and forever `null` with no GPU, so `pass.current?.draw()` is the whole fallback. Everything is disposed on unmount. |
+| `createGpu(canvas, options?)` | The same without React → `Promise<Gpu \| null>`. Options: `backend` (`'auto'` default — WebGPU, else WebGL2; or `'webgpu'`/`'webgl2'`), `dpr` (cap, default `2`), `alpha` (default `true`). |
+| `gpu.pass({ fragment, target?, vertex? })` | `→ Promise<Pass>`. `fragment` is a shader or `{ wgsl, glsl }`. `target` draws offscreen. `vertex` is a GLSL vertex shader for a fragment that expects something other than `v_uv` (it must take `a_position`). |
+| `pass.set(name, value)` / `pass.set(values)` | Uniforms, chainable. Kept across hot reloads. |
+| `pass.texture(name, texture)` | Bind a texture or target. |
+| `pass.draw({ rect?, clip? })` | Resize if the canvas changed, recompile if the shader changed, draw. With no `rect` (and no blending) it replaces the whole target; a `rect` (CSS px from the canvas's top-left) draws into just that box, `uv` 0→1 across it, over what is there. `clip` is a scissor, same units. A pass can be drawn many times a frame; each draw uses the uniforms set just before it. |
+| `gpu.pass({ …, blend: 'alpha' })` | Composite over what is there (source-over). The shader must output PREMULTIPLIED color — `vec4(rgb * a, a)`. |
+| `gpu.clear()` | Clear the canvas to transparent — the start of a frame of rect draws. |
+| `pass.error` | The current compile error, or `null`. |
+| `gpu.texture(source, { filter, wrap, mipmaps, flipY })` | From an image, canvas, video, `ImageBitmap` or raw `{ width, height, data }` RGBA bytes. `.update(source)` re-uploads — same size is cheap. `mipmaps: true` keeps an image sharp when drawn smaller than it is. |
+| `gpu.target({ scale, filter })` | Render-to-texture, sized from the canvas (`scale` × backing store) and resized with it. Contents don't survive a resize — redraw. |
+| `gpu.dirty` | The last frame no longer stands (resized, re-uploaded, shader swapped). Cleared by the next canvas draw. |
+| `gpu.backend`, `gpu.width`, `gpu.height`, `gpu.resize()`, `gpu.dispose()` | — |
+
+**Draw on demand.** A still effect doesn't need 60 frames a second; draw when
+an input moved OR the surface says so:
+
+```ts
+useTicker(() => {
+  const key = JSON.stringify(uniforms.current)
+  if (key === lastKey.current && !gpu.dirty) return   // gpu.dirty: resize, re-upload, shader edit
+  lastKey.current = key
+  pass.current?.set(uniforms.current).draw()
+})
+```
+
+**Shader files.** `@modulato/vite` compiles `.wgsl`, `.glsl`, `.frag` and
+`.vert` imports into `Shader` objects. In dev an edit recompiles inside the
+live pass on its next draw — no remount, no lost state — and `gpu.dirty`
+goes true, so a draw-on-demand effect redraws too. A compile error keeps the last good program on screen
+and prints `[modulato/gpu] /lib/x.wgsl:243:48 <message>`. A build strips
+comments and indentation and renames nothing. `?raw` imports and files
+another plugin already compiled are left alone; plain strings work too
+(language detected, no hot reload). `modulato({ shaders: false })` turns the
+transform off, and the `?sdf` / `?points` imports below with it.
+
+**Fallback.** `'auto'` takes WebGPU where it exists and WebGL2 elsewhere; with
+neither, `createGpu` resolves `null` and the canvas is never touched — put a
+CSS or `<img>` fallback behind it. A pass whose only shader is WGSL can't run
+on WebGL2 and throws a sentence saying so; give it `{ wgsl, glsl }`, or keep a
+GLSL-only site on `backend: 'webgl2'`. All WebGPU surfaces on a page share
+ONE device, so a page of many canvases has no context limit; WebGL2 is still
+one context per canvas, and browsers drop the oldest past about sixteen.
+
+**Checking GPU work (dev).** `window.__MODULATO_GPU__.surfaces()` lists every
+live surface — backend, size, and per pass the shader file, its error and the
+uniforms it was last given. `__MODULATO_GPU__.capture(canvasOrIndex)`
+resolves a PNG data URL of the next frame drawn there; it marks the surface
+dirty, so a loop that checks `gpu.dirty` draws one.
+`?gpu=webgl2` or `?gpu=webgpu` in the page URL overrides every surface's
+backend — the quickest look at the fallback.
+
+### Planes — page elements drawn by the GPU
+
+A plane is an element that stays exactly where it is — server-rendered, in
+the accessibility tree, laid out by CSS, moved by your animations — while the
+GPU draws it, with a shader, wherever it is each frame. One `<GpuStage/>` in
+the shell draws every plane on the page:
+
+```tsx
+// app.tsx — once, so it survives navigation
+import { GpuStage } from '@modulato/gpu'
+<PageOutlet />
+<GpuStage />
+
+// any page
+import { usePlane } from '@modulato/gpu'
+import ripple from './ripple.wgsl'
+import rippleGl from './ripple.frag'
+
+const img = useRef<HTMLImageElement>(null)
+usePlane(img)       // drawn by the GPU, looks identical — and morphs sharp (below)
+usePlane(img, {     // or with a shader of your own
+  fragment: { wgsl: ripple, glsl: rippleGl },
+  uniforms: ({ time, pointer }) => ({ time, ...resolveTokens(tokens).ripple }),
+})
+return <img ref={img} src={cover} alt={title} />
+```
+
+Until the GPU has the picture — or with no stage, no WebGPU/WebGL2, or a
+cross-origin image served without CORS — the element is simply itself. Once
+it does, the DOM copy is hidden with `filter: opacity(0)` (NOT `opacity` or
+`visibility`, which your animations own) and `usePlane` returns `true`.
+
+**What the stage copies from the DOM, every frame:** the element's box
+(`getBoundingClientRect`, so transforms and `scale` count); its opacity times
+every ancestor's (a GSAP fade, a page crossfade); the clip of the viewport and
+of every ancestor whose `overflow` is not `visible` (masks, reveals,
+carousels); `object-fit` fill/cover/contain and `border-radius` (default
+shader). During a transition the page stacked on top covers the other page's
+planes, at its own opacity — the same stacking the DOM shows. All of it is
+read in `onLateFrame`, after every animation-frame callback (Lenis,
+`useTicker`, GSAP) and after layout, so a plane never trails its element by a
+frame. A frame where nothing moved is not redrawn, and with no planes on the
+page the stage does no per-frame work at all.
+
+**What it does not copy:** rotation and skew (a plane fills the element's
+bounding box), `clip-path`, `mask`, CSS `filter`, `object-position` (always
+centered), per-corner radii (the top-left one is used), and stacking among
+elements of one page (planes draw in document order). In dev the console
+names any plane carrying one of these, on itself or an ancestor — a port that
+adds `usePlane` should end with that console clean. The stage sits at
+`z-index: 2`, OVER the pages (they paint opaque backgrounds), so text that
+must sit on top of a plane needs its own `position: relative; z-index: 3`,
+and shell UI meant to cover planes (a menu) needs a higher one than that.
+
+| `usePlane(ref, options)` | |
+|---|---|
+| `fragment` | The shader. Default: the element's image as CSS shows it. |
+| `texture` | What `image` samples: `'element'` (default for `<img>`, `<video>`, `<canvas>`), any texture source, or `null`. Any other element needs a `fragment`. |
+| `uniforms` | An object, or `({ time, delta, rect, pointer }) => object` called every frame — `time` on the motion clock, so Tweak's slow-mo slows it. |
+| `mipmaps` | Default `true`. |
+| `live` | Re-upload every frame (a `<canvas>` something else draws into). A playing `<video>` always is. |
+
+A plane's shader is a pass with these filled in by the stage — declare the
+ones you use, and output premultiplied color multiplied by `planeOpacity`, or
+page fades will not reach it:
+
+| uniform | |
+|---|---|
+| `planeSize` | the plane's size in canvas pixels |
+| `planeOpacity` | effective opacity, including what covers it |
+| `planeRadius` | `border-radius`, canvas pixels |
+| `planeFit` | `object-fit`: 0 fill, 1 cover, 2 contain |
+| `planePointer` | the pointer in the plane's `uv` (outside 0–1 when it is elsewhere) |
+| `image`, `imageSize` | the element's picture and its size in pixels |
+| `imageTo`, `imageToSize`, `planeMorph` | mid-flight: the destination's picture, and 0→1 |
+
+**`<Shared>` morphs are drawn by the GPU.** When a `<Shared>` element is a
+live plane, the clone `flipShared` flies is drawn on the stage with the
+plane's own shader — mipmapped, so the picture stays sharp at every size it
+passes through — and crossfades to the destination's image as it lands
+(`imageTo` by `planeMorph`, read off the clone's position, so it follows
+whatever easing the flight uses). Nothing to configure: `flipShared` announces
+each flight with a `modulato:flip` window event (`{ clone, pair }`), and the
+stage takes it from there. With a `modulato` older than the event, the clone
+simply flies as DOM.
+
+`onLateFrame(callback)` — the hook the stage draws in — is exported too: any
+canvas that mirrors the DOM wants the same moment.
+
+### Build-time GPU assets — `?sdf` and `?points`
+
+Geometry that is a pure function of a file is worked out once, at build,
+rather than in every visitor's browser. Two kinds, both from `@modulato/vite`,
+both typed by `@modulato/gpu/shaders`. The kind goes LAST in the query:
+
+```ts
+import logo from './logo.svg?size=256&spread=16&sdf'
+// { kind: 'sdf', url, width, height, spread, viewBox, skipped }
+
+import title from './Display.ttf?text=EXPA&size=200&pitch=3&points'
+import mark from './mark.svg?pitch=4&points'
+// { kind: 'points', points: Float32Array [x, y, …], count, width, height }
+```
+
+**`?sdf`** — a signed distance field of the SVG's filled shapes, computed
+from the path geometry itself (no rasterizer, exact to the pixel): a
+grayscale PNG, 0.5 on the edge, rising to 1 inside and falling to 0 outside
+over `spread` pixels. Threshold it with `smoothstep(0.45, 0.55, d)` and the
+edge stays crisp at any scale; move the threshold for an outline, widen it
+for a glow. `size` is the shape's longer side in pixels (default 128),
+`spread` the falloff (default size / 16, and the PNG carries that much margin
+on every side). Each shape's own `fill-rule` is honoured; `rule=evenodd`
+forces it. Feed it to a plane with `usePlane(ref, { texture: logo.url,
+fragment })`, or to a pass with `gpu.texture(await loadImage(logo.url))`.
+
+**`?points`** — an outline sampled every `pitch` pixels of arc length, for
+particles and morphs: `[x, y, x, y, …]`, y down, origin at the shape's
+top-left. A closed outline is divided evenly — the pitch rounded to fit its
+length — so no two points crowd where it closes. From an SVG (viewBox units, or `size` px on the longer side) or a
+font — `.ttf`, `.otf`, `.woff`, with `text` laid out at `size` px (default
+100). Fonts are read by `opentype.js`, which the PROJECT installs as a dev
+dependency (`npm i -D opentype.js`); it runs at build time and never ships.
+WOFF2 is not readable — convert it, or point at the TTF/OTF.
+
+What the SVG reader draws: `path`, `rect` (rounded too), `circle`,
+`ellipse`, `polygon`, `polyline`, `line`, through nested `<g>` and every
+`transform`. What it skips and lists in `skipped`: `<text>`, `<use>`,
+`<image>`, and unfilled shapes — strokes have no area, so outline them in
+your editor first. A file with nothing drawable is an error that says so.
+Generated files live in `node_modules/.modulato/gpu/` and are imported from
+there like any image — so Vite hashes, inlines (under its size limit) and
+serves them as it would any other, in dev and in a build.
+
+### Migrating an existing canvas to `@modulato/gpu`
+
+Written for the agent doing it. **The goal is the same pixels on less
+plumbing.** Anything beyond that — WGSL, tokens, a new look — is a separate
+request, and is offered, not done.
+
+**1. Inventory, and report it before changing anything.** Every
+`getContext('webgl' | 'webgl2')`; every shader source (template string,
+`?raw` import, another plugin's import); the uniforms and textures each
+sets; who owns its frame loop (`useTicker`, its own `requestAnimationFrame`,
+a library); its DPR cap, `alpha`, and where it lives (shell or page).
+
+**2. Decide what qualifies.** A canvas qualifies if it draws full-screen
+fragment passes — one, or several chained through framebuffers. A scene with
+meshes, instancing, custom vertex attributes or blending, and anything built
+on three.js, r3f, p5 or OGL, does **not**: leave it exactly as it is and say
+so. A partial port is worse than none.
+
+**3. Capture a baseline** at a fixed viewport, from the unmodified code. A
+WebGL canvas clears its buffer after compositing, so patch `getContext`
+first, then create the canvas (navigate to its page client-side):
+
+```js
+const getContext = HTMLCanvasElement.prototype.getContext
+HTMLCanvasElement.prototype.getContext = function (type, attrs) {
+  if (type === 'webgl2' || type === 'webgl') attrs = { ...attrs, preserveDrawingBuffer: true }
+  return getContext.call(this, type, attrs)
+}
+// …navigate to the page, let it draw, then for each canvas:
+canvas.toDataURL('image/png')    // keep these — IndexedDB holds them across reloads
+```
+
+**4. Port one canvas at a time.** The rules:
+
+- **Shader text stays byte-identical.** GLSL stays GLSL; pass the same string
+  (`gpu.pass({ fragment: SOURCE })`). Moving it into a `.frag` file buys hot
+  reload but changes where it lives — ask first.
+- **GLSL-only surfaces say `backend: 'webgl2'`.** Under `'auto'`, a WebGPU
+  browser would refuse a GLSL-only pass.
+- **Uniform and sampler names stay.** `set('u_size', …)` and `set('size', …)`
+  both reach `u_size` — no renaming needed or wanted.
+- **Keep the canvas's place and attributes**: same component (shell or page),
+  class names, ARIA, CSS size, `dpr` cap (pass the old one), `alpha`.
+- **Keep the frame-loop owner.** `draw()` works from any loop. Moving a
+  private `requestAnimationFrame` onto `useTicker` (one loop, Tweak's slow-mo
+  reaches it) is an improvement to offer, not to make.
+- **Keep the numbers where they are.** Hardcoded uniforms stay hardcoded;
+  moving them into `motion.ts` is a feature, so it is a separate ask.
+- **Keep draw-on-demand logic**, and add `|| gpu.dirty` to it — that is what
+  replaces a hand-rolled `ResizeObserver` that forced a redraw.
+- **Planes are a new feature, not part of a port.** Never turn an existing
+  `<img>` into a plane, or add a `<GpuStage>`, while migrating a canvas.
+- Delete only plumbing the package now does: context creation, shader
+  compile/link, the full-screen quad, uniform-location lookup, DPR resize,
+  texture setup. If the old vertex shader did more than pass `v_uv`, keep it
+  via `vertex`.
+
+**5. Verify, per canvas.** `npm run check` (or `tsc`) and
+`npx modulato check`; `__MODULATO_GPU__.surfaces()` shows no `error`; then
+capture with `await __MODULATO_GPU__.capture(canvas)` at the same viewport
+and compare against the baseline pixel by pixel. **A GLSL→WebGL2 port must be
+identical — max difference 0** (the demo's halftone, 9 canvases, was). Any
+difference means something changed that should not have; find it before
+moving on.
+
+**Porting GLSL to WGSL — only when asked.** Keep the GLSL as the fallback
+(`{ wgsl, glsl }`) and compare WebGPU's output against the GLSL baseline;
+expect at most a level or two per channel (the halftone port measured max 2
+of 255, no pixel over 16). What bit the halftone port:
+
+- `textureSample` is only allowed in uniform control flow (not in loops over
+  pixel-varying data). Without mips, `textureSampleLevel(t, s, uv, 0.0)`
+  samples exactly what GLSL's `texture()` did.
+- Derivatives (`fwidth`, `dpdx`) must run outside non-uniform branches —
+  compute them before the `if`.
+- `smoothstep` with `low > high` is platform-defined in WGSL; GLSL code
+  often relies on it. Write it out: `t = clamp((x - a) / (b - a), 0, 1);
+  t * t * (3 - 2t)`.
+- `mat2(a, b, c, d)` → `mat2x2f(a, b, c, d)` — both column-major, same result.
+- `c ? a : b` → `select(b, a, c)` — both sides are evaluated.
+- `inout` parameters → return the value instead.
+- Reserved words (`type`, `target`, `filter`, `smooth`…) → a trailing
+  underscore; `set()` still finds them.
+- `precision` qualifiers disappear: WGSL is `f32` throughout.
 
 ## 12. CLI
 
@@ -1259,6 +1602,8 @@ human in the overlay and an agent over MCP always converge on the same file.
 
 Dev-page introspection: `window.__MODULATO__` exposes route, tokens, speed,
 replay functions, viewport forcing, and `tick()`.
+`window.__MODULATO_GPU__` lists live GPU surfaces (the stage included) and
+captures their frames (§11).
 
 ## 14. Build & deploy
 
@@ -1327,4 +1672,12 @@ first.
 - Nested scrollable UI under Lenis needs `data-lenis-prevent` on the
   scrollable element.
 - Transitions should start their animations synchronously in `run()`.
+- A canvas only ever hands out ONE kind of context. `createGpu` asks for
+  WebGPU's only once a device exists, so a failed probe still leaves WebGL2
+  available — but a canvas some other code already took a context from
+  cannot become a GPU surface of the other kind.
+- A WGSL uniform struct is laid out by WGSL's alignment rules (a `vec3f` is
+  16-aligned); `@modulato/gpu` reads the struct and writes each field where
+  it belongs, so never pad by hand — and never pass a matrix or array field;
+  split it into vectors.
 - After ANY structural edit: `npx modulato check`.

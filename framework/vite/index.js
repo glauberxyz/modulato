@@ -2,6 +2,10 @@ import fs from 'node:fs'
 import { createRequire } from 'node:module'
 import path from 'node:path'
 import * as vite from 'vite'
+import { assetModule, assetQuery } from './assets.js'
+
+/** Virtual-id prefix for `?sdf` / `?points` imports — see resolveId. */
+const ASSET_PREFIX = '\0modulato-asset:'
 
 const require = createRequire(import.meta.url)
 
@@ -61,6 +65,67 @@ const CONTENT_SNAPSHOT = '.modulato/content.json'
  * folder existed keeps working untouched; `modulato check` is what asks for
  * the move.
  */
+const SHADER_LANGS = { '.wgsl': 'wgsl', '.glsl': 'glsl', '.frag': 'glsl', '.vert': 'glsl' }
+
+function shaderLang(file) {
+  return SHADER_LANGS[path.extname(file)] ?? null
+}
+
+/**
+ * Comments, blank lines and indentation out — nothing renamed, since a
+ * uniform's name is how the page sets it. Newlines stay: GLSL's preprocessor
+ * is line-based. WGSL block comments nest, hence the counter.
+ */
+function minifyShader(source) {
+  let out = ''
+  let depth = 0
+  for (let i = 0; i < source.length; i++) {
+    const two = source.slice(i, i + 2)
+    if (two === '/*') {
+      depth++
+      i++
+    } else if (two === '*/' && depth) {
+      depth--
+      i++
+    } else if (!depth && two === '//') {
+      while (i < source.length && source[i] !== '\n') i++
+      out += '\n'
+    } else if (!depth) out += source[i]
+  }
+  return out
+    .split('\n')
+    .map((line) => line.trim())
+    .filter(Boolean)
+    .join('\n')
+}
+
+/**
+ * The module a shader file becomes.
+ *
+ * In dev it registers on globalThis and self-accepts HMR: a re-evaluation
+ * finds the object the first one made, writes the new source into it and
+ * bumps `version`. Every pass already holding that object recompiles on its
+ * next draw — no importer re-runs, nothing remounts, and a compile error
+ * leaves the last good program drawing.
+ */
+function shaderModule(source, lang, file, root, isServe) {
+  const id = `/${path.relative(root, file).split(path.sep).join('/')}`
+  if (!isServe) {
+    return `export default ${JSON.stringify({ lang, code: minifyShader(source), version: 0 })}`
+  }
+  return [
+    `const code = ${JSON.stringify(source)}`,
+    `const registry = (globalThis.__MODULATO_SHADERS__ ??= new Map())`,
+    `let shader = registry.get(${JSON.stringify(id)})`,
+    // The event wakes surfaces that only draw on change — a still press
+    // would otherwise never notice, since the recompile happens in draw().
+    `if (shader) { if (shader.code !== code) { shader.code = code; shader.version++; globalThis.dispatchEvent?.(new CustomEvent('modulato:shader', { detail: shader })) } }`,
+    `else { shader = { lang: ${JSON.stringify(lang)}, code, version: 0, id: ${JSON.stringify(id)} }; registry.set(shader.id, shader) }`,
+    `export default shader`,
+    `if (import.meta.hot) import.meta.hot.accept()`,
+  ].join('\n')
+}
+
 function tokenFile(root, name) {
   const inFolder = path.resolve(root, 'tokens', `${name}.ts`)
   if (fs.existsSync(inFolder)) return `/tokens/${name}.ts`
@@ -95,6 +160,8 @@ export default function modulato(options = {}) {
   /** @type {string} */ let behaviorsDir
   let isSsrBuild = false
   let isServe = false
+  // Read here, not inside transform(): its third parameter is also `options`.
+  const shaders = options.shaders !== false
 
   return {
     name: 'modulato',
@@ -183,16 +250,31 @@ export default function modulato(options = {}) {
       isServe = config.command === 'serve'
     },
 
-    resolveId(id) {
-      if (id === VIRTUAL.app) {
-        const userApp = path.resolve(root, 'app.tsx')
-        return fs.existsSync(userApp) ? userApp : id
-      }
-      if (Object.values(VIRTUAL).includes(id)) return id
-      return undefined
+    // `pre`, for the asset queries: resolved normally, `logo.svg?sdf` would
+    // reach Vite's own asset handling, which answers any .svg with its URL.
+    // A private id with no extension is one only this plugin loads.
+    resolveId: {
+      order: 'pre',
+      async handler(id, importer, opts) {
+        if (id === VIRTUAL.app) {
+          const userApp = path.resolve(root, 'app.tsx')
+          return fs.existsSync(userApp) ? userApp : id
+        }
+        if (Object.values(VIRTUAL).includes(id)) return id
+        if (shaders && /[?&](sdf|points)(&|$)/.test(id)) {
+          const resolved = await this.resolve(id, importer, { ...opts, skipSelf: true })
+          if (resolved && assetQuery(resolved.id)) return ASSET_PREFIX + resolved.id
+        }
+        return undefined
+      },
     },
 
     load(id) {
+      if (id.startsWith(ASSET_PREFIX)) {
+        const query = assetQuery(id.slice(ASSET_PREFIX.length))
+        this.addWatchFile(query.file)
+        return assetModule(query, root)
+      }
       if (id === VIRTUAL.manifest) return generateManifest(pagesDir)
       if (id === VIRTUAL.transitions) return generateTransitions(transitionsDir, pagesDir)
       if (id === VIRTUAL.jsxDev) return generateJsxDevRuntime(root)
@@ -332,6 +414,15 @@ export default function modulato(options = {}) {
     transform(code, id, options) {
       const original = code
       const file = id.split('?')[0]
+
+      // Shader files → a `Shader` object for @modulato/gpu. A query (`?raw`,
+      // `?url`) means someone asked for something else; code that already
+      // reads as a module means another plugin got here first. Both are left
+      // exactly as they are, so a site's existing shader setup keeps working.
+      const lang = !shaders || id.includes('?') ? null : shaderLang(file)
+      if (lang && !/^\s*(export|import)\b/.test(code)) {
+        return { code: shaderModule(code, lang, file, root, isServe), map: { mappings: '' } }
+      }
 
       // pages/**/server.ts — server actions. On the CLIENT the module is
       // replaced with URL-only stubs (handler code and secrets never ship);

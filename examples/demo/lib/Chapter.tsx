@@ -18,6 +18,8 @@ import { SeparationDiagram } from './diagrams/SeparationDiagram'
 import { NeighborDiagram } from './diagrams/NeighborDiagram'
 import { InkDiagram } from './diagrams/InkDiagram'
 import { RulingDiagram } from './diagrams/RulingDiagram'
+import { ShapeDiagram } from './diagrams/ShapeDiagram'
+import { PlaneImg } from './PlaneImg'
 import './chapter.scss'
 
 const DIAGRAMS: Record<string, () => React.JSX.Element> = {
@@ -26,6 +28,7 @@ const DIAGRAMS: Record<string, () => React.JSX.Element> = {
   neighbors: NeighborDiagram,
   ink: InkDiagram,
   ruling: RulingDiagram,
+  shape: ShapeDiagram,
 }
 
 /**
@@ -285,7 +288,7 @@ export function ChapterView({
                 inspector at /<chapter>/<figure>. */}
             <a href={`/${chapter.slug}/${fig.slug}`} className="movement__figlink">
               <Shared id={`plate:${fig.slug}`}>
-                <img src={`/plates/${fig.slug}.jpg`} alt={fig.title} loading="lazy" />
+                <PlaneImg src={`/plates/${fig.slug}.jpg`} alt={fig.title} loading="lazy" />
               </Shared>
             </a>
             {/* One line. Number, date and title used to stack, which gave a
@@ -394,7 +397,7 @@ export function ChapterView({
           <figure className="track__figure">
             <a href={`/${chapter.slug}/${fig.slug}`} className="movement__figlink">
               <Shared id={`plate:${fig.slug}`}>
-                <img src={`/plates/${fig.slug}.jpg`} alt={fig.title} loading="lazy" />
+                <PlaneImg src={`/plates/${fig.slug}.jpg`} alt={fig.title} loading="lazy" />
               </Shared>
             </a>
           </figure>

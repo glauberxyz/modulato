@@ -69,4 +69,34 @@ export default motion({
     // resting color.
     reduced: { rise: 0 },
   },
+
+  /**
+   * The smile's press — shader uniforms, not motion, but numbers all the
+   * same, and this is where Tweak can reach them. Every value goes straight
+   * into the halftone pass by name (see `smileUniforms` in ./page.tsx).
+   */
+  smile: {
+    // Coarse on purpose: at 100px a fine screen puts the dots under a pixel
+    // and the whole thing grays out. ~30 cells reads as dots.
+    size: 0.88,
+    contrast: 1.5,
+    softness: 0.1,
+    grain: 0,
+    // Per-plate dot gain. Yellow at full gain — it is the only plate doing
+    // real work here.
+    gainC: -0.17,
+    gainM: -0.3,
+    gainY: 0,
+    gainK: 0,
+    paper: '#14110f',
+    inkC: '#00a0c6',
+    inkM: '#d81e78',
+    inkY: '#f5c400',
+    inkK: '#14110f',
+  },
 })
+
+/** Hidden search terms for the Tweak overlay's filter — see tokens/motion.ts. */
+export const keywords: Record<string, string[]> = {
+  smile: ['smiley', 'halftone dots', 'shader', 'ink colors'],
+}
