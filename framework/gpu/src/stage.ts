@@ -250,6 +250,16 @@ function warnUncopied(element: HTMLElement, n: HTMLElement, style: CSSStyleDecla
     )
 }
 
+/** Why an image from another origin will not upload, when that is why. */
+function crossOriginHint(source: TextureSource): string {
+  if (!(source instanceof HTMLImageElement || source instanceof HTMLVideoElement)) return ''
+  const url = source.currentSrc || source.src
+  if (!url || new URL(url, location.href).origin === location.origin) return ''
+  return source.crossOrigin === null
+    ? ' It is from another origin: give the element crossOrigin="anonymous" (its server must send CORS headers).'
+    : ' It is from another origin whose server sent no CORS headers for it.'
+}
+
 function fitOf(style: CSSStyleDeclaration): number {
   return style.objectFit === 'cover' ? 1 : style.objectFit === 'contain' ? 2 : 0
 }
@@ -270,6 +280,29 @@ function readyToUpload(source: TextureSource): boolean {
 interface FlipDetail {
   clone: HTMLElement
   pair: { from: HTMLElement; to: HTMLElement; fromRect: DOMRect; toRect: DOMRect }
+}
+
+/**
+ * Child indices from `root` down to `node`, or null when `node` is not inside
+ * it. `<Shared>` marks whatever element it wraps — often a box with the image
+ * a level or two down — and `flipShared` flies a deep copy of it, so a plane
+ * inside the original is found at the same path inside the clone.
+ */
+function pathTo(root: Element, node: Element): number[] | null {
+  const path: number[] = []
+  for (let n = node; n !== root; ) {
+    const parent = n.parentElement
+    if (!parent) return null
+    path.unshift(Array.prototype.indexOf.call(parent.children, n))
+    n = parent
+  }
+  return path
+}
+
+function follow(root: Element, path: number[]): HTMLElement | null {
+  let n: Element | undefined = root
+  for (const i of path) n = n?.children[i]
+  return n instanceof HTMLElement ? n : null
 }
 
 /**
@@ -304,8 +337,12 @@ export async function createStage(canvas: HTMLCanvasElement, options: StageOptio
   if (!gpu) return null
 
   const attached = new Map<PlaneRecord, Attached>()
-  /** `<Shared>` clones in flight, by clone, with the plane they carry. */
-  const flights = new Map<HTMLElement, { source: Attached; detail: FlipDetail }>()
+  /**
+   * `<Shared>` flights, by the element in the clone the stage draws — the
+   * clone itself, or the copy of a plane inside it — with the plane it
+   * copies and where that plane sits in the shared element.
+   */
+  const flights = new Map<HTMLElement, { source: Attached; path: number[]; detail: FlipDetail }>()
 
   let pointerX = -1e6
   let pointerY = -1e6
@@ -315,32 +352,56 @@ export async function createStage(canvas: HTMLCanvasElement, options: StageOptio
   }
   window.addEventListener('pointermove', onPointer, { passive: true })
 
-  // A shared element that is a live plane flies as one: the clone flipShared
-  // makes is a copy of a hidden element, so it is hidden too, and the stage
-  // draws it instead — with the source's shader, crossfading to the
-  // destination's image, mipmapped so it stays sharp at every size between.
+  // A live plane that is a shared element, or sits inside one, flies with
+  // it: the clone flipShared makes is a copy of a hidden element, so its copy
+  // is hidden too, and the stage draws it instead — with the source's shader,
+  // crossfading to the destination's image, mipmapped so it stays sharp at
+  // every size between.
   const onFlip = (event: Event) => {
     const detail = (event as CustomEvent<FlipDetail>).detail
-    const source = [...attached.values()].find((a) => a.record.element === detail?.pair.from)
-    if (source?.live && source.pass) {
-      flights.set(detail.clone, { source, detail })
-      wake()
+    if (!detail) return
+    for (const source of attached.values()) {
+      if (!source.live || !source.pass) continue
+      const path = pathTo(detail.pair.from, source.record.element)
+      const drawn = path && follow(detail.clone, path)
+      if (drawn) flights.set(drawn, { source, path, detail })
     }
+    wake()
   }
   window.addEventListener('modulato:flip', onFlip)
-  // ...and one the stage did NOT take — an older modulato that sends no
+  // ...and a copy the stage did NOT take — an older modulato that sends no
   // event, or a plane that never went live — must not fly invisibly.
   const clones = new MutationObserver((records) => {
     for (const record of records)
       for (const node of record.addedNodes)
-        if (node instanceof HTMLElement && node.hasAttribute('data-modulato-clone') && !flights.has(node))
-          if (node.style.filter === 'opacity(0)') node.style.filter = ''
+        if (node instanceof HTMLElement && node.hasAttribute('data-modulato-clone'))
+          for (const copy of [node, ...node.querySelectorAll<HTMLElement>('[style*="opacity(0)"]')])
+            if (!flights.has(copy) && copy.style.filter === 'opacity(0)') copy.style.filter = ''
   })
   clones.observe(document.body, { childList: true })
 
   let clock = 0
   let last = 0
   let lastSignature = ''
+
+  /**
+   * The plane a flight crossfades to: the one at the same place inside the
+   * landing element, or failing that the only one in it. Looked up every
+   * frame — the incoming page's planes attach while the clone is in the air.
+   */
+  function landingPlane(to: HTMLElement, path: number[]): Attached | undefined {
+    const target = follow(to, path)
+    let only: Attached | undefined
+    let count = 0
+    for (const a of attached.values()) {
+      if (a.record.element === target) return a
+      if (to.contains(a.record.element)) {
+        only = a
+        count++
+      }
+    }
+    return count === 1 ? only : undefined
+  }
 
   function hide(a: Attached, on: boolean) {
     if (on === a.live) return
@@ -428,7 +489,10 @@ export async function createStage(canvas: HTMLCanvasElement, options: StageOptio
         // GPU. The element goes back on screen as itself.
         a.failed = true
         hide(a, false)
-        warnOnce(`a plane's image could not be uploaded (${(e as Error).message}) — it stays a DOM element.`)
+        warnOnce(
+          `the plane ${describe(record.element)} could not be uploaded (${(e as Error).message}) — it stays a ` +
+            `DOM element.${crossOriginHint(source)}`,
+        )
       }
     }
     upload()
@@ -531,17 +595,19 @@ export async function createStage(canvas: HTMLCanvasElement, options: StageOptio
       const item = measure(a, a.record.element, {}, null)
       if (item) items.push(item)
     }
-    for (const [clone, { source, detail }] of flights) {
-      if (!clone.isConnected) {
-        flights.delete(clone)
+    for (const [drawn, { source, path, detail }] of flights) {
+      if (!detail.clone.isConnected) {
+        flights.delete(drawn)
         continue
       }
-      const destination = [...attached.values()].find((a) => a.record.element === detail.pair.to)
+      const destination = landingPlane(detail.pair.to, path)
       const landing = destination?.texture && destination.textureReady ? destination.texture : null
-      const rect = toRect(clone.getBoundingClientRect())
+      // Progress is read off the clone itself — the box flipShared animates
+      // between the two measured rects — whatever is drawn inside it.
+      const rect = toRect(detail.clone.getBoundingClientRect())
       const item = measure(
         source,
-        clone,
+        drawn,
         { planeMorph: landing ? progress(rect, detail.pair.fromRect, detail.pair.toRect) : 0 },
         landing,
       )

@@ -1357,9 +1357,15 @@ return <img ref={img} src={cover} alt={title} />
 ```
 
 Until the GPU has the picture — or with no stage, no WebGPU/WebGL2, or a
-cross-origin image served without CORS — the element is simply itself. Once
+cross-origin image the GPU may not read — the element is simply itself. Once
 it does, the DOM copy is hidden with `filter: opacity(0)` (NOT `opacity` or
 `visibility`, which your animations own) and `usePlane` returns `true`.
+
+**Images from another origin** (a CDN) need two things before the GPU may read
+them: `crossOrigin="anonymous"` on the element — server-rendered, so the very
+first request is a CORS one — and CORS headers from the server
+(`Access-Control-Allow-Origin`). Without both the plane stays a DOM image; in
+dev the console names it and says which is missing.
 
 **What the stage copies from the DOM, every frame:** the element's box
 (`getBoundingClientRect`, so transforms and `scale` count); its opacity times
@@ -1406,14 +1412,17 @@ page fades will not reach it:
 | `imageTo`, `imageToSize`, `planeMorph` | mid-flight: the destination's picture, and 0→1 |
 
 **`<Shared>` morphs are drawn by the GPU.** When a `<Shared>` element is a
-live plane, the clone `flipShared` flies is drawn on the stage with the
-plane's own shader — mipmapped, so the picture stays sharp at every size it
-passes through — and crossfades to the destination's image as it lands
-(`imageTo` by `planeMorph`, read off the clone's position, so it follows
-whatever easing the flight uses). Nothing to configure: `flipShared` announces
-each flight with a `modulato:flip` window event (`{ clone, pair }`), and the
-stage takes it from there. With a `modulato` older than the event, the clone
-simply flies as DOM.
+live plane — or contains one, like a card's image box with the `<img>` inside
+— the clone `flipShared` flies is drawn on the stage with the plane's own
+shader, mipmapped, so the picture stays sharp at every size it passes
+through. As it lands it crossfades to the destination's image (`imageTo` by
+`planeMorph`, read off the clone's position, so it follows whatever easing the
+flight uses). The destination is the plane at the same place inside the
+landing element, so make that one a plane too — on every code path that
+renders it; without one the flight still lands, just without the crossfade.
+Nothing to configure: `flipShared` announces each flight with a
+`modulato:flip` window event (`{ clone, pair }`), and the stage takes it from
+there. With a `modulato` older than the event, the clone simply flies as DOM.
 
 `onLateFrame(callback)` — the hook the stage draws in — is exported too: any
 canvas that mirrors the DOM wants the same moment.
@@ -1546,6 +1555,35 @@ of 255, no pixel over 16). What bit the halftone port:
 - Reserved words (`type`, `target`, `filter`, `smooth`…) → a trailing
   underscore; `set()` still finds them.
 - `precision` qualifiers disappear: WGSL is `f32` throughout.
+
+### Adding planes to an existing site
+
+Also written for the agent doing it — and unlike a canvas port, this IS a
+new feature, so only on request, and only on the elements asked for. Done
+right, nothing on screen changes: the images look the same, and `<Shared>`
+morphs of them are now drawn by the GPU.
+
+1. **Upgrade together:** `modulato`, `@modulato/vite` and `@modulato/gpu` —
+   the morph needs `modulato ≥ 0.15`. Run the checks before touching code.
+2. **One `<GpuStage/>` in the shell**, after `<PageOutlet/>`.
+3. **A small component, not `usePlane` at every site:** an `<img>` that calls
+   `usePlane(ref)`, takes the same props, and adds `crossOrigin="anonymous"`
+   when the images come from a CDN (check its CORS headers with
+   `curl -sI -H 'Origin: https://example.com' <url>`). Swap it in for the
+   plain `<img>` and change nothing else — same classes, alt, sizes.
+4. **Find every render path of each `<Shared>` pair.** A morph needs a plane
+   on both ends; a page often renders the same cover from two branches (a
+   standalone image and a grid tile). Videos can stay DOM — they fly as before.
+5. **Audit what sits on top of those images.** The stage is at `z-index: 2`
+   above the pages: a sticky header, a fixed pill or a caption that overlaps a
+   plane and has `z-index` 2 or less now draws under it — raise it to 3, with
+   a comment saying why. A `mix-blend-mode` element above the stage still
+   blends with it.
+6. **Verify:** every plane goes live (its `<img>` gets `filter: opacity(0)`),
+   the dev console is clean (it names uncopied CSS and cross-origin failures),
+   a morph's clone keeps its copy hidden while it flies (the stage is drawing
+   it), WebGL2 too (`?gpu=webgl2`), and an idle page submits no GPU work. Then
+   a production build: view-source shows the `crossorigin` attribute.
 
 ## 12. CLI
 
