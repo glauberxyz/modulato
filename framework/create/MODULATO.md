@@ -1376,7 +1376,9 @@ page the stage does no per-frame work at all.
 **What it does not copy:** rotation and skew (a plane fills the element's
 bounding box), `clip-path`, `mask`, CSS `filter`, `object-position` (always
 centered), per-corner radii (the top-left one is used), and stacking among
-elements of one page (planes draw in document order). The stage sits at
+elements of one page (planes draw in document order). In dev the console
+names any plane carrying one of these, on itself or an ancestor — a port that
+adds `usePlane` should end with that console clean. The stage sits at
 `z-index: 2`, OVER the pages (they paint opaque backgrounds), so text that
 must sit on top of a plane needs its own `position: relative; z-index: 3`,
 and shell UI meant to cover planes (a menu) needs a higher one than that.

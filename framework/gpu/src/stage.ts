@@ -175,13 +175,14 @@ interface Look {
  * to copy: the product of every ancestor's opacity (GSAP fades, WAAPI page
  * crossfades), and the clip of every ancestor that hides overflow (masks,
  * reveals, carousels). Rotation, skew, `clip-path` and filters are NOT
- * mirrored — MODULATO.md says so.
+ * mirrored — MODULATO.md says so, and in dev `warnUncopied` says where.
  */
-function look(element: HTMLElement, viewport: Rect): Look {
+function look(element: HTMLElement, viewport: Rect, audit = false): Look {
   let opacity = 1
   let clip: Rect | null = viewport
   for (let n: HTMLElement | null = element; n && n !== document.documentElement; n = n.parentElement) {
     const style = getComputedStyle(n)
+    if (DEV && audit) warnUncopied(element, n, style)
     if (n === element && style.visibility === 'hidden') return { opacity: 0, clip: null }
     opacity *= parseFloat(style.opacity) || 0
     if (opacity <= 0) return { opacity: 0, clip: null }
@@ -192,6 +193,61 @@ function look(element: HTMLElement, viewport: Rect): Look {
     }
   }
   return { opacity, clip }
+}
+
+/** A tag to find an element by in a console message: `<img src="press.jpg">`. */
+function describe(element: Element): string {
+  const src = element.getAttribute('src')?.split(/[?#]/)[0].split('/').pop()
+  const name = element.id
+    ? ` id="${element.id}"`
+    : src
+      ? ` src="${src}"`
+      : element.classList.length
+        ? ` class="${element.classList[0]}"`
+        : ''
+  return `<${element.localName}${name}>`
+}
+
+/**
+ * True when a computed `transform` does more than move and scale: a plane
+ * fills its element's bounding box upright, so a rotation, skew, mirror or
+ * perspective is lost.
+ */
+function bends(transform: string): boolean {
+  if (transform === 'none') return false
+  const m = transform.slice(transform.indexOf('(') + 1).split(',').map(parseFloat)
+  if (transform.startsWith('matrix3d'))
+    return [1, 2, 3, 4, 6, 7, 8, 9, 11].some((i) => Math.abs(m[i]) > 1e-6) || m[0] < 0 || m[5] < 0
+  return Math.abs(m[1]) > 1e-6 || Math.abs(m[2]) > 1e-6 || m[0] < 0 || m[3] < 0
+}
+
+/**
+ * Dev only: CSS on a plane, or on one of its ancestors, that changes how the
+ * element looks but that the stage does not copy — the GPU would draw it
+ * without, and nothing else would say so. Once per element and property.
+ * The plane's own `filter` is checked on attach: by now it is the stage's.
+ */
+function warnUncopied(element: HTMLElement, n: HTMLElement, style: CSSStyleDeclaration): void {
+  const own = n === element
+  const lost: string[] = []
+  if (bends(style.transform)) lost.push('a rotation, skew or mirror (`transform`)')
+  if (style.clipPath && style.clipPath !== 'none') lost.push('`clip-path`')
+  const mask = style.maskImage || style.webkitMaskImage
+  if (mask && mask !== 'none') lost.push('a `mask`')
+  if (!own && style.filter && style.filter !== 'none') lost.push('a CSS `filter`')
+  if (own && style.objectPosition && style.objectPosition !== '50% 50%') lost.push('`object-position` (planes center)')
+  if (
+    own &&
+    new Set([style.borderTopLeftRadius, style.borderTopRightRadius, style.borderBottomRightRadius, style.borderBottomLeftRadius])
+      .size > 1
+  )
+    lost.push('per-corner radii (planes use the top-left one)')
+  const where = own ? '' : ` on its ancestor ${describe(n)}`
+  for (const what of lost)
+    warnOnce(
+      `the plane ${describe(element)} has ${what}${where}, which the stage does not copy — the GPU draws it ` +
+        'without. Remove the style, or drop usePlane on this element.',
+    )
 }
 
 function fitOf(style: CSSStyleDeclaration): number {
@@ -316,6 +372,14 @@ export async function createStage(canvas: HTMLCanvasElement, options: StageOptio
     }
     attached.set(record, a)
     wake()
+    if (DEV) {
+      const filter = getComputedStyle(record.element).filter
+      if (filter !== 'none' && filter !== 'opacity(0)')
+        warnOnce(
+          `the plane ${describe(record.element)} has a CSS \`filter\`, which the stage does not copy — the GPU ` +
+            'draws it without. Remove the style, or drop usePlane on this element.',
+        )
+    }
     const opts = record.options.current
     const wanted = opts.texture === undefined ? 'element' : opts.texture
     let source: TextureSource | null
@@ -419,7 +483,7 @@ export async function createStage(canvas: HTMLCanvasElement, options: StageOptio
     function measure(a: Attached, element: HTMLElement, extra: Record<string, unknown>, imageTo: Texture | null) {
       const rect = toRect(element.getBoundingClientRect())
       if (rect.width <= 0 || rect.height <= 0) return null
-      const l = look(element, viewport)
+      const l = look(element, viewport, element === a.record.element)
       if (l.opacity <= 0.001 || !l.clip || !intersect(rect, l.clip)) return null
       const opts = a.record.options.current
       const style = getComputedStyle(element)
