@@ -31,6 +31,10 @@ Lenis and GSAP have moved things that frame, so a plane never lags.
 `<Shared>` morphs between planes are drawn on the GPU, mipmapped so they stay
 sharp at every size.
 
+**Build-time assets.** `logo.svg?sdf` gives a signed distance field from the
+SVG's geometry, and `Font.ttf?text=EXPA&points` an outline sampled into
+points, worked out once at build rather than in every browser.
+
 Opt in to shader-import types in `tsconfig.json`:
 `"types": ["vite/client", "@modulato/gpu/shaders"]`.
 

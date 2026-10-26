@@ -11,6 +11,7 @@ export { GpuStage, type GpuStageProps, useGpu, usePlane } from './react'
 export { createStage, type PlaneFrame, type PlaneOptions, type Stage, type StageOptions } from './stage'
 export { onLateFrame } from './late'
 export { isShader } from './shader'
+export { loadImage } from './common'
 export type {
   Backend,
   DrawOptions,
@@ -19,7 +20,9 @@ export type {
   GpuOptions,
   Pass,
   PassOptions,
+  PointsAsset,
   Rect,
+  SdfAsset,
   Shader,
   ShaderLang,
   ShaderSource,

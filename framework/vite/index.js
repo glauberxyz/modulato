@@ -2,6 +2,10 @@ import fs from 'node:fs'
 import { createRequire } from 'node:module'
 import path from 'node:path'
 import * as vite from 'vite'
+import { assetModule, assetQuery } from './assets.js'
+
+/** Virtual-id prefix for `?sdf` / `?points` imports — see resolveId. */
+const ASSET_PREFIX = '\0modulato-asset:'
 
 const require = createRequire(import.meta.url)
 
@@ -246,16 +250,31 @@ export default function modulato(options = {}) {
       isServe = config.command === 'serve'
     },
 
-    resolveId(id) {
-      if (id === VIRTUAL.app) {
-        const userApp = path.resolve(root, 'app.tsx')
-        return fs.existsSync(userApp) ? userApp : id
-      }
-      if (Object.values(VIRTUAL).includes(id)) return id
-      return undefined
+    // `pre`, for the asset queries: resolved normally, `logo.svg?sdf` would
+    // reach Vite's own asset handling, which answers any .svg with its URL.
+    // A private id with no extension is one only this plugin loads.
+    resolveId: {
+      order: 'pre',
+      async handler(id, importer, opts) {
+        if (id === VIRTUAL.app) {
+          const userApp = path.resolve(root, 'app.tsx')
+          return fs.existsSync(userApp) ? userApp : id
+        }
+        if (Object.values(VIRTUAL).includes(id)) return id
+        if (shaders && /[?&](sdf|points)(&|$)/.test(id)) {
+          const resolved = await this.resolve(id, importer, { ...opts, skipSelf: true })
+          if (resolved && assetQuery(resolved.id)) return ASSET_PREFIX + resolved.id
+        }
+        return undefined
+      },
     },
 
     load(id) {
+      if (id.startsWith(ASSET_PREFIX)) {
+        const query = assetQuery(id.slice(ASSET_PREFIX.length))
+        this.addWatchFile(query.file)
+        return assetModule(query, root)
+      }
       if (id === VIRTUAL.manifest) return generateManifest(pagesDir)
       if (id === VIRTUAL.transitions) return generateTransitions(transitionsDir, pagesDir)
       if (id === VIRTUAL.jsxDev) return generateJsxDevRuntime(root)

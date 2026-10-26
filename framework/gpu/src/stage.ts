@@ -1,5 +1,5 @@
 import { getMotionSpeed } from 'modulato'
-import { DEV, warnOnce } from './common'
+import { DEV, loadImage, warnOnce } from './common'
 import { createGpu } from './gpu'
 import { onLateFrame } from './late'
 import { PLANE_GLSL, PLANE_WGSL } from './plane-shaders'
@@ -37,10 +37,11 @@ export interface PlaneOptions {
   fragment?: FragmentInput
   /**
    * What `image` samples. `'element'` (the default for `<img>`, `<video>` and
-   * `<canvas>`) uploads the element itself; any other source is uploaded as
-   * given; `null` binds nothing.
+   * `<canvas>`) uploads the element itself; a URL — an `SdfAsset`'s `url`,
+   * say — is loaded; any other source is uploaded as given; `null` binds
+   * nothing.
    */
-  texture?: 'element' | TextureSource | null
+  texture?: 'element' | string | TextureSource | null
   /** Uniforms for the shader — an object, or a function called every frame. */
   uniforms?: Readonly<Record<string, unknown>> | ((frame: PlaneFrame) => Readonly<Record<string, unknown>>)
   /**
@@ -317,7 +318,18 @@ export async function createStage(canvas: HTMLCanvasElement, options: StageOptio
     wake()
     const opts = record.options.current
     const wanted = opts.texture === undefined ? 'element' : opts.texture
-    const source = wanted === 'element' ? elementSource(record.element) : wanted
+    let source: TextureSource | null
+    if (wanted === 'element') source = elementSource(record.element)
+    else if (typeof wanted === 'string') {
+      try {
+        source = await loadImage(wanted)
+      } catch (e) {
+        a.failed = true
+        warnOnce((e as Error).message)
+        return
+      }
+      if (!attached.has(record)) return
+    } else source = wanted
     if (!source && !opts.fragment) {
       // The default shader draws an image; with none, the plane would be an
       // empty hole where the element was.

@@ -55,6 +55,16 @@ is a live plane, the stage draws the flying clone with the plane's shader,
 mipmapped so it stays sharp at every size, and crossfades it to the
 destination's image as it lands.
 
+**Build-time GPU assets** (`@modulato/vite`):
+- `logo.svg?size=256&sdf` gives a signed distance field, computed from the
+  SVG's geometry and emitted as a grayscale PNG.
+- `mark.svg?points` / `Font.ttf?text=EXPA&size=200&points` gives an outline
+  sampled into a `Float32Array`.
+
+Generated files are imported from `node_modules/.modulato/gpu/` like any
+image. Fonts use the project's own `opentype.js`, which runs at build time
+and never ships.
+
 MODULATO.md §11 documents it, along with a migration guide for existing WebGL
 canvases. The guide is written for an agent: inventory first, port one canvas
 at a time, keep shader text byte-identical, and verify pixel parity against a

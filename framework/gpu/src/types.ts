@@ -194,3 +194,42 @@ export interface Gpu {
   /** Everything this surface created. The canvas itself is left alone. */
   dispose(): void
 }
+
+/**
+ * `import logo from './logo.svg?sdf'` — a signed distance field of the SVG's
+ * filled shapes, computed at build time. A grayscale PNG: 0.5 at the edge,
+ * rising to 1 inside and falling to 0 outside over `spread` pixels. Sample it
+ * and `smoothstep` around 0.5 for an edge that stays crisp at any scale;
+ * offset the threshold for outlines, widen it for glows.
+ *
+ * Query: `?size=256&spread=16&sdf` (the kind goes LAST, so the type matches).
+ * `size` is the shape's longer side in pixels (default 128); `spread` the
+ * falloff (default size / 16); `rule=evenodd` for even-odd fills.
+ */
+export interface SdfAsset {
+  kind: 'sdf'
+  url: string
+  /** Pixels, `spread` of margin included on each side. */
+  width: number
+  height: number
+  spread: number
+  /** The SVG's viewBox: [x, y, width, height]. */
+  viewBox: [number, number, number, number]
+  /** Elements this reader could not draw (`<text>`, strokes…), if any. */
+  skipped: string[]
+}
+
+/**
+ * `import title from './Font.ttf?text=EXPA&size=200&pitch=3&points'` — an
+ * outline sampled every `pitch` pixels, at build time: `[x, y, x, y, …]`,
+ * y down, origin at the top-left of the shape. From an .svg (filled shapes,
+ * viewBox units, or `size` px on the longer side) or a font (.ttf .otf .woff;
+ * `text` laid out at `size` px; needs `opentype.js` as a dev dependency).
+ */
+export interface PointsAsset {
+  kind: 'points'
+  points: Float32Array
+  count: number
+  width: number
+  height: number
+}

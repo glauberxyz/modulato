@@ -160,3 +160,15 @@ export function scissorOf(
   if (x1 <= x0 || y1 <= y0) return null
   return { x: x0, y: y0, width: x1 - x0, height: y1 - y0 }
 }
+
+/** Load an image by URL, decoded and ready to upload. */
+export function loadImage(url: string): Promise<HTMLImageElement> {
+  return new Promise((resolve, reject) => {
+    const image = new Image()
+    image.crossOrigin = 'anonymous'
+    image.decoding = 'async'
+    image.onload = () => resolve(image)
+    image.onerror = () => reject(new Error(`[modulato/gpu] could not load ${url}`))
+    image.src = url
+  })
+}

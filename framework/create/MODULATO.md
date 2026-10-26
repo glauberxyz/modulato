@@ -1311,7 +1311,7 @@ and prints `[modulato/gpu] /lib/x.wgsl:243:48 <message>`. A build strips
 comments and indentation and renames nothing. `?raw` imports and files
 another plugin already compiled are left alone; plain strings work too
 (language detected, no hot reload). `modulato({ shaders: false })` turns the
-transform off.
+transform off, and the `?sdf` / `?points` imports below with it.
 
 **Fallback.** `'auto'` takes WebGPU where it exists and WebGL2 elsewhere; with
 neither, `createGpu` resolves `null` and the canvas is never touched — put a
@@ -1415,6 +1415,49 @@ simply flies as DOM.
 
 `onLateFrame(callback)` — the hook the stage draws in — is exported too: any
 canvas that mirrors the DOM wants the same moment.
+
+### Build-time GPU assets — `?sdf` and `?points`
+
+Geometry that is a pure function of a file is worked out once, at build,
+rather than in every visitor's browser. Two kinds, both from `@modulato/vite`,
+both typed by `@modulato/gpu/shaders`. The kind goes LAST in the query:
+
+```ts
+import logo from './logo.svg?size=256&spread=16&sdf'
+// { kind: 'sdf', url, width, height, spread, viewBox, skipped }
+
+import title from './Display.ttf?text=EXPA&size=200&pitch=3&points'
+import mark from './mark.svg?pitch=4&points'
+// { kind: 'points', points: Float32Array [x, y, …], count, width, height }
+```
+
+**`?sdf`** — a signed distance field of the SVG's filled shapes, computed
+from the path geometry itself (no rasterizer, exact to the pixel): a
+grayscale PNG, 0.5 on the edge, rising to 1 inside and falling to 0 outside
+over `spread` pixels. Threshold it with `smoothstep(0.45, 0.55, d)` and the
+edge stays crisp at any scale; move the threshold for an outline, widen it
+for a glow. `size` is the shape's longer side in pixels (default 128),
+`spread` the falloff (default size / 16, and the PNG carries that much margin
+on every side). Each shape's own `fill-rule` is honoured; `rule=evenodd`
+forces it. Feed it to a plane with `usePlane(ref, { texture: logo.url,
+fragment })`, or to a pass with `gpu.texture(await loadImage(logo.url))`.
+
+**`?points`** — an outline sampled every `pitch` pixels of arc length, for
+particles and morphs: `[x, y, x, y, …]`, y down, origin at the shape's
+top-left. From an SVG (viewBox units, or `size` px on the longer side) or a
+font — `.ttf`, `.otf`, `.woff`, with `text` laid out at `size` px (default
+100). Fonts are read by `opentype.js`, which the PROJECT installs as a dev
+dependency (`npm i -D opentype.js`); it runs at build time and never ships.
+WOFF2 is not readable — convert it, or point at the TTF/OTF.
+
+What the SVG reader draws: `path`, `rect` (rounded too), `circle`,
+`ellipse`, `polygon`, `polyline`, `line`, through nested `<g>` and every
+`transform`. What it skips and lists in `skipped`: `<text>`, `<use>`,
+`<image>`, and unfilled shapes — strokes have no area, so outline them in
+your editor first. A file with nothing drawable is an error that says so.
+Generated files live in `node_modules/.modulato/gpu/` and are imported from
+there like any image — so Vite hashes, inlines (under its size limit) and
+serves them as it would any other, in dev and in a build.
 
 ### Migrating an existing canvas to `@modulato/gpu`
 
