@@ -1,15 +1,17 @@
-import { useEffect, useRef, useState } from 'react'
+import { useRef, useState } from 'react'
 import { useTicker } from 'modulato'
-import { createHalftone, DEFAULTS, type HalftoneUniforms, type SceneUniforms } from './halftone'
-// Not for rendering — it is a DEPENDENCY. A press compiles its program once,
-// inside an effect, so editing the shader used to change nothing on screen:
-// Fast Refresh re-evaluates the GLSL module and re-renders the component, but
-// an effect whose deps have not changed does not re-run, and the old compiled
-// program keeps drawing. Naming the source here means a shader edit rebuilds
-// every press on the page, which is the only way the dev loop tells the truth.
-import { HALFTONE_FRAG } from './halftone.glsl'
+import { useGpu } from '@modulato/gpu'
+import {
+  createHalftone,
+  DEFAULTS,
+  pressBackend,
+  type HalftoneUniforms,
+  type SceneUniforms,
+} from './halftone'
 
-type Press = ReturnType<typeof createHalftone>
+// No shader in any effect's dependencies, and no remount on a shader edit:
+// the .wgsl and .frag imports hot-swap inside the pass, and the surface marks
+// itself dirty when they do, so even a still press redraws on save.
 
 /**
  * The live raymarched scene, screened through the halftone. Uniforms are
@@ -26,16 +28,9 @@ export function HalftoneScene({
   className?: string
 }) {
   const canvasRef = useRef<HTMLCanvasElement>(null)
-  const press = useRef<Press>(null)
-
-  useEffect(() => {
-    if (!canvasRef.current) return undefined
-    press.current = createHalftone(canvasRef.current, { source: 'scene' })
-    return () => {
-      press.current?.dispose()
-      press.current = null
-    }
-  }, [HALFTONE_FRAG])
+  const press = useGpu(canvasRef, (gpu) => createHalftone(gpu, { source: 'scene' }), [], {
+    backend: pressBackend('scene'),
+  })
 
   useTicker((time) => {
     if (uniforms.current && scene.current) press.current?.render(time, uniforms.current, scene.current)
@@ -51,7 +46,30 @@ export function HalftoneScene({
  * that way.
  */
 const uniformKey = (u: HalftoneUniforms) =>
-  `${u.size}|${u.contrast}|${u.softness}|${u.gridNoise}|${u.grainOverlay}|${u.type}|${u.window}|${u.angles}|${u.plates}|${u.floodK}|${u.gains}|${u.flat}|${u.noBlack}|${u.tone}|${u.cover}`
+  `${u.size}|${u.contrast}|${u.softness}|${u.gridNoise}|${u.grainOverlay}|${u.type}|${u.window}|${u.angles}|${u.plates}|${u.floodK}|${u.gains}|${u.inks}|${u.paper}|${u.flat}|${u.noBlack}|${u.tone}|${u.cover}`
+
+/**
+ * Draw only when something moved: a uniform, or the surface itself (a
+ * resize, a re-upload, a hot-swapped shader — `dirty` covers all three). A
+ * still image with unchanged uniforms produces an identical frame, so
+ * redrawing it 60 times a second is pure heat; this way the diagrams stay
+ * live while you drag a slider and go completely idle the rest of the time.
+ */
+function useStillPress(
+  press: React.RefObject<Awaited<ReturnType<typeof createHalftone>> | null>,
+  uniforms: React.RefObject<HalftoneUniforms>,
+) {
+  const lastKey = useRef('')
+  useTicker((time) => {
+    const u = uniforms.current
+    const p = press.current
+    if (!u || !p) return
+    const key = uniformKey(u)
+    if (key === lastKey.current && !p.dirty) return
+    lastKey.current = key
+    p.render(time, u)
+  })
+}
 
 /**
  * A flat field of color, screened.
@@ -71,38 +89,19 @@ export function HalftoneFlat({
   className?: string
 }) {
   const canvasRef = useRef<HTMLCanvasElement>(null)
-  const press = useRef<Press>(null)
-
-  useEffect(() => {
-    if (!canvasRef.current) return undefined
-    press.current = createHalftone(canvasRef.current, { source: 'color' })
-    return () => {
-      press.current?.dispose()
-      press.current = null
-    }
-  }, [HALFTONE_FRAG])
-
-  const lastKey = useRef('')
-  useTicker((time) => {
-    const u = uniforms.current
-    if (!u || !press.current) return
-    const key = uniformKey(u)
-    if (key === lastKey.current) return
-    lastKey.current = key
-    press.current.render(time, u)
-  })
-
-  useEffect(() => {
-    const el = canvasRef.current
-    if (!el) return undefined
-    const observer = new ResizeObserver(() => {
-      lastKey.current = ''
-    })
-    observer.observe(el)
-    return () => observer.disconnect()
-  }, [])
-
+  const press = useGpu(canvasRef, (gpu) => createHalftone(gpu, { source: 'color' }))
+  useStillPress(press, uniforms)
   return <canvas ref={canvasRef} className={className} role="img" aria-label={label} />
+}
+
+function loadImage(src: string): Promise<HTMLImageElement> {
+  return new Promise((resolve, reject) => {
+    const img = new Image()
+    img.crossOrigin = 'anonymous'
+    img.onload = () => resolve(img)
+    img.onerror = reject
+    img.src = src
+  })
 }
 
 /**
@@ -121,50 +120,18 @@ export function HalftoneImage({
   className?: string
 }) {
   const canvasRef = useRef<HTMLCanvasElement>(null)
-  const press = useRef<Press>(null)
   const [ready, setReady] = useState(false)
-
-  useEffect(() => {
-    let alive = true
-    const img = new Image()
-    img.crossOrigin = 'anonymous'
-    img.src = src
-    img.onload = () => {
-      if (!alive || !canvasRef.current) return
-      press.current = createHalftone(canvasRef.current, { source: 'image', image: img })
+  const press = useGpu(
+    canvasRef,
+    async (gpu) => {
+      const image = await loadImage(src)
+      const created = await createHalftone(gpu, { source: 'image', image })
       setReady(true)
-    }
-    return () => {
-      alive = false
-      press.current?.dispose()
-      press.current = null
-    }
-  }, [src, HALFTONE_FRAG])
-
-  // A still image with unchanged uniforms produces an identical frame, so
-  // redrawing it 60 times a second is pure heat. Draw only when something
-  // actually moved — the diagrams stay live while you drag a slider and go
-  // completely idle the rest of the time.
-  const lastKey = useRef('')
-  useTicker((time) => {
-    const u = uniforms.current
-    if (!u || !press.current) return
-    const key = uniformKey(u)
-    if (key === lastKey.current) return
-    lastKey.current = key
-    press.current.render(time, u)
-  })
-
-  // A resize invalidates the last frame — force the next tick to redraw.
-  useEffect(() => {
-    const el = canvasRef.current
-    if (!el) return undefined
-    const observer = new ResizeObserver(() => {
-      lastKey.current = ''
-    })
-    observer.observe(el)
-    return () => observer.disconnect()
-  }, [])
+      return created
+    },
+    [src],
+  )
+  useStillPress(press, uniforms)
 
   return (
     <canvas

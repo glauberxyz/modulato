@@ -59,6 +59,16 @@ export interface ModulatoPluginOptions {
    * @modulato/tweak is installed. Set false to disable.
    */
   tweak?: boolean
+  /**
+   * Compile `.wgsl`, `.glsl`, `.frag` and `.vert` imports into the `Shader`
+   * objects `@modulato/gpu` takes: hot-swapped in place in dev, comments and
+   * indentation stripped in a build. Default: true.
+   *
+   * A file another plugin has already turned into JavaScript is left alone,
+   * and `?raw` imports are never touched. Set false if a shader plugin of
+   * your own runs AFTER this one and expects the raw text.
+   */
+  shaders?: boolean
 }
 
 export default function modulato(options?: ModulatoPluginOptions): Plugin
