@@ -17,7 +17,8 @@
     "forceConsistentCasingInFileNames": true,
     "resolveJsonModule": true,
     "types": [
-      "vite/client"
+      "vite/client",
+      "@modulato/gpu/shaders"
     ]
   },
   "include": [

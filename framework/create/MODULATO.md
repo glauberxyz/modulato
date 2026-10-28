@@ -10,8 +10,8 @@
 > site — it is the in-project scaffolder, not the site creator.)
 
 Stack: React 19 · Vite 7 · GSAP (sole animation engine) · Lenis (smooth
-scroll) · classic SSR + hydration (no RSC, no streaming) · optional
-`@modulato/gpu` for shaders (WGSL on WebGPU, GLSL on WebGL2).
+scroll) · classic SSR + hydration (no RSC, no streaming) · `@modulato/gpu`
+for shaders (WGSL on WebGPU, GLSL on WebGL2).
 
 ## 1. Mental model
 
@@ -1206,7 +1206,7 @@ For r3f specifically: put `<Canvas>` in the shell, read `useNavigation`/
 `useScroll`/`useTicker` work anywhere (they don't depend on React context
 when used in the shell).
 
-### GPU passes — `@modulato/gpu` (optional)
+### GPU passes — `@modulato/gpu`
 
 For fragment-shader work — a full-screen effect, a screened image, a
 generative background — `@modulato/gpu` does the plumbing: **WGSL on WebGPU,
@@ -1219,14 +1219,17 @@ Two levels: **passes** — a fragment shader on a canvas you place — and
 instancing or compute — a scene that needs those stays on its own engine (the
 recipe above).
 
+New sites come with it installed, and with the shader-import types on. A site
+scaffolded before that adds both:
+
 ```sh
 npm i @modulato/gpu
 ```
 
 ```jsonc
-// tsconfig.json — types for `.wgsl`/`.glsl`/`.frag`/`.vert` imports. Opt-in,
-// because a site that already types `*.glsl` through another plugin would
-// get two declarations that disagree.
+// tsconfig.json — types for `.wgsl`/`.glsl`/`.frag`/`.vert` imports. Leave it
+// out if the site already types `*.glsl` through another plugin: the two
+// declarations disagree.
 "types": ["vite/client", "@modulato/gpu/shaders"]
 ```
 

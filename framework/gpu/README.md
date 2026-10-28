@@ -35,7 +35,8 @@ sharp at every size.
 SVG's geometry, and `Font.ttf?text=EXPA&points` an outline sampled into
 points, worked out once at build rather than in every browser.
 
-Opt in to shader-import types in `tsconfig.json`:
+New Modulato sites come with it installed and shader-import types on. In an
+older site, `npm i @modulato/gpu` and add the types to `tsconfig.json`:
 `"types": ["vite/client", "@modulato/gpu/shaders"]`.
 
 No meshes, instancing or compute: a 3D scene stays on its own engine.
