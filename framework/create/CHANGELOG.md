@@ -1,5 +1,11 @@
 # create-modulato
 
+## 0.7.0
+
+### Minor Changes
+
+- a03db76: New sites come with `@modulato/gpu` installed, and with its shader-import types (`@modulato/gpu/shaders`) on in `tsconfig.json`. Existing sites are unchanged; MODULATO.md §11 shows how to add it.
+
 ## 0.6.3
 
 ### Patch Changes
