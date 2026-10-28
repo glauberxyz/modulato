@@ -15,7 +15,7 @@
   },
   "dependencies": {
     "@modulato/content-local": "^0.1.1",
-    "@modulato/gpu": "^0.1.1",
+    "@modulato/gpu": "^0.1.2",
     "@modulato/gsap": "^0.3.0",
     "@modulato/server": "^0.4.1",
     "@modulato/tweak": "^0.10.0",
